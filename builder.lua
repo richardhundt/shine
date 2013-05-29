@@ -1,14 +1,20 @@
 local exports = { }
 
+local util   = require('util')
 local syntax = require("syntax")
 
+function exports.tempnam()
+   return exports.identifier(util.genid())
+end
 function exports.chunk(body, loc)
    return syntax.build("Chunk", { body = body, loc = loc })
 end
 function exports.identifier(name, loc)
    return syntax.build("Identifier", { name = name, loc = loc })
 end
-
+function exports.vararg(loc)
+   return syntax.build("Vararg", { loc = loc })
+end
 function exports.binaryExpression(op, left, right, loc)
    return syntax.build("BinaryExpression", {
       operator = op, left = left, right = right, loc = loc
@@ -19,12 +25,12 @@ function exports.unaryExpression(op, arg, loc)
       operator = op, argument = arg, loc = loc
    })
 end
-
-function exports.sequenceExpression(exprs, loc)
-   return syntax.build("SequenceExpression", {
-      expressions = exprs, loc = loc
+function exports.listExpression(op, exprs, loc)
+   return syntax.build("ListExpression", {
+      operator = op, expressions = exprs, loc = loc
    })
 end
+
 function exports.parenExpression(exprs, loc)
    return syntax.build("ParenExpression", {
       expressions = exprs, loc = loc
@@ -42,7 +48,7 @@ function exports.logicalExpression(op, left, right, loc)
 end
 function exports.memberExpression(obj, prop, comp, loc)
    return syntax.build("MemberExpression", {
-      object = obj, property = prop, computed = comp, loc = loc
+      object = obj, property = prop, computed = comp or false, loc = loc
    })
 end
 function exports.callExpression(callee, args, loc)
@@ -88,7 +94,7 @@ function exports.breakStatement(loc)
    return syntax.build("BreakStatement", { loc = loc })
 end
 function exports.returnStatement(arg, loc)
-   return syntax.build("ReturnStatement", { argument = arg, loc = loc })
+   return syntax.build("ReturnStatement", { arguments = arg, loc = loc })
 end
 function exports.whileStatement(test, body, loc)
    return syntax.build("WhileStatement", {
@@ -116,21 +122,29 @@ function exports.forInStatement(init, iter, body, loc)
       init = init, iter = iter, body = body, loc = loc
    })
 end
-function exports.localDeclaration(names, expr, loc)
+function exports.localDeclaration(names, exprs, loc)
    return syntax.build("LocalDeclaration", {
-      names = names, expression = expr, loc = loc
+      names = names, expressions = exprs, loc = loc
    })
 end
-function exports.functionDeclaration(name, params, body, vararg, expr, rec, loc)
+function exports.functionDeclaration(name, params, body, vararg, rec, loc)
    return syntax.build("FunctionDeclaration", {
       id         = name,
       body       = body,
-      params     = params,
-      vararg     = vararg, -- flag
-      expression = expr,   -- flag
-      recursive  = rec,    -- flag
+      params     = params or { },
+      vararg     = vararg,
+      recursive  = rec,
       loc        = loc
    })
 end
+function exports.functionExpression(params, body, vararg, loc)
+   return syntax.build("FunctionExpression", {
+      body       = body,
+      params     = params or { },
+      vararg     = vararg,
+      loc        = loc
+   })
+end
+
 
 return exports

@@ -14,6 +14,9 @@ local function dump(node, level)
    if type(node) == "boolean" then
       return tostring(node)
    end
+   if type(node) == "function" then
+      return tostring(node)
+   end
 
    local buff = { }
    local dent = string.rep("    ", level)
@@ -32,7 +35,7 @@ local function dump(node, level)
       tput(buff, "\n"..string.rep("    ", level - 1).."}")
    else
       tput(buff, "[")
-      for i,data in ipairs(node) do
+      for i,data in pairs(node) do
          tput(buff, "\n"..dent..dump(data, level + 1))
          if i ~= #node then
             tput(buff, ",")
@@ -45,6 +48,12 @@ local function dump(node, level)
 end
 
 exports.dump = dump
+
+local ID = 0
+exports.genid = function()
+   ID = ID + 1
+   return '__'..ID
+end
 
 function exports.extend(base, with)
    with.__super = base

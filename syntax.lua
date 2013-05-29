@@ -35,6 +35,11 @@ local syntax = {
          }
       }
    },
+   Vararg = {
+      kind = "Vararg",
+      base = "Identifier",
+      properties = { }
+   },
    BinaryExpression = {
       kind = "BinaryExpression",
       base = "Expression",
@@ -70,10 +75,14 @@ local syntax = {
          }
       }
    },
-   SequenceExpression = {
-      kind = "SequenceExpression",
+   ListExpression = {
+      kind = "ListExpression",
       base = "Expression",
       properties = {
+         operator = {
+            type   = "enum",
+            values = { "..", "," }
+         },
          expressions = {
             type = "list",
             kind = "Expression"
@@ -92,7 +101,7 @@ local syntax = {
    },
    AssignmentExpression = {
       kind = "AssignmentExpression",
-      base = "Expression",
+      base = "Statement",
       properties = {
          left = {
             type = "list",
@@ -149,8 +158,8 @@ local syntax = {
             kind = "Expression"
          },
          arguments = {
-            type = "node",
-            kind = "SequenceExpression"
+            type = "list",
+            kind = "Expression"
          }
       }
    },
@@ -167,8 +176,8 @@ local syntax = {
             kind = "Identifier",
          },
          arguments = {
-            type = "node",
-            kind = "SequenceExpression"
+            type = "list",
+            kind = "Expression"
          }
       }
     },
@@ -196,7 +205,7 @@ local syntax = {
       properties = {
          expression = {
             type = "node",
-            kind = "Expression"
+            kind = {"Statement", "Expression" }
          }
       }
    },
@@ -220,7 +229,7 @@ local syntax = {
       base = "Statement",
       properties = {
          body = {
-            type = "list",
+            type = "node",
             kind = "BlockStatement",
          }
       }
@@ -231,7 +240,8 @@ local syntax = {
       properties = {
          test = {
             type = "node",
-            kind = "Expression"
+            kind = "Expression",
+            optional = true,
          },
          consequent = {
             type = "node",
@@ -273,8 +283,8 @@ local syntax = {
       kind = "ReturnStatement",
       base = "Statement",
       properties = {
-         argument = {
-            type = "node",
+         arguments = {
+            type = "list",
             kind = "Expression"
          }
       }
@@ -380,8 +390,8 @@ local syntax = {
             type = "list",
             kind = "Identifier"
          },
-         expression = {
-            type = "node",
+         expressions = {
+            type = "list",
             kind = "Expression"
          }
       }
@@ -406,11 +416,25 @@ local syntax = {
             type = "boolean",
             default = false
          },
-         expression = {
+         recursive = {
             type = "boolean",
             default = false
+         }
+      }
+   },
+   FunctionExpression = {
+      kind = "FunctionExpression",
+      base = "Expression",
+      properties = {
+         body = {
+            type = "node",
+            kind = "BlockStatement",
          },
-         recursive = {
+         params = {
+            type = "list",
+            kind = "Identifier",
+         },
+         vararg = {
             type = "boolean",
             default = false
          }
@@ -488,7 +512,7 @@ local function validate_enum(spec, prop)
          return true, prop
       end
    end
-   return nil, "expected one of "..kind2str(spec.kind)
+   return nil, "expected one of "..kind2str(spec.values).." (got '"..tostring(prop).."')"
 end
 
 local function validate_type(spec, prop)
@@ -531,7 +555,7 @@ local function validate(meta, node)
       else
          local ok, er = validate_any(spec, prop)
          if not ok then
-            error(er.." for "..name)
+            error(er.." for "..(node.kind or "?").."."..name)
          end
       end
    end

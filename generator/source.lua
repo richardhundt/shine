@@ -1,3 +1,4 @@
+local util = require('util')
 
 local Writer = { }
 Writer.__index = Writer
@@ -30,50 +31,26 @@ function Writer:__tostring()
    return table.concat(self.buffer)
 end
 
-local Generator = { }
-Generator.__index = Generator
-
-function Generator:new(handlers)
-   return setmetatable({
-      handlers = handlers,
-      writer   = Writer:new(),
-      srcline  = 0,
-      linemap  = { },
-   }, self)
-end
-function Generator:write(...)
-   self.writer:write(...)
-end
-
 local match = { }
-Generator.match = match
-
-function Generator:generate(tree)
-   self:render(tree)
-   return tostring(self.writer)
-end
-
-function Generator:render(node, ...)
-   if node.loc and node.loc.start.line < self.srcline then
-      self.srcline = node.loc.start.line
-      self.linemap[self.writer.line] = self.srcline
-   end
-   local handler = self.match[node.kind]
-   return handler(self, node, ...)
-end
-
 function match:Chunk(node)
    for i=1, #node.body do
       self:render(node.body[i])
+      local last = self.writer.buffer[#self.writer.buffer]
+      if last ~= 'end' and last ~= '\n' then
+         self:write(";")
+      end
       self.writer:writeln()
    end
 end
 function match:Identifier(node)
    self:write(node.name)
 end
+function match:Vararg(node)
+   self:write("...")
+end
 function match:BinaryExpression(node)
    self:render(node.left)
-   self:write(node.operator.." ")
+   self:write(" "..node.operator.." ")
    self:render(node.right)
 end
 function match:UnaryExpression(node)
@@ -81,11 +58,11 @@ function match:UnaryExpression(node)
    self:render(node.argument)
    self:write(" ")
 end
-function match:SequenceExpression(node)
+function match:ListExpression(node)
    for i=1, #node.expressions do
       self:render(node.expressions[i])
       if i ~= #node.expressions then
-         self:write(", ")
+         self:write(node.operator)
       end
    end
 end
@@ -100,15 +77,24 @@ function match:ParenExpression(node)
    self:write(")")
 end
 function match:AssignmentExpression(node)
-   self:render(node.left)
+   for i=1, #node.left do
+      self:render(node.left[i])
+      if i ~= #node.left then
+         self:write(", ")
+      end
+   end
    self:write(" = ")
-   self:render(node.right)
+   for i=1, #node.right do
+      self:render(node.right[i])
+      if i ~= #node.right then
+         self:write(", ")
+      end
+   end
 end
 function match:LogicalExpression(node)
    self:render(node.left)
    self:write(" "..node.operator.." ")
    self:render(node.right)
-   self:write(" ")
 end
 function match:MemberExpression(node)
    if node.computed then
@@ -125,7 +111,12 @@ end
 function match:CallExpression(node)
    self:render(node.callee)
    self:write("(")
-   self:render(node.arguments)
+   for i=1, #node.arguments do
+      self:render(node.arguments[i])
+      if i ~= #node.arguments then
+         self:write(", ")
+      end
+   end
    self:write(")")
 end
 function match:SendExpression(node)
@@ -133,52 +124,88 @@ function match:SendExpression(node)
    self:write(":")
    self:render(node.method)
    self:write("(")
-   self:render(node.arguments)
+   for i=1, #node.arguments do
+      self:render(node.arguments[i])
+      if i ~= #node.arguments then
+         self:write(", ")
+      end
+   end
    self:write(")")
 end
 function match:Literal(node)
    if type(node.value) == "string" then
-      self:write(string.format("%q", node.value))
+      self:write(string.format("(%q)", node.value))
    else
-      self:write(tostring(node.value))
+      self:write("("..tostring(node.value)..")")
    end
 end
+
+function match:LabelStatement(node)
+   self:write("::"..node.label.."::")
+end
+function match:GotoStatement(node)
+   self:write("goto "..node.label)
+end
+
 function match:Table(node)
    self:write("{")
-   for k,v in pairs(node.value) do
-      self:write("[")
-      self:render(k)
-      self:write("] = ")
-      self:render(v)
+   self.writer:indent()
+   local seen = { }
+   for i=1, #node.value do
+      self.writer:writeln()
+      seen[i] = true
+      self:render(node.value[i])
       self:write(";")
    end
+   for k,v in pairs(node.value) do
+      if not seen[k] then
+         self.writer:writeln()
+         self:write("[")
+         if type(k) == 'table' then
+            self:render(k)
+         elseif type(k) == 'string' then
+            self:write(string.format('%q', k))
+         else
+            self:write(tostring(k))
+         end
+         self:write("] = ")
+         self:render(v)
+         self:write(";")
+      end
+   end
+   self.writer:undent()
+   self.writer:writeln()
    self:write("}")
 end
 function match:ExpressionStatement(node)
    self:render(node.expression)
-   self:write(";")
 end
 function match:EmptyStatement(node)
-   self:write(";")
 end
 function match:BlockStatement(node)
    self.writer:indent()
    for i=1, #node.body do
       self.writer:writeln()
       self:render(node.body[i])
+      local last = self.writer.buffer[#self.writer.buffer]
+      if last ~= 'end' and last ~= '\n' then
+         self:write(";")
+      end
    end
    self.writer:undent()
    self.writer:writeln()
 end
 function match:DoStatement(node)
    self:write("do")
-   self:render(self.body)
+   self:render(node.body)
    self:write("end")
 end
 function match:IfStatement(node, nest)
-   self:write("if ")
-   self:render(node.test)
-   self:write(" then")
+   if node.test then
+      self:write("if ")
+      self:render(node.test)
+      self:write(" then")
+   end
    self:render(node.consequent)
    if node.alternate then
       self:write("else")
@@ -196,15 +223,22 @@ end
 function match:GotoStatement(node)
    self:write("goto ")
    self:render(node.label)
-   self:write(";")
 end
 function match:BreakStatement(node)
-   self:write("break;")
+   self:write("do break; ")
+   self:write("end")
 end
 function match:ReturnStatement(node)
-   self:write("return ")
-   self:render(node.argument)
-   self:write(";")
+   self:write("do return ")
+   for i=1, #node.arguments do
+      self:render(node.arguments[i])
+      if i ~= #node.arguments then
+         self:write(", ")
+      else
+         self:write(" ")
+      end
+   end
+   self:write('end')
 end
 function match:WhileStatement(node)
    self:write("while ")
@@ -262,11 +296,20 @@ function match:LocalDeclaration(node)
          self:write(", ")
       end
    end
-   self:write(" = ")
-   self:render(node.expression)
-   self:write(";")
+   if #node.expressions > 0 then
+      self:write(" = ")
+      for i=1, #node.expressions do
+         self:render(node.expressions[i])
+         if i ~= #node.expressions then
+            self:write(", ")
+         end
+      end
+   end
 end
 function match:FunctionDeclaration(node)
+   if node.recursive then
+      self:write("local ")
+   end
    self:write("function ")
    self:render(node.id)
    self:write("(")
@@ -280,81 +323,45 @@ function match:FunctionDeclaration(node)
    self:render(node.body)
    self:write("end")
 end
+function match:FunctionExpression(node)
+   self:write("function ")
+   self:write("(")
+   for i=1, #node.params do
+      self:render(node.params[i])
+      if i ~= #node.params then
+         self:write(", ")
+      end
+   end
+   self:write(")")
+   self:render(node.body)
+   self:write("end")
+end
 
-local b = require("builder")
-local tree = b.chunk{
-   b.functionDeclaration(
-      b.identifier("greet"), { b.identifier("message") },
-      b.blockStatement{
-         b.localDeclaration(
-            { b.identifier("a"), b.identifier("b") },
-            b.sequenceExpression{
-               b.literal(42),
-               b.literal("cheese")
-            }
-         ),
-         b.expressionStatement(
-            b.callExpression(b.identifier("print"), 
-               b.sequenceExpression{
-                  b.literal("Hello"),
-                  b.identifier("message"),
-               }
-            )
-         )
-      }
-   ),
-   b.ifStatement(
-      b.literal(true), b.blockStatement{
-         b.expressionStatement(
-            b.callExpression(b.identifier("print"), 
-               b.sequenceExpression{ b.literal("true") }
-            )
-         )
-      },
-      b.ifStatement(
-         b.literal(false), b.blockStatement{
-            b.expressionStatement(
-               b.callExpression(b.identifier("print"), 
-                  b.sequenceExpression{ b.literal("false") }
-               )
-            )
-         },
-         b.blockStatement{
-            b.expressionStatement(
-               b.callExpression(b.identifier("print"), 
-                  b.sequenceExpression{ b.literal("dunno") }
-               )
-            )
-         }
-      )
-   ),
-   b.forStatement(
-      b.forInit(b.identifier("i"), b.literal(1)),
-      b.literal(10),
-      nil,
-      b.blockStatement{
-         b.expressionStatement(
-            b.callExpression(b.identifier("print"), 
-               b.sequenceExpression{ b.identifier("i") }
-            )
-         )
-      }
-   ),
-   b.forInStatement(
-      b.forNames{ b.identifier("k"), b.identifier("v") },
-      b.callExpression(b.identifier("pairs"),
-         b.sequenceExpression{ b.identifier("t") }
-      ),
-      b.blockStatement{
-         b.expressionStatement(
-            b.callExpression(b.identifier("print"), 
-               b.sequenceExpression{ b.identifier("i") }
-            )
-         )
-      }
-   )
+
+local function generate(tree)
+   local self = { }
+   local writer = Writer:new()
+   self.writer = writer
+   function self:render(node, ...)
+      if type(node) ~= "table" then
+         error("not a table: "..tostring(node))
+      end
+      if not node.kind then
+         error("don't know what to do with: "..util.dump(node))
+      end
+      if not match[node.kind] then
+         error("no handler for "..node.kind)
+      end
+      return match[node.kind](self, node, ...)
+   end
+   function self:write(frag)
+      writer:write(frag)
+   end
+   self:render(tree)
+   return tostring(writer)
+end
+
+return {
+   generate = generate
 }
-
-local gen = Generator:new()
-print(gen:generate(tree))
 
