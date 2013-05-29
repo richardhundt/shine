@@ -403,6 +403,7 @@ function match:MemberExpression(node, base, want)
 end
 function match:FunctionDeclaration(node)
    local free = self.ctx.freereg
+
    local func = self.ctx:child()
    self.ctx = func
 
@@ -421,8 +422,8 @@ function match:FunctionDeclaration(node)
       dest = self.ctx:nextreg()
       self.ctx:op_fnew(dest, func.idx)
       self.ctx:op_gset(dest, node.id.name)
+      self.ctx.freereg = free
    end
-   self.ctx.freereg = free
 
    return dest
 end
@@ -618,41 +619,8 @@ local function generate(tree, name)
       return match[node.kind](self, node, ...)
    end
    self:emit(tree)
-   local pack = self.dump:pack()
-   return pack
+   return self.dump:pack()
 end
-
---[[
-local B = require('builder')
-local tree = B.chunk{
-   B.functionDeclaration(B.identifier("greet"), { }, B.blockStatement{
-      B.localDeclaration({ B.identifier('answer'), B.identifier('foo') }, {
-         B.binaryExpression("+", B.literal(40), B.literal(2)),
-         B.logicalExpression("or", B.literal(false), B.literal("cheese"))
-      });
-      B.expressionStatement(
-         B.callExpression(B.identifier('print'), { B.identifier('answer') })
-      );
-      B.ifStatement(B.literal(true), B.blockStatement{
-         B.expressionStatement(
-            B.callExpression(B.identifier("print"), { B.literal("sanity") })
-         )
-      }, B.blockStatement{
-         B.expressionStatement(
-            B.callExpression(B.identifier("print"), { B.literal("madness") })
-         )
-      })
-   }),
-   B.expressionStatement(
-      B.callExpression(B.identifier('greet'), { })
-   )
-}
-local pack = generate(tree)
-local jbc = require("jit.bc")
-local fn = assert(loadstring(pack))
-jbc.dump(fn, nil, true)
-fn()
---]]
 
 return {
    generate = generate

@@ -528,6 +528,7 @@ function Proto.__index:upval(name)
       self.upvals[name] = upval
       upval.idx = #self.upvals
       self.upvals[#self.upvals + 1] = upval
+      self.outer.need_close = true
    end
    return self.upvals[name].idx
 end
@@ -745,15 +746,27 @@ function Proto.__index:op_uget(dest, name)
    return self:emit(BC.UGET, dest, slot)
 end
 function Proto.__index:op_ret(base, rnum)
+   if self.need_close then
+      self:emit(BC.UCLO, 0, 0)
+   end
    return self:emit(BC.RET, base, rnum + 1)
 end
 function Proto.__index:op_ret0()
+   if self.need_close then
+      self:emit(BC.UCLO, 0, 0)
+   end
    return self:emit(BC.RET0, 0, 1)
 end
 function Proto.__index:op_ret1(base)
+   if self.need_close then
+      self:emit(BC.UCLO, 0, 0)
+   end
    return self:emit(BC.RET1, base, 2)
 end
 function Proto.__index:op_retm(base, rnum)
+   if self.need_close then
+      self:emit(BC.UCLO, 0, 0)
+   end
    return self:emit(BC.RETM, base, rnum)
 end
 function Proto.__index:op_varg(base, want)

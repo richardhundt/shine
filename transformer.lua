@@ -53,6 +53,7 @@ function match:Chunk(node)
    self.hoist = { }
    self.scope = { }
    local export = B.identifier('export')
+   self.scope[#self.scope + 1] = B.localDeclaration({ export }, { B.table({}) })
    for i=1, #node.body do
       local stmt = self:get(node.body[i])
       self.scope[#self.scope + 1] = stmt
@@ -60,10 +61,17 @@ function match:Chunk(node)
    for i=#self.hoist, 1, -1 do
       table.insert(self.scope, 1, self.hoist[i])
    end
+   self.scope[#self.scope + 1] = B.returnStatement({ export })
    return B.chunk(self.scope)
 end
 function match:ImportStatement(node)
-   return B.doStatement(B.blockStatement{ })
+   local args = { B.literal(node.from) }
+   for i=1, #node.names do
+      args[#args + 1] = B.literal(node.names[i].name)
+   end
+   return B.localDeclaration(self:list(node.names), {
+      B.callExpression(B.identifier('import'), args)
+   })
 end
 function match:ModuleDeclaration(node)
    local name = self:get(node.id)
@@ -301,7 +309,6 @@ function match:BinaryExpression(node)
    return B.binaryExpression(o, self:get(node.left), self:get(node.right))
 end
 function match:UnaryExpression(node)
-   print(util.dump(node))
    local o = node.operator
    local a = self:get(node.argument)
    return B.unaryExpression(o, a)
@@ -345,7 +352,18 @@ function match:FunctionDeclaration(node)
    if node.expression then
       return B.functionExpression(params, body, vararg)
    else
-      return B.functionDeclaration(name, params, body, vararg)
+      if node.export then
+         local decl = B.functionExpression(params, body, vararg)
+         local expr = B.memberExpression(
+            B.identifier('export'), name
+         )
+         self.scope[#self.scope + 1] = B.assignmentExpression(
+            { expr }, { decl }
+         )
+         return B.localDeclaration({ name }, { expr })
+      else
+         return B.functionDeclaration(name, params, body, vararg, true)
+      end
    end
 end
 --[[
@@ -462,7 +480,7 @@ function match:CallExpression(node)
          local args = self:list(node.arguments)
          local recv = B.memberExpression(
             B.identifier('super'),
-            B.identifier('init')
+            B.identifier('self')
          )
          table.insert(args, 1, B.identifier('self'))
          return B.callExpression(recv, args)
