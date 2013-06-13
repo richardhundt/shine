@@ -95,7 +95,7 @@ local patt = [[
       "from" <idsafe> s <string>
    ) -> importStmt
 
-   stmt <- (
+   stmt <- ({} (
       <if_stmt>
       / <while_stmt>
       / <repeat_stmt>
@@ -108,7 +108,7 @@ local patt = [[
       / <try_stmt>
       / <throw_stmt>
       / <break_stmt>
-   )
+   )) -> stmt
 
    stmt_list <- {|
       (<stmt> (<sep> s <stmt>)* <sep>?)?

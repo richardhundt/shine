@@ -16,6 +16,10 @@ end
 function defs.chunk(body)
    return { type = "Chunk", body = body }
 end
+function defs.stmt(pos, node)
+   node.pos = pos
+   return node
+end
 function defs.moduleDecl(name, body)
    return { type = "ModuleDeclaration", id = name, body = body }
 end

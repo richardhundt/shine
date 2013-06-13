@@ -781,7 +781,7 @@ end
 function Proto.__index:op_callm(base, want, narg)
    return self:emit(BC.CALLM, base, want + 1, narg)
 end
-function Proto.__index.op_callmt(base, narg)
+function Proto.__index:op_callmt(base, narg)
    return self:emit(BC.CALLMT, base, narg + 1)
 end
 function Proto.__index:op_fori(base, stop, step)

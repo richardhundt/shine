@@ -41,20 +41,20 @@ function match:CallExpression(node, base, want, tail)
    self.ctx.freereg = free
    if want == MULTIRES then
       if tail then
-         self.ctx:op_callt(base, want, narg)
+         self.ctx:op_callt(base, narg)
       else
          self.ctx:op_call(base, want, narg)
       end
       return MULTIRES
    elseif mres then
       if tail then
-         self.ctx:op_callmt(base, want, narg - 1)
+         self.ctx:op_callmt(base, narg - 1)
       else
          self.ctx:op_callm(base, want, narg - 1)
       end
    else
       if tail then
-         self.ctx:op_callt(base, want, narg)
+         self.ctx:op_callt(base, narg)
       else
          self.ctx:op_call(base, want, narg)
       end
@@ -294,7 +294,7 @@ function match:ListExpression(node, dest, want)
    dest = dest or self.ctx:nextreg()
    local o = node.operator
    local rbot = self.ctx:nextreg(#node.expressions)
-   local rtop = rbot + #node.expressions
+   local rtop = rbot + #node.expressions - 1
    for i=1, #node.expressions do
       self:emit(node.expressions[i], rbot + (i - 1), 1)
    end
