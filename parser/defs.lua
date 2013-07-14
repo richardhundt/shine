@@ -45,6 +45,16 @@ function defs.error(src, pos)
       error("Unexpected token '"..tok.."'")
    end
 end
+function defs.fail(src, pos, msg)
+   local loc = string.sub(src, pos, pos)
+   if loc == '' then
+      error("Unexpected end of input")
+   else
+      local tok = string.match(src, '(%w+)', pos) or loc
+      error(msg.." near '"..tok.."'")
+   end
+end
+
 local strEscape = {
    ["\\r"] = "\r",
    ["\\n"] = "\n",
@@ -153,6 +163,9 @@ function defs.blockStmt(body)
 end
 function defs.returnStmt(args)
    return { type = "ReturnStatement", arguments = args }
+end
+function defs.yieldStmt(args)
+   return { type = "YieldStatement", arguments = args }
 end
 function defs.breakStmt()
    return { type = "BreakStatement" }

@@ -379,11 +379,14 @@ function Proto.__index:write(buf)
       end
    end
 
-   local body = Buf.new()
-   if has_child then
+   if self.need_close then
       self:emit(BC.UCLO, 0, 0) -- close upvals
    end
-   if self.code[#self.code][1] ~= BC.CALLT then
+
+   local body = Buf.new()
+   local last_inst = self.code[#self.code][1]
+   if not (last_inst >= BC.CALLMT and last_inst <= BC.CALLT) and
+      not (last_inst >= BC.RETM and last_inst <= BC.RET1) then
       self:emit(BC.RET0, 0, 1)
    end
 
@@ -528,7 +531,7 @@ function Proto.__index:upval(name)
       self.upvals[name] = upval
       upval.idx = #self.upvals
       self.upvals[#self.upvals + 1] = upval
-      self.outer.need_close = true
+      proto.need_close = true
    end
    return self.upvals[name].idx
 end
@@ -748,24 +751,28 @@ end
 function Proto.__index:op_ret(base, rnum)
    if self.need_close then
       self:emit(BC.UCLO, 0, 0)
+      self.need_close = nil
    end
    return self:emit(BC.RET, base, rnum + 1)
 end
 function Proto.__index:op_ret0()
    if self.need_close then
       self:emit(BC.UCLO, 0, 0)
+      self.need_close = nil
    end
    return self:emit(BC.RET0, 0, 1)
 end
 function Proto.__index:op_ret1(base)
    if self.need_close then
       self:emit(BC.UCLO, 0, 0)
+      self.need_close = nil
    end
    return self:emit(BC.RET1, base, 2)
 end
 function Proto.__index:op_retm(base, rnum)
    if self.need_close then
       self:emit(BC.UCLO, 0, 0)
+      self.need_close = nil
    end
    return self:emit(BC.RETM, base, rnum)
 end

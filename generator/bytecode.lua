@@ -589,6 +589,7 @@ function match:ReturnStatement(node)
          self:emit(arg, base, base + i)
       end
    end
+   print("RET: - ctx:", self.ctx, "UVALS:", #self.ctx.upvals)
    self.ctx:op_ret(base, #node.arguments)
    self.ctx.freereg = free
 end

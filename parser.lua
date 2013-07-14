@@ -25,7 +25,7 @@ local patt = [[
       / "yield" / "await" / "break" / "continue" / "not" / "throw"
       / "while" / "do" / "for" / "in" / "of" / "and" / "or"
       / "super" / "import" / "export" / "try" / "catch" / "finally"
-      / "if" / "else" / "elseif" / "then" / "is" / "typeof"
+      / "if" / "elseif" / "else" / "then" / "is" / "typeof"
       / "repeat" / "until"
    ) <idsafe>
 
@@ -108,6 +108,7 @@ local patt = [[
       / <try_stmt>
       / <throw_stmt>
       / <break_stmt>
+      / <yield_stmt>
    )) -> stmt
 
    stmt_list <- {|
@@ -117,6 +118,10 @@ local patt = [[
    break_stmt <- (
       "break" <idsafe>
    ) -> breakStmt
+
+   yield_stmt <- (
+      "yield" <idsafe> s {| <expr_list> |}
+   ) -> yieldStmt
 
    return_stmt <- (
       "return" <idsafe> s {| <expr_list> |}
@@ -209,10 +214,10 @@ local patt = [[
    ) -> blockStmt
 
    if_stmt <- (
-      "if" <idsafe> s <expr> s "then" <idsafe> s <block_stmt> (
-           s "else" <if_stmt>
-         / s "else" <idsafe> s <block_stmt> s <end>
-         / s <end>
+      "if" <idsafe> s <expr> s "then" <idsafe> s <block_stmt> s (
+           "else" <if_stmt>
+         / "else" <idsafe> s <block_stmt> s <end>
+         / <end>
       )
    ) -> ifStmt
 
@@ -257,7 +262,7 @@ local patt = [[
       / "(" s <expr> s ")"
    )
 
-   expr <- <infix_expr> / <new_expr> / <spread_expr>
+   expr <- <infix_expr> / <spread_expr>
 
    spread_expr <- (
       "..." <postfix_expr>
@@ -295,7 +300,7 @@ local patt = [[
 
    postfix_tail <- {|
         { "." } s <ident>
-      / { "::" } s <ident>
+      / { "::" } s (<ident> / '' => error)
       / { "[" } s <expr> s ("]" / '' => error)
       / { "(" } s {| (<expr> (s "," s <expr>)*)? |} s (")" / '' => error)
    |}
@@ -329,13 +334,6 @@ local patt = [[
    update_expr <- (
       <left_expr> s <assop> s <expr>
    ) -> updateExpr
-
-   new_expr <- (
-      "new" <idsafe> s <member_expr> (
-         s "(" s {| (<expr> (s "," s <expr>)*)? |} s ")"
-         / {| |}
-      )
-   ) -> newExpr
 
    array_expr <- (
       "[" s {| <array_elements>? |} s "]"

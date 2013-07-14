@@ -10,6 +10,42 @@ local function genid()
    return IDGEN
 end
 
+
+ffi.cdef [[
+   typedef struct Timer {
+      ray_handle_t* handle;
+   } Timer;
+]]
+
+local Timer = ffi.metatype(ffi.typeof('Timer'), {
+   __new = function()
+      self.handle = lib.ray_timer_new(QUEUE)
+      self.set_id(genid())
+      self.react = {
+         [tonumber(lib.RAY_TIMER)] = function()
+
+         end
+      }
+   end,
+   __index = {
+      get_id = function(self)
+         return lib.ray_handle_get_id(self.handle)
+      end,
+      set_id = function(self, id)
+         lib.ray_handle_set_id(self.handle, id)
+      end,
+      cose = function(self)
+         lib.ray_close(self.handle)
+      end,
+      start = function(self, timeout, rep)
+         lib.ray_timer_start(self.handle, timeout, rep)
+      end,
+      stop = function(self)
+         lib.ray_timer_stop(self.handle)
+      end,
+   }
+})
+
 local function loop()
    while true do
       local evt = lib.ray_queue_next(QUEUE)

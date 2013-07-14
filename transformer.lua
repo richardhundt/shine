@@ -191,6 +191,15 @@ function match:ReturnStatement(node)
    return B.returnStatement(self:list(node.arguments))
 end
 
+function match:YieldStatement(node)
+   return B.expressionStatement(
+      B.callExpression(
+         B.memberExpression(B.identifier('coroutine'), B.identifier('yield')),
+         self:list(node.arguments)
+      )
+   )
+end
+
 function match:IfStatement(node)
    local test, cons, altn = self:get(node.test)
    if node.consequent then
