@@ -10,7 +10,7 @@ local patt = [[
    close    <- ']' =eq ']' / . close
 
    lcomment <- (!%nl %s)* "--" (!%nl .)* %nl
-   bcomment <- ('--[' {:eq: '='* :} '[' close)
+   bcomment <- ('--[' {:eq: '='* :} '[' <close>)
    comment  <- <bcomment> / <lcomment>
    idsafe   <- !(%alnum / "_")
    s        <- (<comment> / %s)*
@@ -33,7 +33,7 @@ local patt = [[
 
    astring <- "'" { (!"'" .)* } "'"
    qstring <- '"' { (!'"' .)* } '"'
-   lstring <- ('[' {:eq: '='* :} '[' close)
+   lstring <- ('[' {:eq: '='* :} '[' <close>)
 
    special <- "\n" / "\$" / "\\" / "\" .
 
