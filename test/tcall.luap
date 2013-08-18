@@ -1,0 +1,9 @@
+function bar()
+   return 42
+end
+function foo()
+   return bar()
+end
+
+print(foo())
+

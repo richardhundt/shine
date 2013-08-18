@@ -1,0 +1,16 @@
+function foo()
+  try
+    throw Error("cheese")
+    return 42
+  catch (e if e is Error)
+    print("caught:", e)
+    return 69
+  catch (e)
+    print("something else")
+  finally
+    print('cleanup')
+  end
+end
+
+print("GOT:", foo())
+

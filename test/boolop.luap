@@ -1,0 +1,6 @@
+local a = 42
+if a >= 31 then
+   print("good")
+else
+   print("bad")
+end
