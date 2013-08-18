@@ -35,7 +35,7 @@ local patt = [[
    qstring <- '"' { (!'"' .)* } '"'
    lstring <- ('[' {:eq: '='* :} '[' <close>)
 
-   special <- "\n" / "\$" / "\\" / "\" .
+   special <- "\n" "\$" / "\\" / "\" .
 
    rstring <- {|
       '`' (
@@ -44,7 +44,7 @@ local patt = [[
    |} -> rawString
 
    raw_expr <- (
-      "%{" s <expr> s "}"
+      "${" s <expr> s "}"
    ) -> rawExpr
 
    string  <- (

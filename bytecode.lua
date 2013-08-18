@@ -673,7 +673,7 @@ function Proto.__index:op_load(dest, val)
    elseif tv == 'string' then
       return self:emit(BC.KSTR, dest, self:const(val))
    elseif tv == 'number' then
-      if val < 0xff then
+      if val < 0xffff then
          return self:emit(BC.KSHORT, dest, val)
       else
          return self:emit(BC.KNUM, dest, self:const(val))
@@ -824,11 +824,13 @@ Dump = {
 }
 Dump.__index = { }
 function Dump.new(main, name, flags)
-   return setmetatable({
+   local self =  setmetatable({
       main  = main or Proto.new(Proto.VARARG);
       name  = name;
       flags = flags or 0;
    }, Dump)
+   self.main.need_close = true
+   return self
 end
 function Dump.__index:write_header(buf)
    buf:put(Dump.HEAD_1)

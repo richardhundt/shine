@@ -1,10 +1,8 @@
-import {timeout} from "@system"
-
 class Point
    self(x = 0, y = 0)
       print(`
-         x: %{x},
-         y: %{y}
+         x: ${x},
+         y: ${y}
       `)
       self.move(x, y)
    end
@@ -25,7 +23,16 @@ class Point3D extends Point
    end
 end
 
+Object.defineProperties(Point, {
+   greet = {
+      value = function(self, whom)
+         print(`Hello ${whom}`)
+      end
+   }
+})
+
 p = Point()
+p.greet("Rich")
 p = Point3D(1,2,3)
 print(p.x, p.y, p.z)
 
@@ -37,7 +44,16 @@ for i, v in a do
    print(i, "val:", v)
 end
 
-timeout((a) => print("tick", a), 1100, 1)
-timeout((a) => print("tick", a), 1200, 2)
-timeout((a) => print("tick", a), 1300, 3)
+import {timeout} from "@system"
+
+timeout((a) => print("tick", a), 100, 1)
+timeout((a) => print("tick", a), 200, 2)
+timeout((a) => print("tick", a), 300, 3)
+
+function mret()
+   return "HERE", 1, 2, 3
+end
+
+print(mret())
+
 

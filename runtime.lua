@@ -79,8 +79,8 @@ local function class(name, base, body)
          return string.format('<%s>:%p', name, o)
       end
    end
-   body(setmetatable({ }, class), base)
-   return setmetatable(class, Class)
+   body(setmetatable(class, Class), base)
+   return class
 end
 
 local Object = setmetatable({ }, Class)
@@ -88,7 +88,8 @@ Object.self = function()
    return Object:create({ }, { })
 end
 function Object:defineProperties(obj, props)
-   local m = getmetatable(obj)
+   --local m = getmetatable(obj)
+   local m = obj
    for k, d in pairs(props) do
       if d.get then
          m.__getters__[k] = d.get
@@ -218,6 +219,9 @@ local function try(try, catch, finally)
 end
 
 local String = class("String", Object, function(self, super)
+   for k, v in pairs(getmetatable("")) do
+      self[k] = v
+   end
    Object:defineProperties(self, {
       self = {
          value = function(self, that)

@@ -258,6 +258,8 @@ function match:BinaryExpression(node, dest, want, jump)
       self.ctx:op_pow(dest, a, b)
    elseif o == '%' then
       self.ctx:op_mod(dest, a, b)
+   elseif o == '..' then
+      self.ctx:op_cat(dest, a, b)
    elseif cmpop[o] then
       want = want or 0
       jump = jump or util.genid()
@@ -581,16 +583,22 @@ end
 function match:ReturnStatement(node)
    local free = self.ctx.freereg
    local base = self.ctx:nextreg(#node.arguments)
-   for i=1, #node.arguments do
+   local narg = #node.arguments
+   for i=1, narg do
       local arg = node.arguments[i]
-      if i == #node.arguments then
-         self:emit(arg, base, base + i, true)
+      if i == narg then
+         self:emit(arg, base + i - 1, narg + 1 - i, true)
       else
-         self:emit(arg, base, base + i)
+         self:emit(arg, base + i - 1, narg + 1 - i)
       end
    end
-   print("RET: - ctx:", self.ctx, "UVALS:", #self.ctx.upvals)
-   self.ctx:op_ret(base, #node.arguments)
+   if narg == 0 then
+      self.ctx:op_ret0()
+   elseif narg == 1 then
+      self.ctx:op_ret1(base)
+   else
+      self.ctx:op_ret(base, narg)
+   end
    self.ctx.freereg = free
 end
 function match:Chunk(tree, name)
