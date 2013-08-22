@@ -95,20 +95,20 @@ function match:SendExpression(node, base, want, tail)
    self.ctx.freereg = free
    if want == MULTIRES then
       if tail then
-         self.ctx:op_callt(base, want, narg + 1)
+         self.ctx:op_callt(base, narg + 1)
       else
          self.ctx:op_call(base, want, narg + 1)
       end
       return MULTIRES
    elseif mres then
       if tail then
-         self.ctx:op_callmt(base, want, narg)
+         self.ctx:op_callmt(base, narg)
       else
          self.ctx:op_callm(base, want, narg)
       end
    else
       if tail then
-         self.ctx:op_callt(base, want, narg + 1)
+         self.ctx:op_callt(base, narg + 1)
       else
          self.ctx:op_call(base, want, narg + 1)
       end
