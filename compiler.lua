@@ -11,9 +11,9 @@ local function compile(src, name)
    local luacode = generator.generate(dsttree, name)
    --print("LUA:", luacode)
 
-   local jbc = require("jit.bc")
+   --local jbc = require("jit.bc")
    local fn = assert(loadstring(luacode))
-   jbc.dump(fn, nil, true)
+   --jbc.dump(fn, nil, true)
 
    return luacode
 end
