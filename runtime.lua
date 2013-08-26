@@ -1,9 +1,9 @@
 local ffi      = require('ffi')
 local util     = require('util')
 local compiler = require('compiler')
-local system   = require('system')
+--local system   = require('system')
 
-package.loaded['@system'] = system
+--package.loaded['@system'] = system
 
 local function loader(filename)
    if string.match(filename, "%.nga") then
@@ -417,7 +417,7 @@ GLOBAL = setmetatable({
    RegExp = RegExp;
    class  = class;
    import = import;
-   system = system;
+   --system = system;
    __range__  = range;
    __spread__ = spread;
    __each__   = each;
@@ -430,7 +430,8 @@ GLOBAL = setmetatable({
 
 local function run(code, ...)
    setfenv(code, GLOBAL)
-   system.run(code)
+   code(...)
+   --system.run(code)
 end
 
 local function runfile(name, ...)
@@ -439,7 +440,8 @@ local function runfile(name, ...)
    file:close()
    local main = assert(loadstring(compiler.compile(code, '@'..name)))
    setfenv(main, GLOBAL)
-   system.run(main, ...)
+   --system.run(main, ...)
+   main(...)
 end
 
 return {
