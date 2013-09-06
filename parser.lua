@@ -53,7 +53,7 @@ local patt = [[
 
    hexnum <- "-"? "0x" %xdigit+
 
-   decimal <- "-"? <digits> "." <digits> (("e"/"E") "-"? <digits>)? -> tonumber
+   decimal <- "-"? <digits> ("." <digits>?)? (("e"/"E") "-"? <digits>)?
 
    integer <- "-"? <digits>
 
