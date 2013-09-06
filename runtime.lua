@@ -1,9 +1,9 @@
 local ffi      = require('ffi')
 local util     = require('util')
 local compiler = require('compiler')
---local system   = require('system')
+local system   = require('system')
 
---package.loaded['@system'] = system
+package.loaded['@system'] = system
 
 local function loader(filename)
    if string.match(filename, "%.nga") then
@@ -48,8 +48,8 @@ function Class.__call(class, ...)
    else
       obj = { }
       setmetatable(obj, class)
-      if class.self then
-         class.self(obj, ...)
+      if class.__members__.self then
+         class.__members__.self(obj, ...)
       end
    end
    return obj
@@ -58,12 +58,13 @@ local function class(name, base, body)
    local class = { __name = name, __base = base }
    class.__getters__ = setmetatable({ }, { __index = base.__getters__ })
    class.__setters__ = setmetatable({ }, { __index = base.__setters__ })
+   class.__members__ = setmetatable({ }, { __index = base.__members__ })
 
    function class.__index(o, k)
       if class.__getters__[k] then
          return class.__getters__[k](o)
       end
-      return class[k]
+      return class.__members__[k]
    end
    function class.__newindex(o, k, v)
       if class.__setters__[k] then
@@ -79,7 +80,7 @@ local function class(name, base, body)
          return string.format('<%s>:%p', name, o)
       end
    end
-   body(setmetatable(class, Class), base)
+   body(setmetatable(class, Class), base.__members__)
    return class
 end
 
@@ -96,7 +97,7 @@ function Object:defineProperties(obj, props)
       elseif d.set then
          m.__setters__[k] = d.set
       else
-         rawset(m, k, d.value)
+         m.__members__[k] = d.value
       end
    end
    return obj 
@@ -105,11 +106,12 @@ function Object:create(proto, props)
    local m = { }
    m.__getters__ = { }
    m.__setters__ = { }
+   m.__members__ = setmetatable({ }, { __index = proto })
    function m.__index(o, k)
       if m.__getters__[k] then
          return m.__getters__[k](o)
-      elseif proto then
-         return proto[k]
+      elseif m.__members__[k] ~= nil then
+         return m.__members__[k]
       end
       return nil
    end
@@ -141,7 +143,7 @@ function Object:create(proto, props)
    return setmetatable(o, m)
 end
 
-local Array = setmetatable({ }, Class)
+local Array = setmetatable({ __members__ = { } }, Class)
 function Array:apply(...)
    return setmetatable({
       length = select('#', ...), [0] = select(1, ...), select(2, ...)
@@ -170,7 +172,7 @@ function Array.__pairs(a)
       end
    end, a, -1
 end
-function Array:join(sep)
+function Array.__members__:join(sep)
    return table.concat({ Array.__spread(self) }, sep)
 end
 function Array.__spread(a)
@@ -186,8 +188,8 @@ function Array.__tostring(a)
    return string.format("[Array: %p]", self)
 end
 function Array.__index(a, k)
-   if Array[k] then
-      return Array[k]
+   if Array.__members__[k] then
+      return Array.__members__[k]
    end
    return nil
 end
@@ -197,14 +199,14 @@ function Array.__newindex(a, i, v)
    end
    rawset(a, i, v)
 end
-function Array:toString()
+function Array.__members__:toString()
    local b = { }
    for i=0, self.length - 1 do
       b[#b + 1] = tostring(self[i])
    end
    return table.concat(b, ', ')
 end
-function Array:map(f)
+function Array.__members__:map(f)
    local b = Array()
    for i=0, self.length - 1 do
       b[i] = f(i, self[i])
@@ -417,7 +419,7 @@ GLOBAL = setmetatable({
    RegExp = RegExp;
    class  = class;
    import = import;
-   --system = system;
+   system = system;
    __range__  = range;
    __spread__ = spread;
    __each__   = each;
@@ -430,8 +432,7 @@ GLOBAL = setmetatable({
 
 local function run(code, ...)
    setfenv(code, GLOBAL)
-   code(...)
-   --system.run(code)
+   system.run(code)
 end
 
 local function runfile(name, ...)
@@ -440,8 +441,7 @@ local function runfile(name, ...)
    file:close()
    local main = assert(loadstring(compiler.compile(code, '@'..name)))
    setfenv(main, GLOBAL)
-   --system.run(main, ...)
-   main(...)
+   system.run(main, ...)
 end
 
 return {

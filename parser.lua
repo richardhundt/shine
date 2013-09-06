@@ -15,7 +15,8 @@ local patt = [[
    idsafe   <- !(%alnum / "_")
    s        <- (<comment> / %s)*
    S        <- (<comment> / %s)+
-   hs       <- !%nl %s
+   hs       <- (!%nl %s)*
+   HS       <- (!%nl %s)+
    digits   <- %digit (%digit / (&('_' %digit) '_') %digit)*
    word     <- (%alpha / "_") (%alnum / "_")*
 
@@ -53,7 +54,7 @@ local patt = [[
 
    hexnum <- "-"? "0x" %xdigit+
 
-   decimal <- "-"? <digits> "." <digits> (("e"/"E") "-"? <digits>)? -> tonumber
+   decimal <- "-"? <digits> "." <digits> (("e"/"E") "-"? <digits>)?
 
    integer <- "-"? <digits>
 
@@ -150,6 +151,21 @@ local patt = [[
       "local" <idsafe> s {| <name_list> |} (s "=" s {| <expr_list> |})?
    ) -> localDecl
 
+   patt <- (
+      <array_patt> / <table_patt> / <member_expr>
+   )
+
+   array_patt <- (
+      "[" s {| <patt> (s "," s <patt>)* |} "]"
+   ) -> arrayPatt
+
+   table_patt <- (
+      "{" s {| <table_patt_pair> (s "," s <table_patt_pair>)* |} "}"
+   ) -> tablePatt
+   table_patt_pair <- (
+      (<literal> / <ident>) s ":" s <patt>
+   )
+
    name_list <- (
       <ident> (s "," s <ident>)*
    )
@@ -180,8 +196,12 @@ local patt = [[
    ) -> classDecl
 
    class_body <- {|
-      (<class_member> (<sep> s <class_member>)* <sep>?)?
+      (<class_body_stmt> (<sep> s <class_body_stmt>)* <sep>?)?
    |}
+
+   class_body_stmt <- (
+      <class_member> / !<return_stmt> <stmt>
+   )
 
    class_member <- (
       ({"meta"} <idsafe> s / '' -> "virt") <prop_defn>
@@ -295,25 +315,26 @@ local patt = [[
    ) -> prefixExpr / <postfix_expr>
 
    postfix_expr <- {|
-      <term> (s <postfix_tail>)+
+      <term> <postfix_tail>+
    |} -> postfixExpr / <term>
 
    postfix_tail <- {|
-        { "." } s <ident>
+      s { "." } s <ident>
       / { "::" } s (<ident> / '' => error)
       / { "[" } s <expr> s ("]" / '' => error)
-      / { "(" } s {| (<expr> (s "," s <expr>)*)? |} s (")" / '' => error)
+      / { "(" } s {| <expr_list>? |} s (")" / '' => error)
+      / {~ HS -> "(" ~} {| !<binop> <expr_list> |}
    |}
 
    member_expr <- {|
-      <term> (s <member_next>)?
+      <term> <member_next>?
    |} -> postfixExpr / <term>
 
    member_next <- (
-      <postfix_tail> s <member_next> / <member_tail>
+      <postfix_tail> <member_next> / <member_tail>
    )
    member_tail <- {|
-        { "." } s <ident>
+      s { "." } s <ident>
       / { "::" } s <ident>
       / { "[" } s <expr> s ("]" / '' => error)
    |}
@@ -324,7 +345,8 @@ local patt = [[
    }
 
    left_expr <- (
-      <member_expr> / <ident>
+      <patt> / <ident>
+      -- <member_expr> / <ident>
    )
 
    assign_expr <- (
@@ -346,11 +368,11 @@ local patt = [[
    ) -> tableExpr
 
    table_members <- (
-      <table_member> (s (","/";") s <table_member>)* (s (","/";"))?
+      <table_member> (hs (","/";"/%nl) s <table_member>)* (hs (","/";"/%nl))?
    )
    table_member <- (<prop_defn> / {|
       {:key: ("[" s <expr> s "]" / <ident>) :} s "=" s {:value: <expr> :}
-   |} / <expr>) -> tableMember
+   |} / <ident>) -> tableMember
 
    -- local t = { for x in y if x > 1 yield x + 1 }
    comp_expr <- (

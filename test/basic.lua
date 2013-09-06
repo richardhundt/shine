@@ -4,3 +4,6 @@ t = {
    end
 }
 t.greet()
+
+print(v[i,j])
+

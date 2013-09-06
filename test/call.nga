@@ -1,2 +1,8 @@
-print(foo([1,2]))
+obj = {
+   greet(name)
+      print(`Hello ${name}`)
+   end
+}
+
+obj.greet "Rich"
 

@@ -391,38 +391,61 @@ function match:ClassDeclaration(node)
    local base = node.base and self:get(node.base) or B.identifier('Object')
 
    local properties = { }
+   local body = { }
 
    for i=1, #node.body do
-      local prop = node.body[i]
-      local desc = properties[prop.key.name] or { }
-      if prop.kind == 'get' then
-         desc.get = self:get(prop)
-      elseif prop.kind == 'set' then
-         desc.set = self:get(prop)
-      else
-         desc.value = self:get(prop)
-      end
-      if desc.static then
-         if desc.static.value ~= prop.static then
-            error("property "..prop.key.name.." already defined as static")
+      if node.body[i].type == "PropertyDefinition" then
+         local prop = node.body[i]
+         local desc = properties[prop.key.name] or { }
+         if prop.kind == 'get' then
+            desc.get = self:get(prop)
+         elseif prop.kind == 'set' then
+            desc.set = self:get(prop)
+         else
+            desc.value = self:get(prop)
          end
+         if desc.static then
+            if desc.static.value ~= prop.static then
+               error("property "..prop.key.name.." already defined as static")
+            end
+         end
+
+         desc.static = B.literal(prop.static)
+         properties[prop.key.name] = desc
+
+         if desc.get then
+            -- self.__getters__[key] = desc.get
+            body[#body + 1] = B.assignmentExpression(
+               { B.memberExpression(
+                  B.memberExpression(B.identifier("self"), B.identifier("__getters__")),
+                  B.identifier(prop.key.name)
+               ) },
+               { desc.get }
+            )
+         elseif desc.set then
+            -- self.__setters__[key] = desc.set
+            body[#body + 1] = B.assignmentExpression(
+               { B.memberExpression(
+                  B.memberExpression(B.identifier("self"), B.identifier("__setters__")),
+                  B.identifier(prop.key.name)
+               ) },
+               { desc.set }
+            )
+         else
+            -- self.__members__[key] = desc.value
+            body[#body + 1] = B.assignmentExpression(
+               { B.memberExpression(
+                  B.memberExpression(B.identifier("self"), B.identifier("__members__")),
+                  B.identifier(prop.key.name)
+               ) },
+               { desc.value }
+            )
+         end
+      else
+         body[#body + 1] = self:get(node.body[i])
       end
-      desc.static = B.literal(prop.static)
-      properties[prop.key.name] = desc
    end
 
-   for k,v in pairs(properties) do
-      properties[k] = B.table(v)
-   end
-
-   local body = {
-      B.expressionStatement(B.sendExpression(
-            B.identifier("Object"),
-            B.identifier("defineProperties"),
-            { B.identifier("self"), B.table(properties) }
-         )
-      )
-   }
    self.hoist[#self.hoist + 1] = B.localDeclaration({ name }, { })
 
    local init = B.callExpression(
@@ -534,7 +557,6 @@ function match:ArrayExpression(node)
 end
 function match:TableExpression(node)
    local properties = { }
-   local idx = 1
    for i=1, #node.members do
       local prop = node.members[i]
 
@@ -546,8 +568,8 @@ function match:TableExpression(node)
             key = prop.key.value
          end
       else
-         key = idx
-         idx = idx + 1
+         assert(prop.type == "Identifier")
+         key = prop.name
       end
 
       local desc = properties[key] or { }
@@ -556,12 +578,10 @@ function match:TableExpression(node)
          desc.get = self:get(prop.value)
       elseif prop.kind == 'set' then
          desc.set = self:get(prop.value)
+      elseif prop.value then
+         desc.value = self:get(prop.value)
       else
-         if prop.key then
-            desc.value = self:get(prop.value)
-         else
-            desc.value = self:get(prop)
-         end
+         desc.value = B.identifier(key)
       end
 
       properties[key] = desc

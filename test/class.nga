@@ -25,11 +25,17 @@ end
 
 Object.defineProperties(Point, {
    greet = {
-      value = function(self, whom)
-         print(`Hello ${whom}`)
+      value(whom)
+         print(`Hello ${self}`)
       end
    }
 })
+
+foo = 42
+bar = 69
+t = { foo,bar }
+
+print(t.foo, t.bar)
 
 p = Point()
 p.greet("Rich")
@@ -43,4 +49,6 @@ a = [ for i in 1..10 if i % 2 == 0 yield i * 2 ]
 for i, v in a do
    print(i, "val:", v)
 end
+
+print((x) => x * 2)
 
