@@ -40,7 +40,7 @@ print(t.foo, t.bar)
 p = Point()
 p.greet("Rich")
 p = Point3D(1,2,3)
-print(p.x, p.y, p.z)
+print p.x, p.y, p.z
 
 print("is check 1:", p is Point)
 print("is check 2:", p is Point3D)

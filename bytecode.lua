@@ -750,10 +750,7 @@ function Proto.__index:op_uget(dest, name)
 end
 function Proto.__index:is_tcall()
    local prev_inst = self.code[#self.code][1]
-   if prev_inst == BC.CALLMT or prev_inst <= BC.CALLT then
-      return true
-   end
-   return false
+   return prev_inst == BC.CALLMT or prev_inst == BC.CALLT
 end
 function Proto.__index:close_uvals()
    if self.need_close then
