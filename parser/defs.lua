@@ -42,7 +42,18 @@ function defs.error(src, pos)
       error("Unexpected end of input")
    else
       local tok = string.match(src, '(%w+)', pos) or loc
-      error("Unexpected token '"..tok.."'")
+      local line = 0
+      local ofs  = 0
+      while ofs < pos do
+         local a, b = string.find(src, "\n", ofs)
+         if a then
+            ofs = a + 1
+            line = line + 1
+         else
+            break
+         end
+      end
+      error("Unexpected token '"..tok.."' on line "..tostring(line))
    end
 end
 function defs.fail(src, pos, msg)
@@ -168,6 +179,21 @@ function defs.funcExpr(head, body)
    local decl = defs.funcDecl(nil, head, body)
    decl.expression = true
    return decl
+end
+function defs.coroExpr(...)
+   local expr = defs.funcExpr(...)
+   expr.generator = true
+   return expr
+end
+function defs.coroDecl(...)
+   local decl = defs.funcDecl(...)
+   decl.generator = true
+   return decl
+end
+function defs.coroProp(...)
+   local prop = defs.propDefn(...)
+   prop.generator = true
+   return prop
 end
 function defs.blockStmt(body)
    return {

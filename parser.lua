@@ -146,7 +146,7 @@ local patt = [[
    ) -> catchClause
 
    decl_stmt <- (
-      <local_decl> / <func_decl> / <class_decl>
+      <local_decl> / <coro_decl> / <func_decl> / <class_decl>
    )
 
    local_decl <- (
@@ -181,17 +181,34 @@ local patt = [[
    |}
 
    func_decl <- (
-      "function" <idsafe> s <func_path> "(" s {| <param_list>? |} s ")" s
-      <func_body>
+      "function" <idsafe> s <func_path> s <func_head> s <func_body>
    ) -> funcDecl
 
+   func_head <- (
+      "(" s {| <param_list>? |} s ")"
+   )
+
    func_expr <- (
-      "function" <idsafe> s "(" s {| <param_list>? |} s ")" s <func_body>
-      / "(" s {| <param_list>? |} s ")" s "=>" s <func_body>
+      "function" <idsafe> s <func_head> s <func_body>
+      / <func_head> s "=>" s <func_body>
       / {| {| {:name: <ident> :} |} |} s "=>" s <func_body>
    ) -> funcExpr
 
    func_body <- <block_stmt> s <end> / <expr>
+
+   coro_expr <- (
+      "function*" s <func_head> s <func_body>
+      / "*" <func_head> s "=>" s <func_body>
+   ) -> coroExpr
+
+   coro_decl <- (
+      "function*" s <func_path> s <func_head> s <func_body>
+   ) -> coroDecl
+
+   coro_prop <- (
+      ({"get"/"set"} <idsafe> s / '' -> "init") "*" <ident> s
+      <func_head> s <func_body>
+   ) -> coroProp
 
    class_decl <- (
       "class" <idsafe> s <ident> (s <class_heritage>)? s <class_body> s <end>
@@ -206,7 +223,7 @@ local patt = [[
    )
 
    class_member <- (
-      ({"meta"} <idsafe> s / '' -> "virt") <prop_defn>
+      ({"meta"} <idsafe> s / '' -> "virt") (<coro_prop> / <prop_defn>)
    ) -> classMember
 
    class_heritage <- (
@@ -215,8 +232,7 @@ local patt = [[
 
    prop_defn <- (
       ({"get"/"set"} <idsafe> s / '' -> "init") <ident> s
-      "(" s {| <param_list>? |} s ")" s
-      <func_body>
+      <func_head> s <func_body>
    ) -> propDefn
 
    param <- {|
@@ -271,7 +287,8 @@ local patt = [[
    ) -> identifier
 
    term <- (
-        <func_expr>
+        <coro_expr>
+      / <func_expr>
       / <nil_expr>
       / <super_expr>
       / <comp_expr>
@@ -372,11 +389,10 @@ local patt = [[
    table_members <- (
       <table_member> (hs (","/";"/%nl) s <table_member>)* (hs (","/";"/%nl))?
    )
-   table_member <- (<prop_defn> / {|
+   table_member <- ((<coro_prop> / <prop_defn>) / {|
       {:key: ("[" s <expr> s "]" / <ident>) :} s "=" s {:value: <expr> :}
    |} / <ident>) -> tableMember
 
-   -- local t = { for x in y if x > 1 yield x + 1 }
    comp_expr <- (
       "[" s {| <comp_block>+ |}
       "yield" <idsafe> s <expr> s "]"

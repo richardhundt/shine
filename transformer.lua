@@ -358,23 +358,34 @@ function match:FunctionDeclaration(node)
       table.insert(body.body, 1, prelude[i])
    end
 
-   if node.expression then
-      return B.functionExpression(params, body, vararg)
+   local func
+   if node.generator then
+      local inner = B.functionExpression({ }, body, vararg)
+      func = B.functionExpression(params, B.blockStatement{
+         B.returnStatement{
+            B.callExpression(
+               B.memberExpression(B.identifier("coroutine"), B.identifier("wrap")),
+               { inner }
+            )
+         }
+      }, vararg)
    else
-      if node.export then
-         local decl = B.functionExpression(params, body, vararg)
-         local expr = B.memberExpression(
-            B.identifier('export'), name
-         )
-         self.scope[#self.scope + 1] = B.assignmentExpression(
-            { expr }, { decl }
-         )
-         return B.localDeclaration({ name }, { expr })
-      else
-         return B.functionDeclaration(name, params, body, vararg, true)
-      end
+      func = B.functionExpression(params, body, vararg)
    end
+   if node.expression then
+      return func
+   end
+   if node.export then
+      local expr = B.memberExpression(
+         B.identifier('export'), name
+      )
+      self.scope[#self.scope + 1] = B.assignmentExpression(
+         { expr }, { func }
+      )
+   end
+   return B.localDeclaration({ name }, { func })
 end
+
 --[[
    local Point = class("Point", function(this, super)
       Object:defineProperties(this, {
@@ -479,6 +490,7 @@ function match:NilExpression(node)
    return B.literal(nil)
 end
 function match:PropertyDefinition(node)
+   node.value.generator = node.generator
    return self:get(node.value)
 end
 function match:BlockStatement(node)

@@ -1,0 +1,23 @@
+function* gen(x)
+   for i in 1..x do
+      yield i
+   end
+end
+
+foo = gen(10)
+print(foo())
+print(foo())
+print(foo())
+
+class A
+   *greeter(x)
+      for i=1, x do
+         yield i
+      end
+   end
+end
+
+a = A()
+g = a.greeter(5)
+for i=1, 5 do print(g()) end
+
