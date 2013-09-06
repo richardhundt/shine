@@ -11,19 +11,19 @@ LPEG_BUILD=linux
 endif
 
 
-#all: ${LIBDIR}/lpeg.so ${LIBDIR}/libray.so
-all: ${LIBDIR}/lpeg.so
+all: ${LIBDIR}/lpeg.so ${LIBDIR}/ray.so
 
 ${LIBDIR}/lpeg.so:
 	make -C ${LIBDIR}/lpeg-0.12 ${LPEG_BUILD}
 	cp ${LIBDIR}/lpeg-0.12/lpeg.so ${LIBDIR}
 
-#${LIBDIR}/libray.so:
-#	make -C ${LIBDIR}/ray
-#	cp ${LIBDIR}/ray/libray.so ${LIBDIR}
+${LIBDIR}/ray.so:
+	git submodule update --init ${LIBDIR}/ray
+	make -C ${LIBDIR}/ray
+	cp ${LIBDIR}/ray/ray.so ${LIBDIR}
 
 clean:
 	make -C ${LIBDIR}/lpeg-0.12 clean
-#	make -C ${LIBDIR}/ray clean
-#	rm ${LIBDIR}/libray.so
-	rm ${LIBDIR}/lpeg.so
+	make -C ${LIBDIR}/ray clean
+	rm -f ${LIBDIR}/ray.so
+	rm -f ${LIBDIR}/lpeg.so
