@@ -1,0 +1,4 @@
+import {timeout} from "@system"
+
+timeout 1000, (x) => print("tick")
+

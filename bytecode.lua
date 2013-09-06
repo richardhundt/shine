@@ -748,32 +748,37 @@ function Proto.__index:op_uget(dest, name)
    local slot = self:upval(name)
    return self:emit(BC.UGET, dest, slot)
 end
-function Proto.__index:op_ret(base, rnum)
+function Proto.__index:is_tcall()
+   local prev_inst = self.code[#self.code][1]
+   if prev_inst == BC.CALLMT or prev_inst <= BC.CALLT then
+      return true
+   end
+   return false
+end
+function Proto.__index:close_uvals()
    if self.need_close then
       self:emit(BC.UCLO, 0, 0)
       self.need_close = nil
    end
+end
+function Proto.__index:op_ret(base, rnum)
+   if self:is_tcall() then return end
+   self:close_uvals()
    return self:emit(BC.RET, base, rnum + 1)
 end
 function Proto.__index:op_ret0()
-   if self.need_close then
-      self:emit(BC.UCLO, 0, 0)
-      self.need_close = nil
-   end
+   if self:is_tcall() then return end
+   self:close_uvals()
    return self:emit(BC.RET0, 0, 1)
 end
 function Proto.__index:op_ret1(base)
-   if self.need_close then
-      self:emit(BC.UCLO, 0, 0)
-      self.need_close = nil
-   end
+   if self:is_tcall() then return end
+   self:close_uvals()
    return self:emit(BC.RET1, base, 2)
 end
 function Proto.__index:op_retm(base, rnum)
-   if self.need_close then
-      self:emit(BC.UCLO, 0, 0)
-      self.need_close = nil
-   end
+   if self:is_tcall() then return end
+   self:close_uvals()
    return self:emit(BC.RETM, base, rnum)
 end
 function Proto.__index:op_varg(base, want)
@@ -783,12 +788,20 @@ function Proto.__index:op_call(base, want, narg)
    return self:emit(BC.CALL, base, want + 1, narg + 1)
 end
 function Proto.__index:op_callt(base, narg)
+   if self.need_close then
+      self:emit(BC.UCLO, 0, 0)
+      self.need_close = nil
+   end
    return self:emit(BC.CALLT, base, narg + 1)
 end
 function Proto.__index:op_callm(base, want, narg)
    return self:emit(BC.CALLM, base, want + 1, narg)
 end
 function Proto.__index:op_callmt(base, narg)
+   if self.need_close then
+      self:emit(BC.UCLO, 0, 0)
+      self.need_close = nil
+   end
    return self:emit(BC.CALLMT, base, narg + 1)
 end
 function Proto.__index:op_fori(base, stop, step)
