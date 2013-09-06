@@ -54,7 +54,9 @@ local patt = [[
 
    hexnum <- "-"? "0x" %xdigit+
 
-   decimal <- "-"? <digits> "." <digits> (("e"/"E") "-"? <digits>)?
+   decexp <- ("e"/"E") "-"? <digits>
+
+   decimal <- "-"? <digits> ("." <digits> <decexp>? / <decexp>)
 
    integer <- "-"? <digits>
 
