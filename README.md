@@ -295,7 +295,7 @@ To export a module, prefix it with `export`:
 -- file: utils.nga
 export module utils
    quote(val)
-      string::format("%q", val)
+      return string::format("%q", val)
    end
 end
 
