@@ -173,11 +173,13 @@ end
 ```
 
 The last parameter of a function may be a rest parameter which "slurps" up the remaining arguments:
+
 ```
 function slurpy(arg1, ...args)
    print `argument 1 is ${arg1}`
    print `the rest of the arguments: `, ...args
 end
+```
 
 ### Generators
 
@@ -254,6 +256,7 @@ pwn()
 ```
 
 Classes can also be exported. To export a variable, it must be declared with `local`:
+
 ```
 export local DEBUG = true
 
