@@ -1,9 +1,6 @@
 local ffi      = require('ffi')
 local util     = require('util')
 local compiler = require('compiler')
-local system   = require('system')
-
-package.loaded['@system'] = system
 
 local function loader(filename)
    if string.match(filename, "%.nga") then
@@ -423,7 +420,6 @@ GLOBAL = setmetatable({
    RegExp = RegExp;
    class  = class;
    import = import;
-   system = system;
    __range__  = range;
    __spread__ = spread;
    __each__   = each;
@@ -433,6 +429,9 @@ GLOBAL = setmetatable({
    assert  = function(...) return assert(...) end;
    print   = function(...) print(...) end;
 }, { __index = _G })
+
+local system = require('system.nga')
+package.loaded['@system'] = system
 
 local function run(code, ...)
    setfenv(code, GLOBAL)

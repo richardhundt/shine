@@ -1,4 +1,12 @@
-import {timeout} from "@system"
+import {sleep, async} from "@system"
 
-timeout 1000, (x) => print("tick")
+async =>
+   sleep 1000
+   print "tick 1"
+end
+
+async =>
+   sleep 500
+   print "tick 2"
+end
 

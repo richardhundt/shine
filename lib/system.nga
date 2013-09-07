@@ -1,0 +1,83 @@
+ray = require "ray"
+
+export class File
+   self(path)
+      self.path = path
+   end
+
+   open(mode = "r", flags = 0644)
+      self.fh = ray::open(self.path, mode, "0%o".format(flags))
+   end
+
+   write(data, ofs = 0)
+      return self.fh.write(data, ofs)
+   end
+
+   read(len, ofs = 0)
+      return self.fh.read(len, ofs)
+   end
+
+   close()
+      self.fh.close()
+      self.fh = nil
+   end
+end
+
+export class TCPClient
+   self(socket = ray::tcp())
+      self.socket = socket
+   end
+   read()
+      return self.socket.read()
+   end
+   write(data)
+      return self.socket.write(data)
+   end
+   shutdown()
+      return self.socket.shutdown()
+   end
+   connect(host, port)
+      return self.socket.connect(host, port)
+   end
+   close()
+      return self.socket.close()
+   end
+end
+
+export class TCPServer
+   self(host, port)
+      self.socket = ray::tcp()
+      self.socket.bind(host, port)
+   end
+   listen(backlog = 128)
+      self.socket.listen(backlog)
+   end
+   accept()
+      client = self.socket.accept()
+      return TCPClient(client)
+   end
+   close()
+      self.socket.close()
+      self.socket = nil
+   end
+end
+
+export function async(block)
+   fiber = ray::fiber(block)
+   fiber.ready()
+   return fiber
+end
+
+export function sleep(timeout)
+   timer = ray::timer()
+   timer.start timeout, 0
+   timer.wait()
+   timer.stop()
+end
+
+export function run(main, ...args)
+   ray::fiber(main, ...args).ready()
+   ray::run()
+end
+
+
