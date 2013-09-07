@@ -426,9 +426,11 @@ function Proto.__index:write_body(buf)
    for i=1, #self.upvals do
       local uval = self.upvals[i]
       if uval.proto == self.outer then
-         buf:put_uint16(bit.bor(uval.vinfo.idx, 0x8000))
+         local uv = bit.bor(uval.vinfo.idx, 0x8000)
+         buf:put_uint16(uv)
       else
-         buf:put_uint16(uval.idx)
+         local uv = self.outer:upval(uval.vinfo.name)
+         buf:put_uint16(uv)
       end
    end
    for i=#self.kobj, 1, -1 do
@@ -514,14 +516,13 @@ function Proto.__index:param(...)
    self.params[#self.params + 1] = var
    return var.idx
 end
-function Proto.__index:upval(name, seen)
+function Proto.__index:upval(name)
    if not self.upvals[name] then
       local proto, upval, vinfo = self.outer, { }
       while proto do
          if proto.actvars[name] then
             break
          end
-         proto:upval(name, true)
          proto = proto.outer
       end
       vinfo = self:lookup(name)
@@ -530,9 +531,7 @@ function Proto.__index:upval(name, seen)
          error("no upvalue found for "..name)
       end
 
-      if not seen then
-         proto.need_close = true
-      end
+      proto.need_close = true
 
       upval = { vinfo = vinfo; proto = proto; }
       self.upvals[name] = upval
