@@ -75,8 +75,8 @@ function match:SendExpression(node, base, want, tail)
 
    local recv = base + 1
    local meth = recv + 1
-   self.ctx:op_load(meth, node.method.name)
    self.ctx:op_move(recv, base)
+   self.ctx:op_load(meth, node.method.name)
    self.ctx:op_tget(base, base, meth)
 
    local args = { }
