@@ -422,6 +422,7 @@ GLOBAL = setmetatable({
    import = import;
    __range__  = range;
    __spread__ = spread;
+   __typeof__ = type;
    __each__   = each;
    __in__  = __in__;
    __is__  = __is__;
