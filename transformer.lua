@@ -101,13 +101,21 @@ function match:ModuleDeclaration(node)
 
    body[#body + 1] = B.returnStatement({ export })
 
-   return B.assignmentExpression({ name }, {
-      B.callExpression(
-         B.parenExpression{
-            B.functionExpression({ }, B.blockStatement(body))
-         }, { }
+   local init = B.callExpression(
+      B.parenExpression{
+         B.functionExpression({ }, B.blockStatement(body))
+      }, { }
+   )
+
+   if node.export then
+      local expr = B.memberExpression(B.identifier('export'), name)
+      self.scope[#self.scope + 1] = B.assignmentExpression(
+         { expr }, { init }
       )
-   })
+      init = expr
+   end
+
+   return B.assignmentExpression({ name }, { init })
 end
 function match:Literal(node)
    return B.literal(node.value)
