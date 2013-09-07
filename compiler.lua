@@ -5,12 +5,16 @@ local util        = require('util')
 
 local function compile(src, name, opts)
    local srctree = parser.parse(src)
+
    if opts and opts['-a'] then
       print("AST:", util.dump(srctree))
    end
 
    local dsttree = transformer.transform(srctree, src)
-   --print("DST:", util.dump(dsttree))
+
+   if opts and opts['-t'] then
+      print("DST:", util.dump(dsttree))
+   end
 
    local luacode
    if opts and opts['-s'] then
