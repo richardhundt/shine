@@ -21,7 +21,7 @@ syn match nyangaSymbolOther "\(#\|@\)" display
 
 " Operators
 syn match nyangaOperator "\(+\|-\|\*\|/\|=\|<\|>\|\*\*\|!=\|\~=\)"
-syn match nyangaOperator "\(<=\|>=\|=>\|\.\.\|<<\|>>\|\"\)"
+syn match nyangaOperator "\(<=\|>=\|=>\|\.\.\.\|\.\.\|<<\|>>\|\"\)"
 
 " Keywords
 syn keyword nyangaKeyword as catch const
