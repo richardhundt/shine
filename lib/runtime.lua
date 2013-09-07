@@ -466,7 +466,7 @@ local function runopt(args)
       end
    until i == #args
 
-   args = { unpack(opts, 2) }
+   args = { [0] = args[0], unpack(opts, 2) }
    local code, name
    if opts['-e'] then
       code = opts['-e']
