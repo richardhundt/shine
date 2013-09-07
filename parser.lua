@@ -190,8 +190,7 @@ local patt = [[
 
    func_expr <- (
       "function" <idsafe> s <func_head> s <func_body>
-      / <func_head> s "=>" s <func_body>
-      / {| {| {:name: <ident> :} |} |} s "=>" s <func_body>
+      / (<func_head> / {| |}) s "=>" s <func_body>
    ) -> funcExpr
 
    func_body <- <block_stmt> s <end> / <expr>
