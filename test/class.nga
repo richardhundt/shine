@@ -12,6 +12,7 @@ class Point
    end
 end
 
+
 class Point3D extends Point
    self(x, y, z = 0)
       super(x, y)

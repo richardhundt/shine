@@ -244,7 +244,7 @@ end
 function defs.propDefn(k, n, h, b)
    local func = defs.funcExpr(h, b)
    table.insert(func.params, 1, defs.identifier("self"))
-   for i=1, #func.defaults do
+   for i=#func.defaults, 1, -1 do
       func.defaults[i + 1] = func.defaults[i]
    end
    func.defaults[1] = nil
