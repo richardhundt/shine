@@ -290,6 +290,9 @@ end
 function match:BreakStatement(node)
    return B.breakStatement()
 end
+function match:ContinueStatement(node)
+   return B.gotoStatement(self.loop)
+end
 
 function match:LogicalExpression(node)
    return B.logicalExpression(
@@ -560,15 +563,54 @@ function match:NewExpression(node)
    })
 end
 function match:WhileStatement(node)
-   return B.whileStatement(self:get(node.test), self:get(node.body))
+   local loop = B.identifier(util.genid())
+   local save = self.loop
+   self.loop = loop
+   local body = B.blockStatement{
+      self:get(node.body);
+      B.labelStatement(loop);
+   }
+   self.loop = save
+   return B.whileStatement(self:get(node.test), body)
 end
 function match:ForStatement(node)
+   local loop = B.identifier(util.genid())
+   local save = self.loop
+   self.loop = loop
+
    local name = self:get(node.name)
    local init = self:get(node.init)
    local last = self:get(node.last)
    local step = B.literal(node.step)
-   local body = self:get(node.body)
+   local body = B.blockStatement{
+      self:get(node.body);
+      B.labelStatement(loop)
+   }
+   self.loop = save
+
    return B.forStatement(B.forInit(name, init), last, step, body)
+end
+function match:ForInStatement(node)
+   local loop = B.identifier(util.genid())
+   local save = self.loop
+   self.loop = loop
+
+   local none = B.tempnam()
+   local temp = B.tempnam()
+   local iter = B.callExpression(B.identifier('__each__'), { self:get(node.right) })
+
+   local left = { }
+   for i=1, #node.left do
+      left[i] = self:get(node.left[i])
+   end
+
+   local body = B.blockStatement{
+      self:get(node.body);
+      B.labelStatement(loop);
+   }
+   self.loop = save
+
+   return B.forInStatement(B.forNames(left), iter, body)
 end
 function match:RegExp(node)
    return B.callExpression(
@@ -582,6 +624,9 @@ function match:RangeExpression(node)
    return B.callExpression(B.identifier('__range__'), {
       self:get(node.min), self:get(node.max)
    })
+end
+function match:ArrayPattern(node)
+   print(util.dump(node))
 end
 function match:ArrayExpression(node)
    return B.callExpression(B.identifier('Array'), self:list(node.elements))
@@ -628,17 +673,6 @@ function match:TableExpression(node)
          B.table(properties);
       }
    )
-end
-function match:ForInStatement(node)
-   local none = B.tempnam()
-   local temp = B.tempnam()
-   local iter = B.callExpression(B.identifier('__each__'), { self:get(node.right) })
-   local left = { }
-   for i=1, #node.left do
-      left[i] = self:get(node.left[i])
-   end
-   local body = self:get(node.body)
-   return B.forInStatement(B.forNames(left), iter, body)
 end
 function match:RawString(node)
    local list = { }
@@ -727,20 +761,20 @@ local function transform(tree, src)
       end
    end
 
-   function self:get(node)
+   function self:get(node, ...)
       if not match[node.type] then
          error("no handler for "..tostring(node.type))
       end
       self:sync(node)
-      local out = match[node.type](self, node)
+      local out = match[node.type](self, node, ...)
       out.line = self.line
       return out
    end
 
-   function self:list(nodes)
+   function self:list(nodes, ...)
       local list = { }
       for i=1, #nodes do
-         list[#list + 1] = self:get(nodes[i])
+         list[#list + 1] = self:get(nodes[i], ...)
       end
       return list
    end

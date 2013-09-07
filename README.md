@@ -198,7 +198,7 @@ print(gen()) -- 3
 
 ### Classes
 
-Nyanga supports single inheritance, static methods (via the `meta` prefix) and lexical class bodies (they're just functions internally).
+Nyanga supports single inheritance, static methods (via the `static` prefix) and lexical class bodies (they're just functions internally).
 
 ```
 class Point
@@ -226,7 +226,7 @@ class Point3D extends Point
    end
 
    -- static method (defined on Point)
-   meta __len()
+   static __len()
       return 2
    end
 end

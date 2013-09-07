@@ -23,8 +23,8 @@ local patt = [[
    word     <- (%alpha / "_") (%alnum / "_")*
 
    keyword  <- (
-      "local" / "function" / "class" / "module" / "meta"
-      / "new" / "nil" / "true" / "false" / "return" / "end"
+      "local" / "function" / "class" / "module" / "static"
+      / "nil" / "true" / "false" / "return" / "end"
       / "yield" / "await" / "break" / "continue" / "not" / "throw"
       / "while" / "do" / "for" / "in" / "of" / "and" / "or"
       / "super" / "import" / "export" / "try" / "catch" / "finally"
@@ -113,6 +113,7 @@ local patt = [[
       / <try_stmt>
       / <throw_stmt>
       / <break_stmt>
+      / <continue_stmt>
       / <yield_stmt>
    )) -> stmt
 
@@ -123,6 +124,10 @@ local patt = [[
    break_stmt <- (
       "break" <idsafe>
    ) -> breakStmt
+
+   continue_stmt <- (
+      "continue" <idsafe>
+   ) -> continueStmt
 
    yield_stmt <- (
       "yield" <idsafe> s {| <expr_list>? |}
@@ -224,7 +229,7 @@ local patt = [[
    )
 
    class_member <- (
-      ({"meta"} <idsafe> s / '' -> "virt") (<coro_prop> / <prop_defn>)
+      ({"static"} <idsafe> s / '' -> "virt") (<coro_prop> / <prop_defn>)
    ) -> classMember
 
    class_heritage <- (

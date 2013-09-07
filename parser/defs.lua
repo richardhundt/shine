@@ -204,6 +204,9 @@ end
 function defs.breakStmt()
    return { type = "BreakStatement" }
 end
+function defs.continueStmt()
+   return { type = "ContinueStatement" }
+end
 function defs.throwStmt(expr)
    return { type = "ThrowStatement", argument = expr }
 end
@@ -238,7 +241,7 @@ function defs.classDecl(name, base, body)
    return { type = "ClassDeclaration", id = name, base = base, body = body }
 end
 function defs.classMember(s, m)
-   m.static = s == "meta"
+   m.static = s == "static"
    return m
 end
 function defs.propDefn(k, n, h, b)
