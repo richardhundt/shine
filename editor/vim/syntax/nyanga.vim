@@ -73,7 +73,14 @@ syn match nyangaStringEscape "\%(\\M-\\C-\|\\C-\\M-\|\\M-\\c\|\\c\\M-\|\\c\|\\C-
 syn region nyangaString matchgroup=nyangaStringDelimiter start="\"" end="\"" skip="\\\\\|\\\"" contains=nyangaStringEscape fold
 syn region nyangaString matchgroup=nyangaStringDelimiter start="'" end="'" skip="\\\\\|\\'" fold
 syn region nyangaString matchgroup=nyangaStringDelimiter start="`" end="`" skip="\\\\\|\\`" contains=nyangaStringEscape fold
-syn region nyangaString matchgroup=nyangaStringDelimiter start="/" end="/" skip="\\\\\|\\/" contains=nyangaStringEscape fold
+
+" Regex
+syn region nyangaRegex start=/\%(\%()\|\i\@<!\d\)\s*\|\i\)\@<!\/=\@!\s\@!/
+\                      skip=/\[[^\]]\{-}\/[^\]]\{-}\]/
+\                      end=/\/[gimy]\{,4}\d\@!/
+\                      oneline contains=@nyangaString
+hi def link nyangaRegex String
+
 
 " Syntax Synchronizing
 syn sync minlines=10 maxlines=100
