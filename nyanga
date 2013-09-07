@@ -16,5 +16,5 @@ do
 end
 
 local runtime = require('runtime')
-runtime.runfile(unpack(arg))
+runtime.runopt(arg)
 

@@ -3,22 +3,33 @@ local transformer = require('transformer')
 local generator   = require('generator')
 local util        = require('util')
 
-local function compile(src, name)
+local function compile(src, name, opts)
    local srctree = parser.parse(src)
-   --print("SRC:", util.dump(srctree))
+   if opts and opts['-a'] then
+      print("AST:", util.dump(srctree))
+   end
+
    local dsttree = transformer.transform(srctree, src)
    --print("DST:", util.dump(dsttree))
-   local luacode = generator.generate(dsttree, name)
-   --local outfile = io.open("a.out", "w+")
-   --outfile:write(luacode)
-   --outfile:close()
-   --print("LUA:", luacode)
 
-   --[[
-   local jbc = require("jit.bc")
-   local fn = assert(loadstring(luacode))
-   jbc.dump(fn, nil, true)
-   --]]
+   local luacode
+   if opts and opts['-s'] then
+      luacode = generator.source(dsttree, name)
+   else
+      luacode = generator.bytecode(dsttree, name)
+   end
+
+   if opts and opts['-o'] then
+      local outfile = io.open(opts['-o'], "w+")
+      outfile:write(luacode)
+      outfile:close()
+   end
+
+   if opts and opts['-b'] then
+      local jbc = require("jit.bc")
+      local fn = assert(loadstring(luacode))
+      jbc.dump(fn, nil, true)
+   end
 
    return luacode
 end

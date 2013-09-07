@@ -1,5 +1,5 @@
 return {
-   generate = require('generator.bytecode').generate;
-   --generate = require('generator.source').generate
+   bytecode = require('generator.bytecode').generate;
+   source   = require('generator.source').generate;
 }
 

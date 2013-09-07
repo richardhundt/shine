@@ -435,17 +435,58 @@ local function run(code, ...)
    system.run(code)
 end
 
-local function runfile(name, ...)
-   local file = assert(io.open(name, 'r'))
-   local code = file:read('*a')
-   file:close()
-   local main = assert(loadstring(compiler.compile(code, '@'..name)))
+local usage = "usage: %s [options]... [script [args]...].\
+Available options are:\
+  -e chunk\tExecute string 'chunk'.\
+  -o file \tSave bytecode to 'file'.\
+  -b      \tDump formatted bytecode.\
+  -p      \tPrint the parse tree.\
+  -t      \tPrint the transformed tree.\
+  -s      \tUse the Lua source generator backend.\
+  --      \tStop handling options."
+local function runopt(args)
+   local opts = { }
+   local i = 0
+   repeat
+      i = i + 1
+      local a = args[i]
+      if a == "-e" then
+         i = i + 1
+         opts['-e'] = args[i]
+      elseif a == "-o" then
+         i = i + 1
+         opts['-o'] = args[i]
+      elseif a == "-h" then
+         print(string.format(usage, arg[0]))
+         os.exit()
+      elseif string.sub(a, 1, 1) == '-' then
+         opts[a] = true
+      else
+         opts[#opts + 1] = a
+      end
+   until i == #args
+
+   args = { unpack(opts, 2) }
+   local code, name
+   if opts['-e'] then
+      code = opts['-e']
+      name = code
+   else
+      if not opts[1] then
+         error("no chunk or script file provided")
+      end
+      name = '@'..opts[1]
+      local file = assert(io.open(opts[1], 'r'))
+      code = file:read('*a')
+      file:close()
+   end
+   local main = assert(loadstring(compiler.compile(code, name, opts), name))
    setfenv(main, GLOBAL)
-   system.run(main, ...)
+   system.run(main, unpack(args))
 end
 
 return {
-   run     = run;
-   runfile = runfile;
+   run    = run;
+   runopt = runopt;
 }
 
