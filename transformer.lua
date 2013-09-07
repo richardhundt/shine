@@ -128,6 +128,12 @@ function match:VariableDeclaration(node)
          inits[i] = expr
       end
    end
+   for i=1, #node.names do
+      local n = node.names[i]
+      if n.type == 'Identifier' and not self.ctx:lookup(n.name) then
+         self.ctx:define(n.name)
+      end
+   end
    return B.localDeclaration(self:list(node.names), inits)
 end
 function match:AssignmentExpression(node)
@@ -444,11 +450,16 @@ function match:ClassDeclaration(node)
             )
          else
             -- self.__members__[key] = desc.value
+            local base
+            if prop.static then
+               base = B.identifier("self")
+            else
+               base = B.memberExpression(
+                  B.identifier("self"), B.identifier("__members__")
+               )
+            end
             body[#body + 1] = B.assignmentExpression(
-               { B.memberExpression(
-                  B.memberExpression(B.identifier("self"), B.identifier("__members__")),
-                  B.identifier(prop.key.name)
-               ) },
+               { B.memberExpression(base, B.identifier(prop.key.name)) },
                { desc.value }
             )
          end

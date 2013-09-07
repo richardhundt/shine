@@ -9,11 +9,16 @@ local function compile(src, name)
    local dsttree = transformer.transform(srctree, src)
    print("DST:", util.dump(dsttree))
    local luacode = generator.generate(dsttree, name)
+   --local outfile = io.open("a.out", "w+")
+   --outfile:write(luacode)
+   --outfile:close()
    --print("LUA:", luacode)
 
+   ---[[
    local jbc = require("jit.bc")
    local fn = assert(loadstring(luacode))
    jbc.dump(fn, nil, true)
+   --]]
 
    return luacode
 end

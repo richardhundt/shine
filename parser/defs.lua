@@ -113,12 +113,6 @@ end
 function defs.tableExpr(members)
    return { type = "TableExpression", members = members }
 end
-function defs.tableMember(prop)
-   if prop.type ~= "PropertyDefinition" then
-      prop.kind = "init"
-   end
-   return prop
-end
 function defs.regexExpr(expr, flags)
    local rx = require('pcre')
    expr = string.gsub(expr, "(\\[rnt\\])", strEscape)

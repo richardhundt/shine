@@ -2,7 +2,7 @@
  dump   = header proto+ 0U
  header = ESC 'L' 'J' versionB flagsU [namelenU nameB*]
  proto  = lengthU pdata
- pdata  = phead bcinsW* kgc* knum* uvdataH* [debugB*]
+ pdata  = phead bcinsW* uvdataH* kgc* knum* [debugB*]
  phead  = flagsB numparamsB framesizeB numuvB numkgcU numknU numbcU
           [debuglenU [firstlineU numlineU]]
  kgc    = kgctypeU { ktab | (loU hiU) | (rloU rhiU iloU ihiU) | strB* }
@@ -379,12 +379,13 @@ function Proto.__index:write(buf)
       end
    end
 
+   local last_inst = self.code[#self.code][1]
+
    if self.need_close then
       self:emit(BC.UCLO, 0, 0) -- close upvals
    end
 
    local body = Buf.new()
-   local last_inst = self.code[#self.code][1]
    if not (last_inst >= BC.CALLMT and last_inst <= BC.CALLT) and
       not (last_inst >= BC.RETM and last_inst <= BC.RET1) then
       self:emit(BC.RET0, 0, 1)
@@ -424,11 +425,10 @@ function Proto.__index:write_body(buf)
    end
    for i=1, #self.upvals do
       local uval = self.upvals[i]
-      if self.outer == uval.proto then
+      if uval.proto == self.outer then
          buf:put_uint16(bit.bor(uval.vinfo.idx, 0x8000))
       else
-         self.outer:upval(uval.vinfo.name)
-         buf:put_uint16(uval.vinfo.idx)
+         buf:put_uint16(uval.idx)
       end
    end
    for i=#self.kobj, 1, -1 do
@@ -487,6 +487,7 @@ function Proto.__index:newvar(name, reg, ofs)
    self.actvars[name] = var
 
    self.varinfo[name] = var
+   var.vidx = #self.varinfo
    self.varinfo[#self.varinfo + 1] = var
    return var
 end
@@ -513,25 +514,30 @@ function Proto.__index:param(...)
    self.params[#self.params + 1] = var
    return var.idx
 end
-function Proto.__index:upval(name)
+function Proto.__index:upval(name, seen)
    if not self.upvals[name] then
       local proto, upval, vinfo = self.outer, { }
       while proto do
-         if proto.varinfo[name] then
-            vinfo = proto.varinfo[name]
-            upval.proto = proto
-            upval.vinfo = vinfo
+         if proto.actvars[name] then
             break
          end
+         proto:upval(name, true)
          proto = proto.outer
       end
-      if not upval then
-         error("not found upvalue:"..name)
+      vinfo = self:lookup(name)
+
+      if not vinfo then
+         error("no upvalue found for "..name)
       end
+
+      if not seen then
+         proto.need_close = true
+      end
+
+      upval = { vinfo = vinfo; proto = proto; }
       self.upvals[name] = upval
       upval.idx = #self.upvals
       self.upvals[#self.upvals + 1] = upval
-      proto.need_close = true
    end
    return self.upvals[name].idx
 end
@@ -725,7 +731,7 @@ function Proto.__index:op_fnew(dest, pidx)
    return self:emit(BC.FNEW, dest, pidx)
 end
 function Proto.__index:op_uclo(jump)
-   return self:emit(BC.UCLO, 0, jump or 0)
+   return self:emit(BC.UCLO, #self.actvars, jump or 0)
 end
 function Proto.__index:op_uset(name, val)
    local slot = self:upval(name)
@@ -754,7 +760,7 @@ function Proto.__index:is_tcall()
 end
 function Proto.__index:close_uvals()
    if self.need_close then
-      self:emit(BC.UCLO, 0, 0)
+      self:emit(BC.UCLO, #self.actvars, 0)
       self.need_close = nil
    end
 end
@@ -785,20 +791,14 @@ function Proto.__index:op_call(base, want, narg)
    return self:emit(BC.CALL, base, want + 1, narg + 1)
 end
 function Proto.__index:op_callt(base, narg)
-   if self.need_close then
-      self:emit(BC.UCLO, 0, 0)
-      self.need_close = nil
-   end
+   self:close_uvals()
    return self:emit(BC.CALLT, base, narg + 1)
 end
 function Proto.__index:op_callm(base, want, narg)
    return self:emit(BC.CALLM, base, want + 1, narg)
 end
 function Proto.__index:op_callmt(base, narg)
-   if self.need_close then
-      self:emit(BC.UCLO, 0, 0)
-      self.need_close = nil
-   end
+   self:close_uvals()
    return self:emit(BC.CALLMT, base, narg + 1)
 end
 function Proto.__index:op_fori(base, stop, step)
@@ -839,7 +839,6 @@ function Dump.new(main, name, flags)
       name  = name;
       flags = flags or 0;
    }, Dump)
-   self.main.need_close = true
    return self
 end
 function Dump.__index:write_header(buf)
