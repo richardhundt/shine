@@ -560,7 +560,12 @@ function Proto.__index:jump(name)
    if self.labels[name] then
       -- backward jump
       local offs = self.labels[name]
-      return self:emit(BC.JMP, self.freereg - 1, offs - #self.code)
+      if self.need_close then
+         self.need_close = nil
+         return self:emit(BC.UCLO, self.freereg - 1, offs - #self.code)
+      else
+         return self:emit(BC.JMP, self.freereg - 1, offs - #self.code)
+      end
    else
       -- forward jump
       if type(name) == 'number' then
