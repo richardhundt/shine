@@ -1,12 +1,22 @@
-import {sleep, async} from "@system"
+import {sleep, async, await} from "@system"
 
 async =>
    sleep 1000
    print "tick 1"
 end
 
-async =>
-   sleep 500
+print "waiting..."
+
+await async =>
+   sleep 200
    print "tick 2"
 end
+
+print "done."
+
+async =>
+   sleep 500
+   print "tick 3"
+end
+
 

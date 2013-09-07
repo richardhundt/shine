@@ -337,6 +337,9 @@ end
 function match:UnaryExpression(node)
    local o = node.operator
    local a = self:get(node.argument)
+   if o == 'typeof' then
+      return B.callExpression(B.identifier('__typeof__'), { a })
+   end
    return B.unaryExpression(o, a)
 end
 function match:FunctionDeclaration(node)

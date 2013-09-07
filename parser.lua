@@ -25,7 +25,7 @@ local patt = [[
    keyword  <- (
       "local" / "function" / "class" / "module" / "static"
       / "nil" / "true" / "false" / "return" / "end"
-      / "yield" / "await" / "break" / "continue" / "not" / "throw"
+      / "yield" / "break" / "continue" / "not" / "throw"
       / "while" / "do" / "for" / "in" / "of" / "and" / "or"
       / "super" / "import" / "export" / "try" / "catch" / "finally"
       / "if" / "elseif" / "else" / "then" / "is" / "typeof"

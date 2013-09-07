@@ -68,6 +68,14 @@ export function async(block)
    return fiber
 end
 
+export function await(fiber)
+   if typeof fiber == "function" then
+      fiber = async fiber
+   end
+   fiber.ready()
+   return fiber.join()
+end
+
 export function sleep(timeout)
    timer = ray::timer()
    timer.start timeout, 0
