@@ -19,6 +19,7 @@ local function compile(src, name, opts)
    local luacode
    if opts and opts['-s'] then
       luacode = generator.source(dsttree, name)
+      print(luacode)
    else
       luacode = generator.bytecode(dsttree, name)
    end
