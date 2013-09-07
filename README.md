@@ -78,6 +78,13 @@ Since Nyanga is an OO language, the `.` operator is the equivalent of Lua's `:` 
 s = string::format("Hello %s", whom)
 ```
 
+Additionally there is the spread prefix operator `...` which calls `unpack` internally:
+```
+a = [1, 2, 3]
+x, y, x = ...a
+print(x, y, z) -- 1  2  3
+```
+
 ### Strings
 
 Strings come in three flavours:
@@ -164,6 +171,13 @@ function greet(whom = "World")
    print `Hello ${whom}!`
 end
 ```
+
+The last parameter of a function may be a rest parameter which "slurps" up the remaining arguments:
+```
+function slurpy(arg1, ...args)
+   print `argument 1 is ${arg1}`
+   print `the rest of the arguments: `, ...args
+end
 
 ### Generators
 

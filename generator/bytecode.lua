@@ -187,9 +187,9 @@ function match:Identifier(node, dest, want)
    return dest
 end
 function match:Vararg(node, base, want)
-   base = base or self.ctx:nextreg()
+   assert(base, "Vararg needs a base")
    self.ctx:op_varg(base, want)
-   return base
+   return MULTIRES
 end
 function match:BlockStatement(node)
    for i=1, #node.body do
