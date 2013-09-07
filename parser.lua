@@ -1,6 +1,8 @@
 local util = require("util")
 local re   = require('re')
 local defs = require('parser.defs')
+local lpeg = require('lpeg')
+lpeg.setmaxstack(1024)
 
 local patt = [[
    chunk  <- {|
@@ -123,11 +125,11 @@ local patt = [[
    ) -> breakStmt
 
    yield_stmt <- (
-      "yield" <idsafe> s {| <expr_list> |}
+      "yield" <idsafe> s {| <expr_list>? |}
    ) -> yieldStmt
 
    return_stmt <- (
-      "return" <idsafe> s {| <expr_list> |}
+      "return" <idsafe> s {| <expr_list>? |}
    ) -> returnStmt
 
    throw_stmt <- (
