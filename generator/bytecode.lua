@@ -323,35 +323,34 @@ function match:LocalDeclaration(node)
 
    local want = #node.expressions
    for i=1, #node.expressions do
-      want = want - (i - 1)
-      self:emit(node.expressions[i], vars[i].idx, want)
+      local w = want - (i - 1)
+      self:emit(node.expressions[i], vars[i].idx, w)
    end
 end
 
 function match:AssignmentExpression(node)
    local free = self.ctx.freereg
    local want = #node.left
-   local expr = { }
 
+   local base = self.ctx:nextreg(want)
    for i=1, #node.right do
-      want = want - (i - 1)
-      expr[i] = self:emit(node.right[i], self.ctx:nextreg(), want)
+      local w = want - (i - 1)
+      self:emit(node.right[i], base + i - 1, w)
    end
 
-   want = #node.left
-   for i=1, #node.left do
-      want = want - (i - 1)
-      local lhs = node.left[i]
+   for i = #node.left, 1, -1 do
+      local lhs  = node.left[i]
+      local expr = base + i - 1
       if lhs.kind == 'Identifier' then
          local info, uval = self.ctx:lookup(lhs.name)
          if info then
             if uval then
-               self.ctx:op_uset(lhs.name, expr[i])
+               self.ctx:op_uset(lhs.name, expr)
             else
-               self.ctx:op_move(info.idx, expr[i])
+               self.ctx:op_move(info.idx, expr)
             end
          else
-            self.ctx:op_gset(expr[i], lhs.name)
+            self.ctx:op_gset(expr, lhs.name)
          end
       elseif lhs.kind == 'MemberExpression' then
          local obj = self:emit(lhs.object, self.ctx:nextreg(), 1)
@@ -362,7 +361,7 @@ function match:AssignmentExpression(node)
          else
             key = self:emit(lhs.property, self.ctx:nextreg(), 1)
          end
-         self.ctx:op_tset(obj, key, expr[i])
+         self.ctx:op_tset(obj, key, expr)
       else
          error("Invalid left-hand side in assignment")
       end
