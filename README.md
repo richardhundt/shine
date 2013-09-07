@@ -197,6 +197,7 @@ print(gen()) -- 3
 ### Classes
 
 Nyanga supports single inheritance, static methods (via the `meta` prefix) and lexical class bodies (they're just functions internally).
+
 ```
 class Point
    -- the constructor
@@ -213,9 +214,92 @@ class Point
       self._x
    end
 end
+
+class Point3D extends Point
+   self.DEBUG = true -- static property
+
+   self(x, y, z)
+      super(x, y) -- call base class initializer
+      self.z = z
+   end
+
+   -- static method (defined on Point)
+   meta __len()
+      return 2
+   end
+end
 ```
 
-### Modules
+### Modules import/export
+
+By default, all symbols declared in a compilation unit are private. To export a symbol, prefix the declaration with `export`.
+
 ```
-TODO
+-- file a.nga
+export function eat()
+   print "nom nom"
+end
+export function pwn()
+   print "pew pew" 
+end
 ```
+
+To import a symbol:
+
+```
+-- file b.nga
+import {eat, pwn} from "b.nga"
+eat()
+pwn()
+```
+
+Classes can also be exported. To export a variable, it must be declared with `local`:
+```
+export local DEBUG = true
+
+export class Nuke
+   launch()
+      print "Kaboom!"
+   end
+end
+```
+
+Namespaces can also be introduced via the `module` keyword:
+
+```
+module armory
+   -- exported classes are visible outside the package
+   export class PlasmaRifle
+      trigger()
+         print "pew pew"
+      end
+   end
+
+   -- this class is private
+   class BootKnife
+      unsheath()
+         print "snick"
+      end
+   end
+end
+
+gun = armory::PlasmaRifle()
+```
+
+To export a module, prefix it with `export`:
+
+```
+-- file: utils.nga
+export module utils
+   quote(val)
+      string::format("%q", val)
+   end
+end
+
+-- file: app.nga
+import {utils} from 'utils.nga'
+
+print `she yelled: ${utils::quote('fire in the hole!')}`
+```
+
+
