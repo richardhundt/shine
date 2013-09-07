@@ -54,6 +54,10 @@ function Class.__call(class, ...)
    end
    return obj
 end
+function Class.__tostring(class)
+   return string.format("Class<%s>", class.__name)
+end
+
 local function class(name, base, body)
    local class = { __name = name, __base = base }
    class.__getters__ = setmetatable({ }, { __index = base.__getters__ })
