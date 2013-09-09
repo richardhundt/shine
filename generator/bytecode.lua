@@ -355,7 +355,7 @@ function match:AssignmentExpression(node)
       elseif lhs.kind == 'MemberExpression' then
          local obj = self:emit(lhs.object, self.ctx:nextreg(), 1)
          local key
-         if lhs.property.kind == 'Identifier' then
+         if lhs.property.kind == 'Identifier' and not lhs.computed then
             key = self.ctx:nextreg()
             self.ctx:op_load(key, lhs.property.name)
          else
