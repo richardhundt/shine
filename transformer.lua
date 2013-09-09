@@ -52,8 +52,7 @@ local match = { }
 function match:Chunk(node)
    self.hoist = { }
    self.scope = { }
-   local export = B.identifier('export')
-   self.scope[#self.scope + 1] = B.localDeclaration({ export }, { B.table({}) })
+   self.exports = { }
    for i=1, #node.body do
       local stmt = self:get(node.body[i])
       self.scope[#self.scope + 1] = stmt
@@ -61,7 +60,8 @@ function match:Chunk(node)
    for i=#self.hoist, 1, -1 do
       table.insert(self.scope, 1, self.hoist[i])
    end
-   self.scope[#self.scope + 1] = B.returnStatement({ export })
+
+   self.scope[#self.scope + 1] = B.returnStatement({ B.table(self.exports) })
    return B.chunk(self.scope)
 end
 function match:ImportStatement(node)
@@ -75,17 +75,16 @@ function match:ImportStatement(node)
 end
 function match:ModuleDeclaration(node)
    local name = self:get(node.id)
-   self.hoist[#self.hoist + 1] = B.localDeclaration({ name }, { })
+
+   self.ctx:define(name)
 
    local outer_scope = self.scope
    local outer_hoist = self.hoist
+   local outer_exports = self.exports
 
    self.scope = { }
    self.hoist = { }
-
-   local export = B.identifier('export')
-   self.scope[#self.scope + 1] = B.localDeclaration({ export }, { B.table({}) })
-
+   self.exports = { }
    for i=1, #node.body do
       local stmt = self:get(node.body[i])
       self.scope[#self.scope + 1] = stmt
@@ -94,28 +93,23 @@ function match:ModuleDeclaration(node)
       table.insert(self.scope, 1, self.hoist[i])
    end
 
-   local body = self.scope
+   self.scope[#self.scope + 1] = B.assignmentExpression(
+      { name }, { B.table(self.exports) }
+   )
+
+   local inner_scope = self.scope
 
    self.scope = outer_scope
    self.hoist = outer_hoist
-
-   body[#body + 1] = B.returnStatement({ export })
-
-   local init = B.callExpression(
-      B.parenExpression{
-         B.functionExpression({ }, B.blockStatement(body))
-      }, { }
-   )
+   self.exports = outer_exports
 
    if node.export then
-      local expr = B.memberExpression(B.identifier('export'), name)
-      self.scope[#self.scope + 1] = B.assignmentExpression(
-         { expr }, { init }
-      )
-      init = expr
+      self:export(name, name)
    end
 
-   return B.assignmentExpression({ name }, { init })
+   self.hoist[#self.hoist + 1] = B.localDeclaration({ name }, { })
+
+   return B.doStatement(B.blockStatement(inner_scope))
 end
 function match:Literal(node)
    return B.literal(node.value)
@@ -127,12 +121,8 @@ function match:VariableDeclaration(node)
    local inits = node.inits and self:list(node.inits) or { }
    if node.export then
       for i=1, #node.names do
-         local expr = B.memberExpression(
-            B.identifier('export'), self:get(node.names[i])
-         )
-         self.scope[#self.scope + 1] = B.assignmentExpression(
-            { expr }, { inits[i] }
-         )
+         local name = self:get(node.names[i])
+         self:export(name, inits[i])
          inits[i] = expr
       end
    end
@@ -395,15 +385,13 @@ function match:FunctionDeclaration(node)
    if node.expression then
       return func
    end
+
+   self.ctx:define(name)
+   local decl = B.localDeclaration({ name }, { func })
    if node.export then
-      local expr = B.memberExpression(
-         B.identifier('export'), name
-      )
-      self.scope[#self.scope + 1] = B.assignmentExpression(
-         { expr }, { func }
-      )
+      self:export(name, name)
    end
-   return B.localDeclaration({ name }, { func })
+   return decl
 end
 
 --[[
@@ -495,10 +483,7 @@ function match:ClassDeclaration(node)
    )
 
    if node.export then
-      local expr = B.memberExpression(B.identifier('export'), name)
-      self.scope[#self.scope + 1] = B.assignmentExpression(
-         { expr }, { init }
-      )
+      self:export(name, init)
       init = expr
    end
 
@@ -780,6 +765,10 @@ local function transform(tree, src)
          list[#list + 1] = self:get(nodes[i], ...)
       end
       return list
+   end
+
+   function self:export(name, val)
+      self.exports[name.name] = val
    end
 
    return self:get(tree)
