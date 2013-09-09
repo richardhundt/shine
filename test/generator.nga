@@ -21,3 +21,13 @@ a = A()
 g = a.greeter(5)
 for i=1, 5 do print(g()) end
 
+pow = *(x) =>
+   for i=1, 10 do
+      yield i ** x
+   end
+end
+
+squares = pow(2)
+print squares()
+print squares()
+print squares()

@@ -6,7 +6,7 @@ local util        = require('util')
 local function compile(src, name, opts)
    local srctree = parser.parse(src)
 
-   if opts and opts['-a'] then
+   if opts and opts['-p'] then
       print("AST:", util.dump(srctree))
    end
 

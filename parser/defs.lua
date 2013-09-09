@@ -337,6 +337,8 @@ local prec = {
    ["*"] = 13,
    ["/"] = 13,
    ["%"] = 13,
+
+   ["**"] = 14,
 }
 
 local shift = table.remove

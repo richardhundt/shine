@@ -652,7 +652,7 @@ function Proto.__index:op_mod(dest, var1, var2)
    return self:emit(BC.MODVV, dest, var1, var2)
 end
 function Proto.__index:op_pow(dest, var1, var2)
-   return self:emit(BC.POWVV, dest, var1, var2)
+   return self:emit(BC.POW, dest, var1, var2)
 end
 function Proto.__index:op_gget(dest, name)
    return self:emit(BC.GGET, dest, self:const(name))
