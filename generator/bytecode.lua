@@ -10,6 +10,16 @@ local cmpop = {
    ['>' ] = 'LE',
    ['<' ] = 'GE',
 }
+-- comparisons in expression context
+local cmpop2 = {
+   ['=='] = 'EQ',
+   ['~='] = 'NE',
+   ['>='] = 'GE',
+   ['<='] = 'LE',
+   ['>' ] = 'GT',
+   ['<' ] = 'LT',
+}
+
 
 local match = { }
 
@@ -240,7 +250,7 @@ end
 function match:ExpressionStatement(node, dest, ...)
    return self:emit(node.expression, dest, ...)
 end
-function match:BinaryExpression(node, dest, want, jump)
+function match:BinaryExpression(node, dest, want)
    local free = self.ctx.freereg
    dest = dest or self.ctx:nextreg()
    local o = node.operator
@@ -262,12 +272,14 @@ function match:BinaryExpression(node, dest, want, jump)
       self.ctx:op_cat(dest, a, b)
    elseif cmpop[o] then
       want = want or 0
-      jump = jump or util.genid()
-      self.ctx:op_comp(cmpop[o], a, b, jump)
-      if want > 0 then
-         self.ctx:op_load(dest, false)
-         self.ctx:here(jump)
-      end
+      local j1 = util.genid()
+      local j2 = util.genid()
+      self.ctx:op_comp(cmpop2[o], a, b, j1)
+      self.ctx:op_load(dest, false)
+      self.ctx:jump(j2)
+      self.ctx:here(j1)
+      self.ctx:op_load(dest, true)
+      self.ctx:here(j2)
    else
       error("bad binary operator: "..o, 2)
    end
