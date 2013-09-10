@@ -134,7 +134,7 @@ friendly.greet("World")
 
 ### Functions
 
-Parenthesese are optional (not this makes Nyanga a bit line oriented):
+Parenthesese are optional (note that this makes Nyanga a bit line oriented):
 ```
 print("Hello World!")
 print "Hello World!" -- same thing
@@ -194,6 +194,22 @@ gen = seq(3)
 print(gen()) -- 1
 print(gen()) -- 2
 print(gen()) -- 3
+
+-- short syntax
+powseq = *(x) =>
+   for i in 1 .. 10 do
+      yield i ** x
+   end
+end
+
+squares = powseq(2)
+for i in squares do
+   if i % 2 == 0 then
+      continue
+   end
+   print i
+end
+
 ```
 
 ### Classes

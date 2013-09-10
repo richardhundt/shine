@@ -2,6 +2,8 @@ local ffi      = require('ffi')
 local util     = require('util')
 local compiler = require('compiler')
 
+local Range
+
 local function loader(filename)
    if string.match(filename, "%.nga") then
       local namelist = { }
@@ -65,11 +67,19 @@ local function class(name, base, body)
       if class.__getters__[k] then
          return class.__getters__[k](o)
       end
-      return class.__members__[k]
+      if class.__members__[k] then
+         return class.__members__[k]
+      end
+      if class.__getindex__ then
+         return class.__getindex__(o, k)
+      end
+      return nil
    end
    function class.__newindex(o, k, v)
       if class.__setters__[k] then
          class.__setters__[k](o, v)
+      elseif class.__setindex__ then
+         class.__setindex__(o, k, v)
       else
          rawset(o, k, v)
       end
@@ -222,9 +232,16 @@ local function try(try, catch, finally)
 end
 
 local String = class("String", Object, function(self, super)
-   for k, v in pairs(getmetatable("")) do
-      self[k] = v
+   local orig_meta = getmetatable("")
+   for k, v in pairs(orig_meta) do
+      self.__members__[k] = v
    end
+   self.__getindex__ = function(o, k)
+      if type(k) == "table" and getmetatable(k) == Range then
+         return string.sub(o, k.left, k.right)
+      end
+   end
+
    Object:defineProperties(self, {
       self = {
          value = function(self, that)
@@ -362,7 +379,7 @@ local function each(o, ...)
    return pairs(o)
 end
 
-local Range = { }
+Range = { }
 Range.__index = Range
 function Range.__in(self, that)
    local n = tonumber(that)
