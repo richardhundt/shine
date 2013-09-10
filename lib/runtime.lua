@@ -371,6 +371,9 @@ function Range.__in(self, that)
    end
    return false
 end
+function Range.__tostring(self)
+   return string.format("Range[%s..%s]", self.left, self.right)
+end
 function Range.__iter(self)
    local i, r = self.left, self.right
    local n = i <= r and 1 or -1
@@ -385,6 +388,7 @@ function Range.__iter(self)
       return j
    end
 end
+
 local function range(left, right, inclusive)
    return setmetatable({
       left = left,
