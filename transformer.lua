@@ -352,10 +352,13 @@ function match:FunctionDeclaration(node)
    local prelude = { }
    local vararg  = false
 
+   self.ctx:enter()
+
    for i=1, #node.params do
-      params[#params + 1] = self:get(node.params[i])
+      local name = self:get(node.params[i])
+      self.ctx:define(name.name)
+      params[#params + 1] = name
       if node.defaults[i] then
-         local name = self:get(node.params[i])
          local test = B.binaryExpression("==", name, B.literal(nil))
          local expr = self:get(node.defaults[i])
          local cons = B.blockStatement{
@@ -392,6 +395,9 @@ function match:FunctionDeclaration(node)
    else
       func = B.functionExpression(params, body, vararg)
    end
+
+   self.ctx:leave()
+
    if node.expression then
       return func
    end
