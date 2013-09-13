@@ -504,22 +504,23 @@ function match:RepeatStatement(node)
    self.exit = exit
 
    self.ctx:here(loop)
+   self.ctx:loop(exit)
+   self:emit(node.body)
+
    local treg = self.ctx:nextreg()
    local test = node.test
-   local o = test.operator
    if test.kind == 'BinaryExpression' and cmpop[o] then
+      local o = test.operator
       local a = self:emit(test.left, self.ctx:nextreg())
       local b = self:emit(test.right, self.ctx:nextreg())
       self.ctx.freereg = free
-      self.ctx:op_comp(o, a, b, exit)
+      self.ctx:op_comp(cmpop[o], a, b)
    else
       self:emit(test, treg, 1)
       self.ctx.freereg = free
-      self.ctx:op_test(false, treg, exit)
+      self.ctx:op_test(false, treg)
    end
 
-   self.ctx:loop(exit)
-   self:emit(node.body)
    self.ctx:jump(loop)
    self.ctx:here(exit)
    self.ctx:leave()
