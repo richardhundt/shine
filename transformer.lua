@@ -51,18 +51,18 @@ local match = { }
 
 function match:Chunk(node)
    self.hoist = { }
-   self.scope = { }
+   self.block = { }
    local export = B.identifier('export')
-   self.scope[#self.scope + 1] = B.localDeclaration({ export }, { B.table({}) })
+   self.block[#self.block + 1] = B.localDeclaration({ export }, { B.table({}) })
    for i=1, #node.body do
       local stmt = self:get(node.body[i])
-      self.scope[#self.scope + 1] = stmt
+      self.block[#self.block + 1] = stmt
    end
    for i=#self.hoist, 1, -1 do
-      table.insert(self.scope, 1, self.hoist[i])
+      table.insert(self.block, 1, self.hoist[i])
    end
-   self.scope[#self.scope + 1] = B.returnStatement({ export })
-   return B.chunk(self.scope)
+   self.block[#self.block + 1] = B.returnStatement({ export })
+   return B.chunk(self.block)
 end
 function match:ImportStatement(node)
    local args = { B.literal(node.from) }
@@ -77,26 +77,26 @@ function match:ModuleDeclaration(node)
    local name = self:get(node.id)
    self.hoist[#self.hoist + 1] = B.localDeclaration({ name }, { })
 
-   local outer_scope = self.scope
+   local outer_block = self.block
    local outer_hoist = self.hoist
 
-   self.scope = { }
+   self.block = { }
    self.hoist = { }
 
    local export = B.identifier('export')
-   self.scope[#self.scope + 1] = B.localDeclaration({ export }, { B.table({}) })
+   self.block[#self.block + 1] = B.localDeclaration({ export }, { B.table({}) })
 
    for i=1, #node.body do
       local stmt = self:get(node.body[i])
-      self.scope[#self.scope + 1] = stmt
+      self.block[#self.block + 1] = stmt
    end
    for i=#self.hoist, 1, -1 do
-      table.insert(self.scope, 1, self.hoist[i])
+      table.insert(self.block, 1, self.hoist[i])
    end
 
-   local body = self.scope
+   local body = self.block
 
-   self.scope = outer_scope
+   self.block = outer_block
    self.hoist = outer_hoist
 
    body[#body + 1] = B.returnStatement({ export })
@@ -109,7 +109,7 @@ function match:ModuleDeclaration(node)
 
    if node.export then
       local expr = B.memberExpression(B.identifier('export'), name)
-      self.scope[#self.scope + 1] = B.assignmentExpression(
+      self.block[#self.block + 1] = B.assignmentExpression(
          { expr }, { init }
       )
       init = expr
@@ -130,7 +130,7 @@ function match:VariableDeclaration(node)
          local expr = B.memberExpression(
             B.identifier('export'), self:get(node.names[i])
          )
-         self.scope[#self.scope + 1] = B.assignmentExpression(
+         self.block[#self.block + 1] = B.assignmentExpression(
             { expr }, { inits[i] }
          )
          inits[i] = expr
@@ -401,15 +401,18 @@ function match:FunctionDeclaration(node)
    if node.expression then
       return func
    end
+
+   local decl = B.localDeclaration({ name }, { })
+   local frag = { decl }
+
+   frag[#frag + 1] = B.assignmentExpression({ name }, { func });
+
    if node.export then
-      local expr = B.memberExpression(
-         B.identifier('export'), name
-      )
-      self.scope[#self.scope + 1] = B.assignmentExpression(
-         { expr }, { func }
-      )
+      local expr = B.memberExpression(B.identifier('export'), name)
+      frag[#frag + 1] = B.assignmentExpression({ expr }, { name });
    end
-   return B.localDeclaration({ name }, { func })
+
+   return B.blockStatement(frag)
 end
 
 --[[
@@ -502,7 +505,7 @@ function match:ClassDeclaration(node)
 
    if node.export then
       local expr = B.memberExpression(B.identifier('export'), name)
-      self.scope[#self.scope + 1] = B.assignmentExpression(
+      self.block[#self.block + 1] = B.assignmentExpression(
          { expr }, { init }
       )
       init = expr
