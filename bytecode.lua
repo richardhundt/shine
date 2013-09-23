@@ -562,9 +562,9 @@ function Proto.__index:jump(name)
       local offs = self.labels[name]
       if self.need_close then
          self.need_close = nil
-         return self:emit(BC.UCLO, self.freereg - 1, offs - #self.code)
+         return self:emit(BC.UCLO, self.freereg, offs - #self.code)
       else
-         return self:emit(BC.JMP, self.freereg - 1, offs - #self.code)
+         return self:emit(BC.JMP, self.freereg, offs - #self.code)
       end
    else
       -- forward jump
@@ -577,14 +577,14 @@ function Proto.__index:jump(name)
          self.tohere[name] = here
       end
       here[#here + 1] = #self.code + 1
-      return self:emit(BC.JMP, self.freereg - 1, NO_JMP)
+      return self:emit(BC.JMP, self.freereg, NO_JMP)
    end
 end
 function Proto.__index:loop(name)
    if self.labels[name] then
       -- backward jump
       local offs = self.labels[name]
-      return self:emit(BC.LOOP, self.freereg - 1, offs - #self.code)
+      return self:emit(BC.LOOP, self.freereg, offs - #self.code)
    else
       -- forward jump
       local here = self.tohere[name]
@@ -593,19 +593,21 @@ function Proto.__index:loop(name)
          self.tohere[name] = here
       end
       here[#here + 1] = #self.code + 1
-      return self:emit(BC.LOOP, self.freereg - 1, NO_JMP)
+      return self:emit(BC.LOOP, self.freereg, NO_JMP)
    end
 end
 function Proto.__index:op_jump(delta)
-   return self:emit(BC.JMP, self.freereg - 1, delta)
+   return self:emit(BC.JMP, self.freereg, delta)
 end
 function Proto.__index:op_loop(delta)
-   return self:emit(BC.LOOP, self.freereg - 1, delta)
+   return self:emit(BC.LOOP, self.freereg, delta)
 end
 
 -- branch if condition
 function Proto.__index:op_test(cond, a, here)
-   return self:emit(cond and BC.IST or BC.ISF, 0, a), self:jump(here)
+   local inst = self:emit(cond and BC.IST or BC.ISF, 0, a)
+   if here then here = self:jump(here) end
+   return inst, here
 end
 -- branch if comparison
 function Proto.__index:op_comp(cond, a, b, here)
@@ -633,7 +635,9 @@ function Proto.__index:op_comp(cond, a, b, here)
          cond = cond..'V'
       end
    end
-   return self:emit(BC['IS'..cond], a, b), self:jump(here)
+   local inst = self:emit(BC['IS'..cond], a, b)
+   if here then here = self:jump(here) end
+   return inst, here
 end
 
 function Proto.__index:op_add(dest, var1, var2)
