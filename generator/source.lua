@@ -1,5 +1,32 @@
 local util = require('util')
 
+ -- From Lua 5.1 reference manual:
+ -- Operator precedence in Lua follows the table below, from lower to higher priority:
+ --     or
+ --     and
+ --     <     >     <=    >=    ~=    ==
+ --     ..
+ --     +     -
+ --     *     /     %
+ --     not   #     - (unary)
+ --     ^
+
+local infix_priority = {
+   ['or']  = 1,
+   ['and'] = 2,
+   ['<'] = 5, ['>'] = 5, ['<='] = 5, ['>='] = 5, ['~='] = 5, ['=='] = 5,
+   ['..'] = 6,
+   ['+'] = 10, ['-'] = 10,
+   ['*'] = 11, ['/'] = 11, ['%'] = 11,
+   ['^'] = 15,
+}
+
+local prefix_priority = {
+   ['not'] = 12, ['#'] = 12, ['-'] = 12,
+}
+
+local literal_priority = 100
+
 local Writer = { }
 Writer.__index = Writer
 
@@ -31,6 +58,17 @@ function Writer:__tostring()
    return table.concat(self.buffer)
 end
 
+function get_priority(node)
+   if node.kind == 'BinaryExpression' then
+      return infix_priority[node.operator]
+   elseif node.kind == 'UnaryExpression' then
+      return prefix_priority[node.operator]
+   elseif node.kind == 'Identifier' or node.kind == 'Literal' then
+      return literal_priority
+   end
+   return 0
+end
+
 local match = { }
 function match:Chunk(node)
    for i=1, #node.body do
@@ -49,14 +87,24 @@ function match:Vararg(node)
    self:write("...")
 end
 function match:BinaryExpression(node)
-   self:render(node.left)
+   local lprio = get_priority(node.left)
+   local rprio = get_priority(node.right)
+   local prio = get_priority(node)
+   self:render_protected(node.left, lprio < prio)
    self:write(" "..node.operator.." ")
-   self:render(node.right)
+   self:render_protected(node.right, rprio < prio)
+end
+local function is_wordy(s)
+   return (string.match(s, "^[a-zA-Z]+$") ~= nil)
 end
 function match:UnaryExpression(node)
    self:write(node.operator)
-   self:render(node.argument)
-   self:write(" ")
+   if is_wordy(node.operator) then
+      self:write(" ")
+   end
+   local aprio = get_priority(node.argument)
+   local prio = get_priority(node)
+   self:render_protected(node.argument, aprio < prio)
 end
 function match:ListExpression(node)
    for i=1, #node.expressions do
@@ -136,7 +184,7 @@ function match:Literal(node)
    if type(node.value) == "string" then
       self:write(string.format("(%q)", node.value))
    else
-      self:write("("..tostring(node.value)..")")
+      self:write(tostring(node.value))
    end
 end
 
@@ -353,6 +401,11 @@ local function generate(tree)
          error("no handler for "..node.kind)
       end
       return match[node.kind](self, node, ...)
+   end
+   function self:render_protected(node, protect, ...)
+      if protect then self:write("(") end
+      self:render(node, ...)
+      if protect then self:write(")") end
    end
    function self:write(frag)
       writer:write(frag)
