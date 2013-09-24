@@ -49,9 +49,11 @@ function match:Vararg(node)
    self:write("...")
 end
 function match:BinaryExpression(node)
+   self:write("(")
    self:render(node.left)
    self:write(" "..node.operator.." ")
    self:render(node.right)
+   self:write(")")
 end
 function match:UnaryExpression(node)
    self:write(node.operator)
