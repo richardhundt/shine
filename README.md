@@ -4,7 +4,7 @@ Nyanga - Object Oriented Lua Dialect
 
 # DESCRIPTION
 
-Nyanga (Xhosa word for moon), is a super set of Lua which adds OO features, array comprehensions, ranges, modules, a smarter generic for loop, and more.
+Nyanga (Xhosa word for moon), is a loose super set of Lua which adds OO features, array comprehensions, ranges, modules, a smarter generic for loop, and more.
 
 The goal of the project is to allow rapid experimentation with Lua's surface syntax and semantics. So if you've ever felt that Lua is too minimal, or missing that one killer feature, here's your chance to build it and try it out.
 
@@ -97,6 +97,16 @@ s4 = `
     strings can span
     multiple lines
 `
+```
+
+### Ranges
+
+Ranges are a builtin which represent and generate sequences of numbers.
+```
+r = 1..10
+for i in r do
+   print i
+end
 ```
 
 ### RegExp
@@ -212,9 +222,36 @@ end
 
 ```
 
+### Control structures
+
+Nyanga supports the standard Lua if-then/elseif-then/else control structure:
+
+```
+if a > 10 then
+   print "biggish"
+elseif a > 10 and a < 5 then
+   print "medium"
+else
+   print "widdle"
+end
+```
+
+The familiar `while`, `repeat` and `for` loops are included as well.
+However, the generic `for` loop implicitly does a `pairs` call on
+its argument if it is not a function.
+
+```
+t = { aye = 'a', bee = 'b', see = 'c' }
+for k,v in t do
+   print k, '=>', v
+end
+```
+
+
 ### Classes
 
-Nyanga supports single inheritance, static methods (via the `static` prefix) and lexical class bodies (they're just functions internally).
+Nyanga supports single inheritance, static methods (via the `static`
+prefix) and lexical class bodies (they're just functions internally).
 
 ```
 class Point

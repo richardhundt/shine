@@ -195,6 +195,16 @@ function defs.blockStmt(body)
       body = body
    }
 end
+function defs.matchStmt(disc, cases, default)
+   if default then
+      cases[#cases + 1] = defs.matchWhen(nil, default)
+   end
+   return { type = "MatchStatement", discriminant = disc, cases = cases }
+end
+function defs.matchWhen(test, cons)
+   return { type = "MatchWhen", test = test, consequent = cons }
+end
+
 function defs.returnStmt(args)
    return { type = "ReturnStatement", arguments = args }
 end
@@ -306,49 +316,55 @@ function defs.doStmt(block)
    return { type = "DoStatement", body = block }
 end
 
-local prec = {
-   ["or"] = 1,
-   ["and"] = 2,
-   ["~"] = 3,
-   ["~<"] = 3,
-   ["|"] = 4,
-   ["^"] = 5,
-   ["&"] = 6,
+local op_info = {
+   ["or"]  = { 1, 'L' },
+   ["and"] = { 2, 'L' },
+   ["~"]   = { 3, 'L' },
+   ["~<"]  = { 3, 'L' },
+   ["|"]   = { 4, 'L' },
+   ["^"]   = { 5, 'L' },
+   ["&"]   = { 6, 'L' },
 
-   ["=="] = 7,
-   ["!="] = 7,
+   ["=="]  = { 7, 'L' },
+   ["!="]  = { 7, 'L' },
 
-   ["is"] = 8,
-   ["in"] = 9,
+   ["is"]  = { 8, 'L' },
+   ["in"]  = { 9, 'L' },
 
-   [">="] = 10,
-   ["<="] = 10,
-   [">"] = 10,
-   ["<"] = 10,
+   [">="]  = { 10, 'L' },
+   ["<="]  = { 10, 'L' },
+   [">"]   = { 10, 'L' },
+   ["<"]   = { 10, 'L' },
 
-   ["<<"] = 11,
-   [">>"] = 11,
-   [">>>"] = 11,
+   ["<<"]  = { 11, 'L' },
+   [">>"]  = { 11, 'L' },
+   [">>>"] = { 11, 'L' },
 
-   ["-"] = 12,
-   ["+"] = 12,
-   [".."] = 12,
+   ["-"]   = { 12, 'L' },
+   ["+"]   = { 12, 'L' },
+   [".."]  = { 12, 'R' },
 
-   ["*"] = 13,
-   ["/"] = 13,
-   ["%"] = 13,
+   ["*"]   = { 13, 'L' },
+   ["/"]   = { 13, 'L' },
+   ["%"]   = { 13, 'L' },
 
-   ["**"] = 14,
+   ["**"]  = { 14, 'R' },
 }
 
 local shift = table.remove
 
 local function fold_infix(exp, lhs, min)
-   while prec[exp[1]] ~= nil and prec[exp[1]] >= min do
-      local op  = shift(exp, 1)
-      local rhs = shift(exp, 1)
-      while prec[exp[1]] ~= nil and prec[exp[1]] > prec[op] do
-         rhs = fold_infix(exp, rhs, prec[exp[1]])
+   while op_info[exp[1]] ~= nil and op_info[exp[1]][1] >= min do
+      local op   = shift(exp, 1)
+      local rhs  = shift(exp, 1)
+      while op_info[exp[1]] ~= nil do
+         local info = op_info[exp[1]]
+         local prec, assoc = info[1], info[2]
+         if prec > op_info[op][1] or (assoc == 'R' and prec == op_info[op][1]) then
+            rhs = fold_infix(exp, rhs, prec)
+         else
+            break
+         end
       end
       if op == "or" or op == "and" then
          lhs = defs.logicalExpr(op, lhs, rhs)
@@ -364,3 +380,4 @@ function defs.infixExpr(exp)
 end
 
 return defs
+
