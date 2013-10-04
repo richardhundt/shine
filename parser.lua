@@ -160,19 +160,19 @@ local patt = [[
       "local" <idsafe> s {| <name_list> |} (s "=" s {| <expr_list> |})?
    ) -> localDecl
 
-   patt <- (
+   left_pattern <- (
       <array_patt> / <table_patt> / <member_expr>
    )
 
    array_patt <- (
-      "[" s {| <patt> (s "," s <patt>)* |} "]"
+      "[" s {| <left_pattern> (s "," s <left_pattern>)* |} "]"
    ) -> arrayPatt
 
    table_patt <- (
       "{" s {| <table_patt_pair> (s "," s <table_patt_pair>)* |} "}"
    ) -> tablePatt
    table_patt_pair <- (
-      (<literal> / <ident>) s ":" s <patt>
+      (<literal> / <ident>) s ":" s <left_pattern>
    )
 
    name_list <- (
@@ -369,17 +369,12 @@ local patt = [[
       / "|=" / "&=" / "^=" / "<<=" / ">>>=" / ">>="
    }
 
-   left_expr <- (
-      <patt> / <ident>
-      -- <member_expr> / <ident>
-   )
-
    assign_expr <- (
-      {| <left_expr> (s "," s <left_expr>)* |} s "=" s {| <expr_list> |}
+      {| <left_pattern> (s "," s <left_pattern>)* |} s "=" s {| <expr_list> |}
    ) -> assignExpr
 
    update_expr <- (
-      <left_expr> s <assop> s <expr>
+      <left_pattern> s <assop> s <expr>
    ) -> updateExpr
 
    array_expr <- (
