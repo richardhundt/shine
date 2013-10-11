@@ -13,6 +13,26 @@ end
 function defs.quote(s)
    return string.format("%q", s)
 end
+local escape_lookup = {
+   ["a"] = "\a",
+   ["b"] = "\b",
+   ["f"] = "\f",
+   ["n"] = "\n",
+   ["r"] = "\r",
+   ["t"] = "\t",
+   ["v"] = "\v",
+   ["0"] = "\0",
+   ['"'] = '"',
+   ["'"] = "'",
+   ["\\"]= "\\"
+}
+function defs.escape(s)
+   local t = string.sub(s, 2)
+   local n = tonumber(t)
+   if n then return string.char(n) end
+   if escape_lookup[t] then return escape_lookup[t] end
+   error("invalid escape sequence")
+end
 function defs.chunk(body)
    return { type = "Chunk", body = body }
 end
@@ -64,16 +84,6 @@ function defs.fail(src, pos, msg)
       local tok = string.match(src, '(%w+)', pos) or loc
       error(msg.." near '"..tok.."'")
    end
-end
-
-local strEscape = {
-   ["\\r"] = "\r",
-   ["\\n"] = "\n",
-   ["\\t"] = "\t",
-   ["\\\\"] = "\\",
-}
-function defs.string(str)
-   return string.gsub(str, "(\\[rnt\\])", strEscape)
 end
 function defs.literal(val)
    return { type = "Literal", value = val }

@@ -34,8 +34,10 @@ local patt = [[
 
    sep <- <bcomment>? (%nl / ";" / &"}" / <lcomment>) / %s <sep>?
 
-   astring <- "'" { (!"'" .)* } "'"
-   qstring <- '"' { (!'"' .)* } '"'
+   escape <- {~ ('\' (%digit^3 / .)) -> escape ~}
+
+   astring <- "'" {~ (<escape> / {!"'" .})* ~} "'"
+   qstring <- '"' {~ (<escape> / {!'"' .})* ~} '"'
    lstring <- ('[' {:eq: '='* :} '[' <close>)
 
    special <- "\n" "\$" / "\\" / "\" .
@@ -50,9 +52,7 @@ local patt = [[
       "${" s <expr> s "}"
    ) -> rawExpr
 
-   string  <- (
-      <qstring> / <astring> / <lstring>
-   ) -> string
+   string  <- <qstring> / <astring> / <lstring>
 
    hexnum <- "-"? "0x" %xdigit+
 
