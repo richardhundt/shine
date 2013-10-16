@@ -593,7 +593,7 @@ function match:ForStatement(node)
    local name = self:get(node.name)
    local init = self:get(node.init)
    local last = self:get(node.last)
-   local step = B.literal(node.step)
+   local step = self:get(node.step)
    local body = B.blockStatement{
       self:get(node.body);
       B.labelStatement(loop)

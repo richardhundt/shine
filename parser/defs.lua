@@ -78,6 +78,9 @@ end
 function defs.literal(val)
    return { type = "Literal", value = val }
 end
+function defs.literalNumber(s)
+   return { type = "Literal", value = tonumber(s) }
+end
 function defs.boolean(val)
    return val == 'true'
 end
