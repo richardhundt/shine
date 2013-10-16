@@ -687,7 +687,7 @@ function Proto.__index:op_load(dest, val)
    elseif tv == 'string' then
       return self:emit(BC.KSTR, dest, self:const(val))
    elseif tv == 'number' then
-      if val < 0xffff then
+      if math.floor(val) == val and val < 0x8000 and val >= -0x8000 then
          return self:emit(BC.KSHORT, dest, val)
       else
          return self:emit(BC.KNUM, dest, self:const(val))
