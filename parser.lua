@@ -267,7 +267,7 @@ local patt = [[
 
    for_stmt <- (
       "for" <idsafe> s <ident> s "=" s <expr> s "," s <expr>
-      (s "," s <expr> / ('' -> '1') -> tonumber) s
+      (s "," s <expr> / ('' -> '1') -> literalNumber) s
       <loop_body>
    ) -> forStmt
 
