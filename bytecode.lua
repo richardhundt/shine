@@ -302,6 +302,7 @@ function Proto.new(flags, outer)
       firstline = 1;
       numlines  = 1;
       framesize = 0;
+      explret = false;
    }, Proto)
 end
 Proto.__index = { }
@@ -320,6 +321,9 @@ function Proto.__index:enter()
       freereg = self.freereg;
       __index = outer;
    })
+end
+function Proto.__index:is_root_scope()
+   return (getmetatable(self.actvars) == nil)
 end
 function Proto.__index:leave()
    local scope = assert(getmetatable(self.actvars), "cannot leave main scope")
