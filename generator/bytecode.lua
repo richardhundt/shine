@@ -454,6 +454,9 @@ function match:FunctionExpression(node, dest)
       end
    end
    self:emit(node.body)
+   if not self.ctx.explret then
+      self.ctx:op_ret0()
+   end
 
    self.ctx = self.ctx.outer
    self.ctx:op_fnew(dest, func.idx)
@@ -613,10 +616,16 @@ function match:ReturnStatement(node)
       self.ctx:op_ret(base, narg)
    end
    self.ctx.freereg = free
+   if self.ctx:is_root_scope() then
+      self.ctx.explret = true
+   end
 end
 function match:Chunk(tree, name)
    for i=1, #tree.body do
       self:emit(tree.body[i])
+   end
+   if not self.ctx.explret then
+      self.ctx:op_ret0()
    end
 end
 

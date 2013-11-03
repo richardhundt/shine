@@ -302,6 +302,7 @@ function Proto.new(flags, outer)
       firstline = 1;
       numlines  = 1;
       framesize = 0;
+      explret = false;
    }, Proto)
 end
 Proto.__index = { }
@@ -320,6 +321,9 @@ function Proto.__index:enter()
       freereg = self.freereg;
       __index = outer;
    })
+end
+function Proto.__index:is_root_scope()
+   return (getmetatable(self.actvars) == nil)
 end
 function Proto.__index:leave()
    local scope = assert(getmetatable(self.actvars), "cannot leave main scope")
@@ -379,18 +383,7 @@ function Proto.__index:write(buf)
       end
    end
 
-   local last_inst = self.code[#self.code][1]
-
-   if self.need_close then
-      self:emit(BC.UCLO, 0, 0) -- close upvals
-   end
-
    local body = Buf.new()
-   if not (last_inst >= BC.CALLMT and last_inst <= BC.CALLT) and
-      not (last_inst >= BC.RETM and last_inst <= BC.RET1) then
-      self:emit(BC.RET0, 0, 1)
-   end
-
    self:write_body(body)
 
    local offs = body.offs
