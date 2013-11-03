@@ -49,14 +49,7 @@ function match:CallExpression(node, base, want, tail)
    end
 
    self.ctx.freereg = free
-   if want == MULTIRES then
-      if tail then
-         self.ctx:op_callt(base, narg)
-      else
-         self.ctx:op_call(base, want, narg)
-      end
-      return MULTIRES
-   elseif mres then
+   if mres then
       if tail then
          self.ctx:op_callmt(base, narg - 1)
       else
@@ -70,7 +63,7 @@ function match:CallExpression(node, base, want, tail)
       end
    end
 
-   return base
+   return want == MULTIRES and MULTIRES or base
 end
 
 function match:SendExpression(node, base, want, tail)
