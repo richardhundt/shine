@@ -418,11 +418,13 @@ function Proto.__index:write_body(buf)
    end
    for i=1, #self.upvals do
       local uval = self.upvals[i]
-      if uval.proto == self.outer then
-         local uv = bit.bor(uval.vinfo.idx, 0x8000)
+      if uval.outer_idx then
+         -- the upvalue refer to a local of the enclosing function
+         local uv = bit.bor(uval.outer_idx, 0x8000)
          buf:put_uint16(uv)
       else
-         local uv = self.outer:upval(uval.vinfo.name)
+         -- the upvalue refer to an upvalue of the enclosing function
+         local uv = uval.outer_uv
          buf:put_uint16(uv)
       end
    end
@@ -518,15 +520,24 @@ function Proto.__index:upval(name)
          end
          proto = proto.outer
       end
-      vinfo = self:lookup(name)
+      vinfo = assert(self:lookup(name), "no upvalue found for "..name)
 
-      if not vinfo then
-         error("no upvalue found for "..name)
+      upval = { vinfo = vinfo; proto = proto; }
+
+      -- for each upval we set either outer_idx or outer_uv
+      if proto == self.outer then
+         -- The variable is in the enclosing function's scope.
+         -- We store just its register index.
+         upval.outer_idx = vinfo.idx
+      else
+         -- The variable is in the outer scope of the enclosing
+         -- function. We register this variable as an upvalue for
+         -- the enclosing function. Then we store the upvale index.
+         upval.outer_uv = self.outer:upval(name)
       end
 
       proto.need_close = true
 
-      upval = { vinfo = vinfo; proto = proto; }
       self.upvals[name] = upval
       upval.idx = #self.upvals
       self.upvals[#self.upvals + 1] = upval
