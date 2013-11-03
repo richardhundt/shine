@@ -320,17 +320,17 @@ function match:ParenExpression(node, dest, want)
    return self:emit(node.expressions[1], dest, 1)
 end
 function match:LocalDeclaration(node)
-   local vars = { }
-
-   for i=1, #node.names do
-      local lhs = node.names[i]
-      vars[i] = self.ctx:newvar(lhs.name, self.ctx:nextreg())
-   end
+   local base = self.ctx:nextreg(#node.names)
 
    local want = #node.expressions
    for i=1, #node.expressions do
       local w = want - (i - 1)
-      self:emit(node.expressions[i], vars[i].idx, w)
+      self:emit(node.expressions[i], base + (i - 1), w)
+   end
+
+   for i=1, #node.names do
+      local lhs = node.names[i]
+      self.ctx:newvar(lhs.name, base + (i - 1))
    end
 end
 
