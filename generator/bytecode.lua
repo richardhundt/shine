@@ -542,13 +542,14 @@ function match:ForStatement(node)
    local free = self.ctx.freereg
    self:block_enter(3)
    local init = node.init
-   local base = self.ctx:nextreg(3)
+   local base = self.ctx:nextreg(4)
+   local var_base = base + 3
    local name = init.id.name
 
    local saveexit = self.exit
    self.exit = util.genid()
 
-   self.ctx:newvar(name, base)
+   self.ctx:newvar(name, var_base)
    self:emit(init.value, base, 1)
    self:emit(node.last, base + 1, 1)
    if node.step then
