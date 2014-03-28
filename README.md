@@ -1,488 +1,823 @@
-# NAME
+# Shine Guide
 
-Shine - Object Oriented Lua Dialect
+* [Introduction](#introduction)
+* [Philosophy](#philosophy)
+* [Getting Started](#getting-started)
+* [Language Basics](#language-basics)
+  * [Comments](#comments)
+  * [Identifiers](#identifiers)
+  * [Scoping](#scoping)
+  * [Builtin Types](#builtin-types)
+    * [Booleans](#booleans)
+    * [Numbers](#numbers)
+    * [`nil` and `null`](#nil-and-null)
+    * [Strings](#strings)
+    * [Ranges](#ranges)
+    * [Tables](#tables)
+    * [Arrays](#arrays)
+    * [Patterns](#patterns)
+  * [Expressions](#expressions)
+    * [Operators](#operators)
+    * [Call Expressions](#call-expressions)
+    * [Member Expressions](#member-expressions)
+    * [Assignment](#assignment)
+    * [Destructuring](#destructuring)
+    * [Comprehensions](#comprehensions)
+    * [Lambda Expressions](#lambda-expressions)
+  * [Statements](#statements)
+    * [Do Statement](#do-statement)
+    * [If Statement](#if-statement)
+    * [Given Statement](#given-statement)
+    * [While Statement](#while-statement)
+    * [Numeric For Loop](#numeric-for-loop)
+    * [Generic For Loop](#generic-for-loop)
+    * [Try Statement](#try-statement)
+    * [Import Statement](#import-statement)
+    * [Export Statement](#export-statement)
+  * [Functions](#functions)
+  * [Generators](#generators)
+  * [Modules](#modules)
+  * [Classes](#classes)
+    * [Methods](#methods)
+    * [Properties](#properties)
+    * [Constructor](#constructor)
+    * [Inheritance](#inheritance)
+    * [Module Mixins](#module-mixins)
+  * [Grammars](#grammars)
+* [Standard Libraries](#standard-libraries)
+  * [Concurrency](#concurrency)
+    * [Fibers](#fibers)
+    * [Threads](#threads)
+  * [Serialization](#serialization)
 
-# SYNOPSIS
+## <a name="introduction"></a>Introduction
+
+Shine is a general purpose, dynamic, multi-paradigm programming
+language which is based on, and extends, Lua with features geared
+more to programming in the large. For maximum performance it uses
+a modified version of the LuaJIT virtual machine, which is known
+for its small footprint and impressive performance which rivals
+that of C.
+
+Most of the language features are those of the underlying LuaJIT
+VM, and the extensions are implemented in terms of lower level
+constructs already present in LuaJIT, so anyone familiar with
+Lua and LuaJIT should quickly feel right at home with Shine.
+
+Moreover, vanilla Lua libraries can be loaded and run unmodified,
+and although compilation of Lua code is slower than with LuaJIT or
+PuC Lua, there is no additional runtime penalty, and since they
+share the same bytecode, this means that Shine users can leverage
+all of the existing Lua libraries out there without writing wrappers
+or additional bindings. You can, of course, call seamlessly into
+Shine code from Lua too, as long as Lua is running within the
+Shine runtime.
+
+Another goal of Shine, is that the standard libraries which are
+included are focused on providing
+[CSP](http://en.wikipedia.org/wiki/Communicating_sequential_processes)
+style concurrency, so although the language itself has no concurrency
+primitives, the fibers, channels, threads, pipes and I/O libraries
+are all centered around building highly scalable, low-footprint,
+network oriented concurrent applications.
+
+## <a name="philosophy"></a>Philosophy
+
+Shine strives for a pragmatic balance between safety and syntactic
+and semantic flexibility.
+
+Like Lua, Shine is a dynamic language with late binding. Unlike
+Lua, however, Shine will raise an error at compile-time if a symbol
+is referenced which is not in scope. This means that the only globals
+are those which are pre-defined by the runtime which the compiler
+knows about. The only way a symbol can come into scope is if it is
+pre-defined, imported, or defined locally.
+
+Summary of safety features:
+
+* Static local variable name resolution.
+* Default declaration scope is localized.
+* Function and method parameter guards.
+
+Although some safety features were added, Shine's philosophy is
+that whereas safety can be extended by the user through testing,
+if the language isn't flexible, then there is nothing the user can
+do about it.
+
+In this spirit, Shine gives you the power to create new syntax in
+the same way that Ruby or Perl do, by making parentheses optional
+around function and method call parameters, introducing a short
+function syntax, and by extending support for hooks for operator
+overloading and builtin events.
+
+Summary of flexibility features:
+
+* Operator meta-methods as in Lua with Shine specific extensions.
+* Deep introspection into nominal types
+* Lambda expressions / short function syntax
+* Optional parentheses 
+* Property getters and setters with fallback
+
+Additionally, all constructs can be nested. Classes can be declared
+inside other classes and even inside functions, which allows for
+run-time construction of classes, modules and grammars.
+
+## <a name="getting-started"></a>Getting Started
+
+Shine ships with all its dependencies, so simply clone the git
+repository and run `make && sudo make install`:
 
 ```
-usage: shine [options]... [script [args]...].
-Available options are:
-  -e chunk	Execute string 'chunk'.
-  -c ...  	Compile or list bytecode.
-  -i      	Enter interactive mode after executing 'script'.
-  -v      	Show version information.
-  --      	Stop handling options. 
-  -       	Execute stdin and stop handling options.
+$ git clone --recursive https://github.com/richardhundt/shine.git
+$ make && sudo make install
 ```
 
-If `script` ends with a `.lua` extension it is parsed and executed
-as Lua, otherwise it is passed to the Shine loader. In both cases
-pre-compiled bytecode is detected and executed directly. The default
-Shine file extension is `.shn`, which is used by `require`'s search
-paths.
+This will install two executables `shinec` and `shine`.  The
+`shinec` executable is just the compiler and has the following
+usage:
 
 ```
 usage: shinec [options]... input output.
 Available options are:
-  -t type 	Output file format.
-  -b      	List formatted bytecode.
-  -n name 	Provide a chunk name.
-  -g      	Keep debug info.
-  -p      	Print the parse tree.
-  -o      	Print the opcode tree.
+  -t type   Output file format.
+  -b        List formatted bytecode.
+  -n name   Provide a chunk name.
+  -g        Keep debug info.
+  -p        Print the parse tree.
+  -o        Print the opcode tree.
 ```
 
-# OVERVIEW
+The main executable and runtime is `shine`, which includes
+all the functionality of `shinec` via the `-c` option and
+has the following usage:
 
-This document is written primarily for Lua hackers and assumes you
-know Lua's semantics and syntax, and that you know what LPeg is.
+```
+usage: shine [options]... [script [args]...].
+Available options are:
+  -e chunk  Execute string 'chunk'.
+  -c ...    Compile or list bytecode.
+  -i        Enter interactive mode after executing 'script'.
+  -v        Show version information.
+  --        Stop handling options. 
+  -         Execute stdin and stop handling options.
+```
 
-# DESCRIPTION
+The `script` file argument extension is significant in that
+files with a `.lua` extension are passed to the built-in Lua
+compiler, whereas files with a `.shn` extension are compiled
+as Shine source.
 
-Shine (Xhosa word for moon), is a loose super set of Lua which
-adds OO features, array comprehensions, ranges, modules, a smarter
-generic for loop, destructuring assignment, and more.
+Shine has been tested on Linux and Mac OS X, and support for
+Windows is in progress.
 
-Kinda like C++ for Lua.
+## <a name="language-basics"></a>Language Basics
 
-The goal of the project is to allow rapid experimentation with Lua's
-surface syntax and semantics. So if you've ever felt that Lua is
-too minimal, or missing that one killer feature, here's your chance
-to build it and try it out.
+Shine is a line-oriented language. Statements are generally seperated
+by a line terminator. If several statements appear on the same line, they
+must be may be separated by a semicolon `;`.
 
-Shine consists of an LPeg based parser and is built on top of
-[TvmJIT](https://github.com/fperrad/tvmjit), which is itself a hack
-around LuaJIT-2.0.3, and a minimal core runtime of builtin types
-and functions.
+Long expressions with infix operators may be wrapped with the operator
+leading after the line break, however for function and method calls, the
+argument list must start on the same line as the callee:
 
-The rest is pushed into libraries which come included.  Of course,
-you still have access to all the Lua libraries out there as Shine
-can load and run vanilla Lua code just fine.
+```
+a = 40
+  + 2 -- OK
 
-Programming - if not in the large, then at least in the medium -
-doesn't seem to be a goal for Lua (although there are some large
-Lua code-bases out there). Shine aims to make it more feasible
-though, by making a best effort to detect unresolved symbol names
-statically and raising an error.  This means that the only globals
-you can reference without a fully qualified name are those which
-are pre-defined.
+foo
+  .bar() -- OK
 
-It also means that providing libraries such for accessing the file
-system, sockets, threads, binary serialization, regular expressions,
-JSON, HTTP and "fibers" (coroutines scheduled by an event-loop) is
-also in scope.
+print "answer:", 42 -- OK [means: print("answer:", 42)]
 
-Here's a quick sample showing some of the features:
+print(
+  "answer:", 42 -- OK
+)
 
-```Lua
-module shapes
+print
+  "answer:", 42 -- BAD [syntax error]
+```
 
-   class Point
-      -- default parameter values with guards
-      self(x = 0 is 'number', y = 0 is 'number')
-         self.x = x
-         self.y = y
-      end
-   end
+A bare word by itself is parsed as a function call:
 
-   -- single inheritance
-   class Point3D extends Point
-
-      -- constructor
-      self(x = 0, y = 0, z = 0)
-         super(x, y)
-      end
-
-      -- getters/setters
-      set x(x)
-         self._x = x
-      end
-      get x()
-         return self._x
-      end
-
-      -- delegated meta-methods
-      __tostring__()
-         return "Point3D<%p>".format(self)
-      end
-   end
-
+```
+if waiting then
+   yield -- compiles as yield()
 end
-
-a = [ 'foo', 'bar', { answer = 42 }, 101 ]
-
--- destructuring assignment
-[ x, y, { answer = z } ] = a
-
-print x, y, z
-
--- short lambda syntax
-a = ["a", "b", "c"].map (i, v) => i ~ v
-
--- string interpolation
-answer = 42
-print "the answer is ${answer}"
-
--- LPeg is a first class citizen
-pattern = /
-   text  <- {~ <item>* ~}
-   item  <- <macro> | [^()] | '(' <item>* ')'
-   arg   <- ' '* {~ (!',' <item>)* ~}
-   args  <- '(' <arg> (',' <arg>)* ')'
-   macro <- (
-        ('apply' <args>) -> '%1(%2)'
-      | ('add'   <args>) -> '%1 + %2'
-      | ('mul'   <args>) -> '%1 * %2'
-   )
-/
-
-s = "add(mul(a,b),apply(f,x))"
-print(pattern.match(s))
-
 ```
 
-## Language Basics
+### <a name="comments"></a>Comments
 
-Block comments have been extended to include `--:<mark>: ... :<mark>:`
-as well as supporting the Lua style block comments:
+Comments come in 3 forms: Vanilla Lua-style `--` and `--[=*[...]=*]`
 
-```
-   --[[ Lua's block comment. ]]
-   --:: But this also works. ::
-   --:foo: And so does this. :foo:
-```
+* Lua-style line comments starting with `--`
+* Lua-style block comments of the form `--[=*[ ... ]=*]`
+* Shine block comments of the form `--:<token>([^)]*)?: ... :<token>:`
 
-The motivation for this is to allow you to add metadata hints to
-the source to support documentation generators (for example).
-
-Symbol names are the same as in Lua with the addition that `$` is
-a valid character. For example `$_$` is a valid variable name.
-
-Shine is a line oriented language, so to some degree whitespace
-is significant. In particular, call expressions may have parentheses
-omitted even when the arguments are not tables or constants (as in Lua).
-
-This means that although you can say:
+The last form is designed to allow Shine sources to be annotated
+for processing by external tools such as documentation generators:
 
 ```
-   answer = 42
-   prefix = "the answer is: "
-   print prefix, answer -- no parens
+-- a line comment
+
+--[[
+a familiar Lua-style
+block comment
+]]
+
+--::
+simple Shine block comment
+::
+
+--:md(github-flavored):
+perhaps this is extracted by a markdown processor
+:md:
 ```
 
-You can't say:
+### <a name="identifiers"></a>Identifiers
+
+Identifiers must start with `[a-zA-Z_$]` (alphabetical characters
+or `_` or `$`) which may be followed by zero or more `[a-zA-Z_$0-9]`
+characters (alphanumeric or `_` or `$`).
 
 ```
-   answer = 42
-   prefix = "the answer is: "
-
-   print
-   prefix, answer  -- WRONG
+$this_is_valid
+so_is_$this
 ```
 
-In the second case you need parentheses for the `print()` function call.
+### <a name="scoping"></a>Scoping
 
-Moreover, in Shine, everything can be nested. You can have classes
-and modules inside functions, and vice versa.
+Shine scoping rules are similar to Lua's with the addition of the concept
+of a default storage if `local` is not specified when introducing a new
+declaration.
 
-### Operators
+The default storage for variables is always `local`. For other
+declarations, it depends on the enclosing scope:
 
-Shine supports additional operators to Lua, adding C-style bitwise
-operators. String concatenation is done using `~` instead of `..`
-as the latter is reserved for ranges. The `**` operator replaces `^` as
-exponentiation (`^` is bitwise xor instead).
+* If at the top level of a compilation unit, the default is package
+  scoped for all non-variable declarations.
+* Inside class and module bodies, the default is scoped to the body
+  environment.
+* Everwhere else (i.e. functions and blocks) it is `local`.
 
-Binary operators:
+Declarations can always be lexically scoped by declaring them as `local`.
+
+In short, what this means is that most of the time you can simply leave out
+the `local` keyword without worrying about creating globals or leaking out
+declarations to the surrounding environment.
+
+There are cases where a `local` is useful for reusing a variable name in
+a nested scope when the inner scope should shadow the variable in the outer
+scope.
+
+### <a name="builtin-types"></a>Builtin Types
+
+Shine includes all of LuaJIT's builtin types:
+
+* `nil`
+* `boolean`
+* `number`
+* `string`
+* `table`
+* `function`
+* `userdata`
+* `thread` (coroutine)
+* `cdata`
+
+All other extensions are built primarily using `table`s and `cdata`.
+These include additional primitives:
+
+* `null`
+* `Array`
+* `Range`
+* `Error`
+
+nominal meta types:
+
+* `Class`
+* `Module`
+* `Grammar`
+
+pattern matching meta types:
+
+* `ArrayPattern`
+* `TablePattern`
+* `ApplyPattern`
+
+and the meta meta type:
+
+* `Meta`
+
+#### <a name="booleans"></a>Booleans
+
+The constants `true` and `false`. The only values which are logically
+false are `false` and `nil`. Everything else evaluates to `true` in a
+boolean context.
+
+#### <a name="numbers"></a>Numbers
+
+The Shine parser recognizes LuaJIT `cdata` long integers as well as
+Lua numbers. This is extended with octals.
+
+The following are represented as Lua `number` type:
+
+* `123`
+* `123.45`
+* `1.2e3`
+* `0x42` - heximal
+* `0644` - octal
+
+These are LuaJIT extensions enabled by default in Shine:
+
+* `42LL` - LuaJIT long integer `cdata`
+* `42ULL` - LuaJIT unsigned long integer `cdata`
+
+#### <a name="nil-and-null"></a>`nil` and `null`
+
+The constant `nil` has exactly the same meaning as in Lua.
+
+The constant `null` is exactly the cdata `NULL` value. It compares
+to `nil` as true, however, unlike in C, in a boolean context also
+evaluates to true. That is, although `null == nil` holds, `if null
+then print 42 end` will print "42".
+
+#### <a name="strings"></a>Strings
+
+As in Lua, strings are 8-bit clean, immutable and interned. The
+extensions added by Shine relate to delimiters, escape sequences
+and expression interpolation.
+
+There are two types of strings:
+
+* Single quoted
+* Double quoted
+
+Single quoted strings are verbatim strings. The only escape sequences
+which they recognise are `\'` and `\\`. All other bytes are passed
+through as is.
+
+Double quoted strings allow the common C-style escape sequences, including
+unicode escapes. These are all valid strings:
 
 ```
-"+" "-" "~" "/" "**" "*" "%" "^"
-"|" "&" ">>>" ">>" "<<"
-">=" ">" "<=" "<"
-"!=" "==" "or" "and" "is" "as"
-"+=" "-=" "~=" "**=" "*=" "/=" "%=" "|=" "&=" "^=" "<<=" ">>>=" ">>="
-"or=" "and="
-".."
-```
-
-The `as` operator calls `setmetatable` internally, and `is` checks to see
-if its left operand is an instance of its right.
-
-Unary operators:
-
-```
-"#" "~" "+" "-" "not" "..."
-```
-
-Bitwise operators have been added using the `bit` library. All borrow from C:
-
-```
-b = a | 0x8000
-c = b << 1
-```
-
-Since Shine is an OO language, the `.` operator is the equivalent
-of Lua's `:` operator. To call a function statically, use the `::`
-operator.
-
-```
-s = string::format("Hello %s", whom)
-```
-
-Additionally there is the spread prefix operator `...` which calls
-`unpack` internally:
-
-```
-a = [1, 2, 3]
-x, y, x = ...a
-print(x, y, z) -- 1  2  3
-```
-
-### Null
-
-Shine adds a addtional global singleton type `null` which is the
-ctype `NULL`, which evaluates to `true` in a boolean context, but
-`null == nil` still holds.
-
-It's useful for adding holes to lists, passing to C libraries, and creating
-segmentation faults (couldn't resist, sorry).
-
-### Strings
-
-Strings come in four flavours. Double quoted, double quoted long string,
-single quoted, and single quoted long string. The double quoted variants
-interpolate `${ <expr> }` escapes, whereas the single quoted strings don't.
-
-The long versions are delimited with `"""` and `'''` for double and single
-quoted strings respectively. All four strings types can span multiple lines.
-
-```
-s1 = 'another'
-s2 = 'short'
-s3 = "a ${s1} string and ${s2}" -- double quoted strings interpolate
-s4 = "
-    strings can span
-    multiple lines
+"text"
+"tab\t"
+"quote\""
+"\x3A"      -- hexadecimal 8-bits character
+"\u20AC"    -- unicode char UTF-8 encoded
 "
-s5 = """
-a Pythonesue long string
-"""
-s6 = '''
-a long one where ${this doesn't interpolate}
-'''
+multiline
+string
+"
 ```
 
-### Ranges
-
-Ranges are a builtin which represent and generate sequences of numbers.
-
-```
-r = 1..10
-for i in r do
-   print i
-end
-```
-
-Strings can be sliced with a range:
+Additionally, double quoted strings interpolate expressions inside
+`%{` and `}` marks. When constructing strings programmatically it
+is encouraged to use this form as the fragments produced are
+concatenated in a single VM instruction without creating short-lived
+temporary strings.
 
 ```
-s = "Hello World!"
-print s[1..4]
-
-print "Hello World!"[1..4] -- also OK
+"answer = ${40 + 2}" -- interpolated
 ```
 
-### Structural Types
-
-Shine makes a distinction between tables and arrays. Arrays have a metatable
-are zero-based, and can have "holes". Tables are vanilla Lua tables.
+Both types of strings can be delimited with single and triple
+delimiters. This is just a convenience to save escaping quotation
+marks:
 
 ```
-a1 = [ "a", 2, "three" ]
-t1 = { answer = 42, ["duff"] = "beer" }
+"a quoted string"
+"""a triple quoted string"""
+'a verbatim string'
+'''a triple quoted verbatim string'''
+```
 
--- newlines also count as pair separators
-t2 = {
-   foo = "bar"
-   baz = "quux"
+##### <a name="string-operations">String Operations
+
+Strings have a metatable with all the methods supported by Lua,
+namely: `len`, `match`, `uppper`, `sub`, `char`, `rep`, `lower`,
+`dump`, `gmatch`, `reverse`, `byte`, `gsub`, `format` and `find`.
+
+Shine adds a `split` method with the following signature:
+
+* `str.split(sep = '%s+', max = math::huge, raw = false)`
+
+Splits `str` on `sep`, which is interpreted as a Lua match pattern
+unless `raw` is `true`. The default value for `sep` is `%s+`. If
+`max` is given, then this is the maximum number of fragments returned.
+If the pattern is not found, the `split` returns the entire string.
+The `split` method is only available as a method, and is not defined
+in the `string` library.
+
+Strings can additionally be subscripted with numbers and ranges.
+Both subscripts have the effect of calling `string.sub()` internally.
+If a number is passed then a single character is returned at that
+offset, otherwise the two extremes of the range are passed to
+`string.sub`.  Negative offsets may be used.
+
+#### <a name="ranges"></a>Ranges
+
+Ranges are objects which represent numeric spans and are constructed with
+`<expr> .. <expr>`. They can be used for slicing strings, or for looping
+constructs.
+
+#### <a name="tables"></a>Tables
+
+Tables work just as in Lua with the addition that line-breaks serve as
+separators, in addition to `,` and `;`
+
+```
+-- these are equivalent
+t = { answer = 42, 1, 'b' }
+t = {
+    answer = 42
+    1
+    'b'
 }
-
--- tables can still be a sequence as in Lua
-t3 = { 'a', 'b', 'c' }
-
 ```
 
-### Functions
+#### <a name="arrays"></a>Arrays
 
-Shine allows function calls without parentheses, and bare word
-expressions are compiled as calls as well:
+Arrays are zero-based, numerically indexed lists of values, based on Lua
+tables, with the difference being that they track their length, and so
+may contain `nil` values.
 
-```
-print "Hello", "World!" -- compiled as: print("Hello", "World!")
-
-yield -- compiled as: yield()
-```
-
-Shine supports Lua-style function declarations:
+Arrays have a literal syntax delimited by `[` and `]` as in languages
+such as Perl, JavaScript or Ruby, but may also be constructed by
+calling `Array(...)`.
 
 ```
-function f(a, b, ...)
-   -- just like Lua
+a = [ 1, 'two', 33 ]
+a = Array(1, 'two', 33) -- same thing
+```
+
+The array type defines the following methods:
+
+* `join(sep = '')`
+
+* `push(val)`
+
+* `pop()`
+
+* `shift()`
+
+* `unshift(val)`
+
+* `slice(offset, count)`
+
+  Returns a new array with `count` elements, starting at `offset`.
+
+* `reverse()`
+
+  Returns a new array with elements in reverse order.
+
+* `sort(cmp = less, len = #self)`
+
+  Sorts the array in place using the comparison function `cmp` if given
+  and limits the number of items sorted to `len` if provided.
+
+#### <a name="patterns"></a>Patterns
+
+Shine integrates Parsing Expression Grammars into the language as
+a first-class type, thanks to the excellent
+[LPeg](http://www.inf.puc-rio.br/~roberto/lpeg/) library.
+
+Patterns are delimited by a starting and ending `/`, which borrows from
+commonly used regular expression quotation. However, Shine's patterns
+are very different and far more powerful than regular expressions.
+
+Syntax borrows heavily from the [re.lua](luahttp://www.inf.puc-rio.br/~roberto/lpeg/re.html) module.  Notable differences are that `|` replaces re's `/` as an
+alternation separator, `%pos` replaces `{}` as a position capture, and `+>`
+replaces `=>` as a match-time capture. Fold captures are added using `~>`.
+
+Unlike the `re.lua` module, grammars aren't represented as strings,
+but are compiled to LPeg API calls directly, so production rules
+for `->`, `~>` and `+>` captures can be any term or postfix expression
+supported by the language itself.
+
+Which means you can say `rule <- %digit -> function(c) ... end`
+with functions inlined directly in the grammar.
+
+It also means that patterns can be composed using the standard Lua
+operators as with the LPeg library:
+
+```
+word = / { %alnum+ } /
+patt = / %s+ / * word + function()
+   error "d'oh!"
 end
-local function g()
-   -- just like Lua
-end
 ```
 
-Functions can also be declared on tables, however, note that
-the meaning of the `.` replaces `:` in Lua, and `::` replaces Lua's `.`:
+### <a name="expressions"></a>Expressions
+
+Expressions are much the same as in Lua, with a few changes and some
+additions, notable C-style bitwise operators.
+
+String concatenation is done using `~` instead of `..` as the latter
+is reserved for ranges. The `**` operator replaces `^` as exponentiation
+(`^` is bitwise xor instead).
+
+Moreover, methods can be called directly on literals without the need to
+surround them in parentheses. So whereas in Lua one would say:
 
 ```
-o = { }
-function o.greet()
-   -- implies self == o here
-end
-function o::munge()
-   -- no self parameter
-end
+local quote = ("%q"):format(val)
 ```
 
-Shine also supports short function syntax:
+in Shine it's simply:
 
 ```
-addone = (x) => x + 1
-addone 41
+local quote = "%q".format(val)
+```
 
-compare = (a, b) =>
-   if a > b then
-      return 1
-   elseif a == b then
-      return 0
-   else
-      return -1
+#### <a name="operators"></a>Operators
+
+The following table lists Shine's operators in order of increasing
+precedence. Operators marked with a trailing `_` are unary operators.
+
+| Operator | Precedence | Associativity | Comment |
+|----------|------------|---------------|---------|
+| `..._`   | 1          | right         | unpack |
+| `or`     | 1          | left          | logical or |
+| `and`    | 2          | left          | logical and |
+| `==`     | 3          | left          | equality |
+| `!=`     | 3          | left          | inequality |
+| `is`     | 4          | left          | type equality |
+| `as`     | 4          | left          | type coercion |
+| `>=`     | 5          | left          | greater than or equal to |
+| `<=`     | 5          | left          | less than or equal to |
+| `>`      | 5          | left          | greater than |
+| `<`      | 5          | left          | less than |
+| `|`      | 6          | left          | bitwise or |
+| `^`      | 7          | left          | bitwise exclusive or |
+| `&`      | 8          | left          | bitwise and |
+| `<<`     | 9          | left          | bitwise left shift |
+| `>>`     | 9          | left          | bitwise right shift |
+| `>>>`    | 9          | left          | bitwise arithmetic right shift |
+| `~`      | 10         | left          | concatenation |
+| `+`      | 10         | left          | addition |
+| `-`      | 10         | left          | subtraction |
+| `..`     | 10         | right         | range |
+| `*`      | 11         | left          | multiplication |
+| `/`      | 11         | left          | division |
+| `%`      | 11         | left          | remainder (modulo) |
+| `~_`     | 12         | right         | bitwise not |
+| `!_`     | 12         | right         | logical not |
+| `not_`   | 12         | right         | logical not |
+| `**`     | 13         | right         | exponentiation |
+| `#_`     | 14         | right         | length of |
+
+The following operators are used in [patterns](#patterns):
+
+| Operator | Precedence | Associativity | Comment |
+|----------|------------|---------------|---------|
+| `~>`     | 1          | left          | fold capture |
+| `->`     | 1          | left          | production capture |
+| `+>`     | 1          | left          | match-time capture |
+| `|`      | 2          | left          | ordered choice |
+| `&_`     | 3          | right         | lookahead assertion |
+| `!_`     | 3          | right         | negative lookahead assertion |
+| `+`      | 3          | left          | one or more repetitions |
+| `*`      | 3          | left          | zero or more repetitions |
+| `?`      | 3          | left          | zero or one |
+| `^+`<N>  | 4          | right         | at least `N` repetitions |
+| `^-`<N>  | 4          | right         | at most `N` repetitions |
+
+Not listed above are the common `(` and `)` for grouping, and
+postcircumfix `()` and `[]` operators for function/method calls and
+subscripting respectively.
+
+#### <a name="call-expressions"></a>Call Expressions
+
+When calling a function, method, or other callable, parenthesis
+may be omitted provided there is either at least one argument.
+The following are all valid:
+
+```
+fido.bark(loudness)
+fido.move x, y          -- fido.move(x, y)
+```
+
+As a special case, if the callee is a single word as a statement
+on its own, then no parentheses or arguments are required:
+
+```
+yield                   -- OK yield()
+fido.greet              -- BAD (not a word)
+print yield             -- BAD (yield not a statement)
+```
+
+#### <a name="member-expressions"></a>Member Expressions
+
+Member expressions have three lexical forms:
+
+* method call
+* property call
+* property access
+
+Shine deviates from Lua in that the `.` operator when followed by
+a call expression is a method call, whereas Lua uses `:`. To call
+a property without passing an implicit receiver, use `::` instead:
+
+```
+s.format(...)          -- method call (self is implicit)
+string::format(s, ...) -- property call
+```
+
+For property access, either `::` or `.` may be used with identical
+semantics. By convention, one may prefer `::` for indicating namespace
+access such as `async::io::StreamReader`, whereas `.` may be used to
+access instance members.
+
+#### <a name="assignment"></a>Assignment
+
+Assignment expressions are based on Lua allowing multiple left and
+right hand sides. If an identifier on the left is previously
+undefined, then a new local variable is automatically introduced
+the fist time it is assigned.  This prevents global namespace
+pollution. Examples:
+
+```
+a, b = 1, 2             -- implicit locals a, b
+o.x, y = y, o.x         -- implicit local y 
+local o, p = f()        -- explicit
+a[42] = 'answer'
+```
+
+#### <a name="destructuring"></a>Destructuring
+
+Shine also supports destructuring of tables, arrays and application
+patterns. This can be used during assignment as well as pattern
+matching in [given](#given-statement) statements.
+
+For tables and arrays, Shine knows how to extract values for you:
+
+```
+a = ['foo', { bar = 42 }, 'baz']
+[x, { bar = y }, z] = a
+print x, y, z           -- prints: foo  42  baz
+```
+
+However, with objects you have to implement an `__unapply` hook to make
+it work. The hook is expected to return an iterator which would be valid
+for use in a generic for loop. Here's an example:
+
+```
+class Point
+   self(x = 0, y = 0)
+      self.x = x
+      self.y = y
    end
-end -- required, body is not an expression
-```
-
-If the body of a function is not an expression, then a closing `end` is required
-
-Combined with optional params, makes functional programming nicer
-(note that the space after `map` is significant):
-
-```
-a = ["a","b","c"].map (i,v) => i ~ v
-```
-
-Functions can have default parameters:
-
-```
-function greet(whom = "World")
-   print `Hello ${whom}!`
-end
-```
-
-The last parameter of a function may be a rest parameter which
-"slurps" up the remaining arguments into an Array:
-
-```
-function slurpy(arg1, ...args)
-   print "argument 1 is ${arg1}"
-   print "the rest of the arguments: ", ...args
-end
-```
-
-Of course, you can still do it the Lua way:
-
-```
-function slurpy(arg1, ...)
-   print "argument 1 is ${arg1}"
-   print "the rest of the arguments: ", ...
-end
-```
-
-### Generators
-
-Functions declared with an asterisk are coroutine generators.
-
-```
-function* seq(x)
-   for i in 1..x do
-      yield i
-   end
-end
-gen = seq(3)
-print(gen()) -- 1
-print(gen()) -- 2
-print(gen()) -- 3
-
--- short syntax
-powseq = *(x) =>
-   for i in 1 .. 10 do
-      yield i ** x
+   function self.__unapply(o)
+      return ipairs{ o.x, o.y }
    end
 end
 
-squares = powseq(2)
-for i in squares do
-   if i % 2 == 0 then
-      continue
+p = Point(42, 69)
+Point(x, y) = p
+print x, y              -- prints: 42   69
+```
+
+[Patterns](#patterns) already implement the relevant hooks, so the following
+works as expected:
+
+```
+Split2 = / { [a-z]+ } %s+ { [a-z]+ } /
+str = "two words"
+
+Split2(a, b) = str
+
+assert a == 'two' and b == 'words'
+```
+
+#### <a name="comprehensions"></a>Comprehensions
+
+Comprehensions are an experimental feature only implemented for
+arrays currently. They are also _not_ lazy generators. They should
+look familiar to Python programmers. Here are two examples:
+
+```
+a1 = [ i * 2 for i in 1..10 if i % 2 == 0 ]
+a2 = [ i * j for i in 1..5 for j in 1..5 ]
+```
+
+#### <a name="lambda-expressions">Lambda Expressions
+
+Shine has two syntactically similar short-hand forms for creating
+functions. The body of the first form must have a line-break after
+the `=>` and may contain statements like an ordinary function, must
+explicitly return any results, and must be terminated by a closing
+`end` token:
+
+```
+-- these two are identical
+f1 = (x) =>
+   return x * 2
+end
+function f1(x)
+    return x * 2
+end
+```
+
+The second form must be all on one line and may contain a single
+expression. An implicit `return` is added by the compiler, and no
+terminating `end` token is allowed:
+
+```
+f2 = (x) => x * 2
+```
+
+### <a name="statements"></a>Statements
+
+#### <a name="do-statement"></a>Do Statement
+
+`do <chunk> end`
+
+Same as in Lua.
+
+#### <a name="if-statement"></a>If Statement
+
+`if <expr> then <chunk> (elseif <expr> then <chunk>)* (else <chunk>)? end`
+
+Same as in Lua.
+
+#### <a name="given-statement"></a>Given Statement
+
+`given <expr> (case <bind_expr> then <chunk>)* (else <chunk>)? end`
+
+This is analogous to C's `switch` statement, however, the discriminant
+is not simply compared for equality. Instead, Shine provides pattern
+and smart matching capabilities.
+
+If `<bind_expr>` is not an extractor used for destructuring:
+
+* If the `<bind_expr>` evaluates to an object which implements a
+  `__match` metamethod, then this is used to determine of the
+  discriminant given by `<expr>` matches.
+
+* Otherwise the `is` operator is used for comparison.
+
+If `<bind_expr>` is a destructuring expression, then the extractor
+is bound and evaluated.
+
+Example:
+
+```
+function match(disc)
+   given disc
+      case "Hello World!" then
+         print "a greeting"
+      case String then
+         print "a string"
+      case { answer = A } then
+         print "%{A} is the answer"
+      else
+         print "something else"
    end
-   print i
 end
-
--- works for methods as well
-class Foo
-   *ticker()
-      while true do
-         yield "tick"
-      end
-   end
-end
-f = Foo()
-g = f.ticker()
-print g()
+match "Hello World!"    -- prints: "a greeting"
+match "cheese"          -- prints: "a string"
+match { answer = 42 }   -- prints: "42 is the answer"
+match 42                -- prints: "something else"
 ```
 
-### Control structures
+#### <a name="while-statement"></a>While Statement
 
-Shine supports the standard Lua if-then/elseif-then/else control structure:
+`while <expr> do <chunk> end`
 
-```
-if a > 10 then
-   print "biggish"
-elseif a > 10 and a < 5 then
-   print "medium"
-else
-   print "widdle"
-end
-```
+Same as in Lua.
 
-The familiar `while`, `repeat` and `for` loops are included as well.
-However, the generic `for` loop implicitly does a `pairs` call on
-its argument if it is not a function.
+#### <a name="repeat-statement"></a>Repeat Statement
 
-```
-t = { aye = 'a', bee = 'b', see = 'c' }
-for k,v in t do
-   print k, '=>', v
-end
-```
+`repeat <chunk> until <expr>`
 
-Additionally we have `given/case` statements which try to be smart in matching
-the discriminant and can also do pattern matching (case guards coming soon):
+Same as in Lua.
 
-```
-o = { answer = 42 }
-given o
-   case { answer = X } then -- this matches
-      print "answer: ${X}"  -- X is extracted and in scope
-   case 69 then
-      print "got 69"
-   else
-      print "HUH?"
-end
-```
+#### <a name="numeric-for-loop"></a>Numeric For Loop
 
-We also have `try/catch/finally` with optional guard expressions:
+`for <ident>=<init>,<limit>,<step> do <chunk> end`
+
+Same as in Lua.
+
+#### <a name="generic-for-loop"></a>Generic For Loop
+
+`for <name_list> in <expr_list> do <chunk> end`
+
+Generally works as in Lua, except that you don't need to use `pairs`
+as it is called implicitly (via a builtin called `__each__`), if
+the first argument in `<expr_list>` is not a function.
+
+The builtin `__each__` also calls a meta-method hook `__each`. This
+allows objects to differentiate `pairs`, `ipairs` iterators which
+return pairs, from the notion of a /default/ iterator, which may
+return an arbitrary number of values.
+
+#### <a name="try-statement"></a>Try Statement
+
+`try <chunk> (catch <ident> (if <expr>)? then <chunk>)* (finally <chunk>)? end`
+
+Does an `xpcall` internally, however it ensures that the `finally` clause is
+run, even if `return` is used in the `try` block or one of the `catch`
+bodies.
 
 ```
 function foo()
@@ -500,71 +835,400 @@ function foo()
 end
 
 print("GOT:", foo())
+
+--:output:
+
+caught:  cheese
+cleanup
+GOT:    69
+
+--:output:
 ```
 
 Just bear in mind that this still creates up to three closures
 inline, so it's best to place loops inside the try block and not
 around it.
 
-### Classes
+#### <a name="import-statement"></a>Import Statement
 
-Shine supports single inheritance, static methods (via the `static`
-prefix) and lexical class bodies (they're just functions internally).
+`import (<alias> = )? <symbol> (, (<alias> = )? <symbol>)* from <expr>`
+
+Calls `require(expr)` and then extracts and assigns the named symbols
+to `local` variables. May be used anywhere.
+
+#### <a name="export-statement"></a>Export Statement
+
+`export <ident> (, <ident>)*`
+
+Copies the values refered to by the identifiers into a table which is
+returned by the compilation unit. By default, the `_M` table is visible
+along with all non-local declarations being available for import or
+public access. By using an explicit `export`, only the symbols declared
+are exported and the compilation unit's namespace is essentially sealed.
+
+The `export` statement may not precede the declarations which are being
+exported.
+
+### <a name="functions"></a>Functions
+
+Functions are closures with all the same semantics as in Lua, however
+Shine extends function declarations with /default parameter expressions/,
+/parameter guards/, and /rest arguments/.
+
+Default parameter expressions can be any valid Shine expression and are
+scoped to the body of the function. That is, they are evaluate at the top
+of the function body.
+
+```
+function greet(whom = "World")
+   print "Hello %{whom}!"
+end
+greet()             -- prints: "Hello World!"
+greet("romix")      -- prints: "Hello romix!"
+```
+
+Since defaults can be any expression, they can be used to enforce a
+contract:
+
+```
+function addone(n = assert(type(n) == 'number') and n)
+   return n + 1
+end
+```
+
+However, this can be better achieved using /parameter guards/. Guards
+are checked against by using the `is` operator, and if they evaluate
+to `false`, an error is raised.
+
+```
+function addone(n is Number)
+   return n + 1
+end
+
+addone(40)          -- OK
+addone("cheese")    -- bad argument #1 to 'addone' (Number expected got String)
+```
+
+Like in Lua, functions can be declared on tables. However, the `.` notation
+defines a method with an implicit `self`, whereas the `::` notation does not.
+Therefore the `.` is the equivalent of Lua's `:`, and `::` is the equivalent
+of Lua's `.`. For example:
+
+```
+o = { }
+function o.greet()
+   print "Hi, I'm %{self}"      -- implicit self parameter
+end
+function o::greet()
+   print self                   -- Error: self is undefined
+end
+```
+
+Calling functions attached to tables follows the same conventions,
+with `.` passing the receiver, whereas `::` does not.
+
+Lastly, although the Lua-style `...` notation may be used for
+"vararg" functions as the last parameter. Shine extends this by
+adding `...<ident>` syntax. This has the effect of collecting the
+remaining arguments and packing them into an array:
+
+```
+-- the Lua way
+function luaesque(...)
+   for i=1, select('#', ...) do
+      a = select(i, ...)
+      print "arg: %{i} is %{a}"
+   end
+   return ...
+end
+
+-- the Shine way
+function shiny(...args)
+   for i, v in args do
+      print "arg: %{i} is %{v}"
+   end
+   return ...args   -- unpack
+end
+```
+
+Of course, the Lua way may often be preferred, especially for
+performance sensitive code which passes `...` along to avoid
+allocating arrays at each invocation.
+
+### <a name="generators"></a>Generators
+
+Generators are special functions which return a wrapped coroutine
+up invocation. Generators are declared as functions decorated with
+a `*`. The position of the asterisk depends on whether the generator
+is declared using long or short syntax.
+
+The long syntax takes the form:
+
+`function* '(' <param_list> ')' <chunk> end`
+
+Example:
+
+```
+function* seq(x)
+   -- inside the coroutine
+   for i in 1..x do
+      yield i       -- i.e. coroutine::yield(i)
+   end
+end
+gen = seq(3)
+
+print gen()         -- prints: 1
+print gen()         -- prints: 2
+print gen()         -- prints: 3
+```
+
+The short syntax takes the form:
+
+`*'(' <param_list> ')' => (<nl> <chunk> end) | <expr>`
+
+Example:
+
+```
+seq = *(x) =>
+   -- inside the coroutine
+   for i in 1..x do
+      yield i       -- i.e. coroutine::yield(i)
+   end
+end
+gen = seq(3)
+
+print gen()         -- prints: 1
+print gen()         -- prints: 2
+print gen()         -- prints: 3
+```
+
+Generators can also be defined as [class members](#methods)
+
+
+### <a name="classes"></a>Classes
+
+Classes are Lua tables used as constructors and metatables for their
+instances. A class is declared using the `class` keyword, which has
+the following form.
+
+`class <ident> (extends <expr>)? <chunk> end`
+
+Classes support single inheritance with implementation sharing via module
+mixins. Much like Ruby.
+
+Class bodies are closures internally, so all the ordinary scoping rules for
+functions apply. Two parameters `self` and `super` are passed to the class
+body, where `super` either references the base class, or the builtin `Object`
+if no base class is specified.
+
+The behaviour expressed by a class is contained in three special
+tables attached to the class as properties: `__members__`, `__getters__`
+and `__setters__`.
+
+Shine overloads the `__index` and `__newindex` metamethods to
+delegate to these tables - as well as two fallbacks: `__getindex`,
+and `__setindex` - according to the following rules:
+
+* if the access is a read access (`__index` hook)
+  * if `__getters__` contains the key, then call `__getters__[key](obj)`
+  * otherwise if `__members__` defines the key, return `__members__[key]`
+  * otherwise if `class.__getindex` is defined, call `__getindex(obj, key)`
+  * otherwise return `nil`
+
+* if the access is a write access (`__newindex` hook)
+  * if `__setters__` contains the key, then call `__setters__[key](obj, val)`
+  * otherwise, if `class.__setindex` is defined, call `__setindex(obj, key, val)`
+  * otherwise call `rawset(obj, key, val)`
+
+#### <a name="methods"></a>Methods
+
+Methods are shared by all instances, and attached to the class's
+`__members__` property, keyed on their name, who's value is an
+ordinary function, with an implicit `self` parameter.
+
+Methods are introduced with an identifier followed by the parameters
+and the body:
+
+`<ident> '( <param_list> ')' <chunk> end`
+
+The `function` keyword is omitted. This allows functions local to
+the class body to be distinguised from instance methods. Here is
+the canonical `Point` class in Shine, with comments to illustrate:
 
 ```
 class Point
-   -- the constructor
+   -- constructor
    self(x = 0, y = 0)
-      self.x = x
-      self.y = y
+      self.x = x    -- property 'x'
+      self.y = y    -- property 'y'
    end
 
-   -- getters and setters
-   set x(v)
-      self._x = v
-   end
-   get x()
-      self._x
-   end
-end
-
-class Point3D extends Point
-   self.DEBUG = true -- static property
-
-   self(x, y, z)
-      super(x, y) -- call base class initializer
-      self.z = z
+   -- instance method
+   move(dx, dy)
+      self.x = delta(self.x, dx)
+      self.y = delta(self.y, dy)
    end
 
-   -- static method (defined on Point)
-   function self.__len()
-      return super.__len() + 1
-   end
-
-   -- alternatively as a method (note the tailing "__")
-   __len__()
-      return super.__len__() + 1
+   -- class-scoped function
+   function delta(v, dv)
+      return v + dv
    end
 end
 ```
 
-Additional `__getindex` and `__setindex` hooks are defined as metamethods,
-and these delegate to `__get__` and `__set__` instance methods, if present,
-respectively.
+As a special case, generators may also be declared as methods, if
+they are prefixed with a `*`:
 
-To overload the constructor, classes provide an `__apply` hook
-(since `__call` must be defined on the class's metatable, so this
-delegates down to the class object from the meta-class).
+```
+class Bomb
+   *ticker()
+      while true do
+         yield "tick"
+      end
+   end
+end
+b = Bomb()
+g = b.ticker()
+print g()       -- prints: "tick"
+```
 
-The `super` expression is a little special in that, although it's
-just a variable like any other (you can assign to it), the compiler
-will pass the value of `self` as an implicit parameter to any methods
-called on it.
+#### <a name="properties"></a>Properties
 
-### Modules
+Properties are typically not part of the class model, and can be
+simply set inside the constructor, or externally as needed.
 
-Modules are containers for pieces of code. They're a lot like classes, but
-without a constructor.
+For cases where more control is needed, however, classes may also
+define /getters/ and /setters/, which are method declarations
+prefixed with `get` or `set` respectively. These special methods
+behave like properties in that they can be read from or assigned
+to as with ordinary properties by users of the objects, but they
+are invoked by the runtime as methods on the object. The following
+illustrates:
+
+```
+class Point
+   set x(x)
+      self._x = x
+   end
+   get x()
+      return self._x
+   end
+
+   set y(v)
+      self._y = y
+   end
+   get y()
+      return self._y
+   end
+end
+
+p = Point()
+p.x = 42            -- means: Point::__setters__::x(p, 42)
+print p.x           -- means: print(Point::__getters__::y(p, 42))
+```
+
+This allows for lazy construction of default property values,
+read-only or write-only properties,  enforcing type constraints,
+or coercing to and from `cdata` values.
+
+#### <a name"constructors"></a>Constructors
+
+The constructor of a class is a an ordinary method called `self`.
+Classes overload the `__apply` hook, which is called from the `Class`
+metatype's `__call` metamethod, and so are callable directly.  This
+is used to create instances of the class. Arguments are passed
+through to the constructor.
+
+However, this is largely a convention. An instance can also be created
+by using Lua's `setmetatable`:
+
+```
+p = setmetatable({ x = 0, y = 0}, Point)
+```
+
+A more concise form is supported by Shine using `as`:
+
+```
+p = { x = 0, y = 0 } as Point
+```
+
+The default `__apply` implementation calls `self` on the class, passing
+in a table with the metatable already set to that of the receiving class.
+In some cases - especially when creating metatypes for FFI bindings - this
+is undesirable, since FFI bindings construct `cdata` types and not insances
+based on tables.
+
+In this case a custom `__apply` method should be used. The following
+illustates:
+
+```
+import ffi from "sys.ffi"
+class Buffer
+   local ctype = ffi::typeof('struct { char* ptr; size_t len; };')
+   function self.__apply(str)
+      return ctype(str, #str)
+   end
+   -- make this class the metatype
+   ffi::metatype(ctype, self)
+end
+
+buf = Buffer("Hello World!")
+```
+
+#### <a name="inheritance"></a>Inheritance
+
+Inheritance uses the `extends <expr>` clause. The following illustrates:
+
+```
+class Point3D extends Point
+   self(x, y, z = 0)
+      super(x, y)           -- super refers to Point::__members__
+      self.z = z
+   end
+   move(dx, dy, dz)
+      super.move(dx, dy)    -- compiles to super::move(self, dx, dy)
+      self.z += dz
+   end
+end
+```
+
+The argument to `extends` can be any valid expression, so even literal
+tables, and call expressions are allowed, which can be powerful tools for
+constructing parameterized class hierarchies at runtime.
+
+```
+function DBRecord(table)
+   dbh = DB.connection()
+   class base
+      fetch()
+         dbh.with(table) (handle) =>
+            -- do something
+         end
+      end
+   end
+   return base
+end
+class DBUser extends DBRecord("user_table")
+   -- whatever
+end
+```
+
+The above also shows that all declarations - including class
+declarations - can be nested.
+
+### <a name="modules"></a>Modules
+
+Shine's modules are not to be confused with Lua's modules.
+
+In Shine modules are almost identical to classes in every way,
+except that they are without a constructor and don't inherit. Modules
+are often used as singletons, or namespaces to contain related
+pieces of code. Their real power, however, comes from the fact that
+they can be composed into classes and even other modules using
+`include <expr_list>`.
+
+This example shows similarities with classes, and how modules may be
+used as namespaces:
 
 ```
 module armory
@@ -590,15 +1254,14 @@ module armory
          print "snick"
       end
    end
-
 end
 
 gun = armory::PlasmaRifle()
 
 ```
 
-Although only single inheritance is supported, Shine follows Ruby's
-approach to module mixins via the `include <expr>[, ...<expr>]` statement:
+The following shows composing a module into a class using the `include`
+statement:
 
 ```
 module Explosive
@@ -634,10 +1297,21 @@ g.ignite() -- also crashes your program
 
 ```
 
-### Grammars
+### <a name="grammars"></a>Grammars
 
-Grammars in Shine can either be introduced with the `grammar` statement, or
-as an expression:
+Shine grammars are exactly [LPeg](http://www.inf.puc-rio.br/~roberto/lpeg/)
+grammars constructed with `lpeg.P(<table>)`.
+
+Grammars in Shine are simply named [patterns](#patterns) which have
+sub-rules which can be referenced recursively. Patterns are just
+the expression form, whereas grammars are named. Otherwise there
+is no difference and all the constructs allowed in one are allowed
+in the other.
+
+To illustrate this identity, the following two examples compile to
+the same patterns:
+
+Using the `grammar <ident> ... end` notation:
 
 ```
 grammar Macro
@@ -654,9 +1328,12 @@ end
 
 local s = "add(mul(a,b),apply(f,x))"
 print(Macro.match(s))
+```
 
--- same thing, but as an expression
-g2 = /
+This same thing, but as an expression:
+
+```
+Macro = /
    text  <- {~ <item>* ~}
    item  <- <macro> | [^()] | '(' <item>* ')'
    arg   <- ' '* {~ (!',' <item>)* ~}
@@ -667,103 +1344,68 @@ g2 = /
       | ('mul'   <args>) -> '%1 * %2'
    )
 /
-print(g2, g2.match(s))
-
+local s = "add(mul(a,b),apply(f,x))"
+print(Macro.match(s))
 ```
 
-The syntax for defining patterns borrows heavily from the `re.lua` module
-shipped with LPeg. Notable differences are that `|` replaces re's `/` as an
-alternative separator, `%pos` replaces `{}` as a position capture, and `+>`
-replaces `=>` as a match-time capture and `~>` is added as a fold capture.
+This distinction may change in future, so that the `grammar`
+notation's body becomes a lexically scoped block.
 
-Unlike the `re.lua` module, grammars aren't represented as strings,
-but are compiled to LPeg API calls directly, so production rules
-for `->`, `~>` and `+>` captures can be any term or postfix expression
-supported by the language itself.
+## <a name="standard-libaries"></a>Standard Libraries
 
-Which means you can say `rule <- %digit -> function(c) ... end`
-with functions inlined directly in the grammar.
+See [./lib](./lib)
 
-It also means that patterns can be composed using the standard Lua
-operators as with the LPeg library:
+### <a name="concurrency"></a>Concurrency
 
-```
-word = / { %alnum+ } /
-patt = / %s+ / * word + function()
-   error "d'oh!"
-end
-```
+The standard libraries have a strong focus on concurrency using
+scheduled coroutines, wrapped as the class `Fiber`, which cooperate
+with (but not scheduled by) an event loop.
 
-### Destructuring
+This gives a clean linear flow to writing concurrent applications
+without the need for inverting everything using callbacks.
 
-Shine supports destructuring in assignment as well as in `given/case`
-matching. For tables and arrays, Shine knows how to extract values for
-you:
+Here's the canonical TCP echo server example:
 
 ```
-a = ['foo','bar','baz']
-[x, y, z] = a
-```
+import async, yield from "async"
+import TCPServer from "async.io"
 
-However, with objects you have to implement an `unapply` hook to make
-it work. The hook is expected to return an iterator which would be valid
-for use in a generic for loop. Here's an example:
+server = TCPServer()
+server.reuseaddr(true)
+server.bind("localhost", 1976)
+server.listen(128)
 
-```
-class Point
-   self(x = 0, y = 0)
-      self.x = x
-      self.y = y
-   end
-   function self.__unapply(o)
-      return ipairs{ o.x, o.y }
+async =>
+   while true do
+      client = server.accept()
+      async =>
+         while true do
+            got = client.read()
+            if got == nil then
+               client.close()
+               break
+            end
+            client.write("you said %{got}")
+         end
+      end
    end
 end
 
-p = Point(42, 69)
-Point(x, y) = p
-print x, y  -- prints 42   69
+yield
 ```
 
-### Symbol import and export
+#### <a name="fibers"></a>Fibers
 
-By default, all symbols declared in the top scope of a compilation unit
-are public unless prefixed with `local`. If you want to explictly control
-what is exported, the `export`, but still want your symbols anchored in
-the module's environment, then you can use `export <name_list>`
-which desugars to a `return { symbol1 = symbol1, ..., symbolN = symbolN }`
-statement at the end of the compilation unit.
+See [./lib/async/fiber.shn](./lib/async/fiber.shn),
+[./lib/async/util.shn](./lib/async/util.shn)
 
-Public symbols can be imported with the `import` statement, which
-has the form:
+#### <a name="threads"></a>Threads
 
-```
-import (<alias> =)? <symbol>, ... from <expr>
-```
+See [./lib/sys/thread.shn](./lib/sys/thread.shn)
 
-An `import` calls `require` internally if <expr> is a string, otherwise
-if it is a table then symbols are copied out of that. If it is neither,
-you'll get an error.
+### <a name="serialization"></a>Serialization
 
-Examples:
+See [./lib/codec/serializer.shn](./lib/codec/serializer.shn)
 
-```
-import create, yield from "coroutine"
-import join = concat, push = insert from _G.table
-```
-
-Imported symbols are always private to the package. To re-export,
-either assign the symbols to `_M`, use `export` or add an explicit
-return at the end of the compilation unit to control what is exported
-as with Lua.
-
-## MAILING LIST
-
-Get involved! http://www.freelists.org/list/shine
-
-## ACKNOWLEDGEMENTS
-
-* Francesco Abbate - my first early adopter with lots of contributions
-* romix - giving me instant karma whenever I break master
-* François Perrad - creating TvmJIT and keeping it up-to-date
+Big TODO here.
 
