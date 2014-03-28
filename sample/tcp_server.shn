@@ -1,29 +1,22 @@
 import async, yield from "async"
-import TCPServer from "net.socket"
-
-ffi = require "ffi"
+import TCPServer from "async.io"
 
 server = TCPServer()
 server.reuseaddr(true)
-print "bind", server.bind("localhost", 1976)
-print "listen", server.listen(128)
-server.nonblocking = true
+server.bind("localhost", 1976)
+server.listen(128)
 
 async =>
    while true do
-      print "loop top"
       client = server.accept()
-      print "accept", client
       async =>
          while true do
-            print "reading..."
-            got, str = client.read()
-            if got == 0 then
-               print("close")
+            got = client.read()
+            if got == nil then
                client.close()
                break
             end
-            client.write("you said %{str}")
+            client.write("you said %{got}")
          end
       end
    end
