@@ -545,7 +545,7 @@ precedence. Operators marked with a trailing `_` are unary operators.
 | `<=`     | 5          | left          | less than or equal to |
 | `>`      | 5          | left          | greater than |
 | `<`      | 5          | left          | less than |
-| `&#124;` | 6          | left          | bitwise or |
+| &#124;   | 6          | left          | bitwise or |
 | `^`      | 7          | left          | bitwise exclusive or |
 | `&`      | 8          | left          | bitwise and |
 | `<<`     | 9          | left          | bitwise left shift |
