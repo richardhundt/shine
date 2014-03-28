@@ -1,0 +1,130 @@
+import ffi, C from "sys.ffi"
+
+function getcwd()
+   buf = ffi::new('char[?]', C::PATH_MAX)
+   C::getcwd(buf, C::PATH_MAX)
+   return ffi::string(buf)
+end
+
+function chdir(path is 'string')
+   return C::chdir(path)
+end
+
+function mkdir(path is 'string', mode is 'number' = 0755)
+   return C::mkdir(path, mode)
+end
+
+function rmdir(path is 'string')
+   return C::rmdir(path)
+end
+
+function unlink(path is 'string')
+   return C::unlink(path)
+end
+
+DIR = ffi::typeof('DIR')
+
+function opendir(path is 'string')
+   return C::opendir(path)
+end
+
+function readdir(dir is DIR)
+   if dir == null then
+      return nil, C::strerror(C::EINVAL)
+   end
+   ent = C::readdir(dir)
+   if ent == -1 then
+      return nil, C::sterror(ffi::errno())
+   end
+   if ent == null then
+      return null
+   end
+   return ffi::string(ent.d_name, ent.d_namlen)
+end
+
+function rewinddir(dir is DIR)
+   return C::rewinddir(dir)
+end
+
+function closedir(dir is DIR)
+   return C::closedir(dir)
+end
+
+function seekdir(dir is DIR, loc is 'number')
+   return C::seekdir(dir, loc)
+end
+
+function telldir(dir is DIR)
+   return C::telldir(dir)
+end
+
+local function ts2number(ts)
+   return tonumber(ts.ts_sec) + tonumber(ts.ts_nsec / 1e9)
+end
+local function stat2table(stat)
+   return {
+      dev   = stat.st_dev
+      ino   = stat.st_ino
+      mode  = stat.st_mode
+      nlink = stat.st_nlink
+      uid   = stat.st_uid
+      gid   = stat.st_gid
+      rdev  = stat.st_rdev
+      size  = stat.st_size
+      atime = ts2number(stat.st_atimespec)
+      mtime = ts2number(stat.st_mtimespec)
+      ctime = ts2number(stat.st_ctimespec)
+   }
+end
+if ffi::os == 'Linux' then
+   function _M::stat(path)
+      stat = ffi::new('struct stat')
+      rc = C::__xstat(C::STAT_VER, path, stat)
+      if rc == -1 then
+         return nil, C::strerror(ffi::errno())
+      end
+      return stat2table(stat)
+   end
+   function _M::lstat(path)
+      stat = ffi::new('struct stat')
+      rc = C::__xlstat(C::STAT_VER, path, stat)
+      if rc == -1 then
+         return nil, C::strerror(ffi::errno())
+      end
+      return stat2table(stat)
+   end
+   function _M::fstat(fd)
+      stat = ffi::new('struct stat')
+      rc = C::__xfstat(C::STAT_VER, fd, stat)
+      if rc == -1 then
+         return nil, C::strerror(ffi::errno())
+      end
+      return stat2table(stat)
+   end
+else
+   function _M::stat(path)
+      stat = ffi::new('struct stat')
+      rc = C::stat(path, stat)
+      if rc == -1 then
+         return nil, C::strerror(ffi::errno())
+      end
+      return stat2table(stat)
+   end
+   function _M::lstat(path)
+      stat = ffi::new('struct stat')
+      rc = C::lstat(path, stat)
+      if rc == -1 then
+         return nil, C::strerror(ffi::errno())
+      end
+      return stat2table(stat)
+   end
+   function _M::fstat(fd)
+      stat = ffi::new('struct stat')
+      rc = C::fstat(fd, stat)
+      if rc == -1 then
+         return nil, C::strerror(ffi::errno())
+      end
+      return stat2table(stat)
+   end
+end
+

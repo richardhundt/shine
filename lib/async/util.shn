@@ -1,0 +1,85 @@
+import Fiber from "async.fiber"
+import yield from "async"
+import Queue from 'data.queue'
+
+class Semaphore
+
+   self(count = 1)
+      self.count = count
+      self.queue = Queue()
+   end
+   up()
+      self.count += 1
+      if self.count > 0 and self.queue.count() > 0 then
+         wait = self.queue.dequeue()
+         wait.ready()
+      end
+   end
+   down()
+      if self.count > 0 then
+         self.count -= 1
+         return
+      end
+      curr = Fiber::current
+      self.queue.enqueue(curr)
+      while self.count < 1 do
+         curr.pause()
+         yield
+      end
+      self.count -= 1
+   end
+   release()
+      self.count = 1
+      while not self.queue.empty() do
+         wait = self.queue.dequeue()
+         wait.ready()
+         self.count += 1
+      end
+   end
+   try_down()
+      if self.count > 0 then
+         self.down()
+         return true
+      end
+      return false
+   end
+end
+
+class Channel
+   self(size = math.huge)
+      self.wput = Semaphore(size)
+      self.wget = Semaphore(0)
+      self.data = Queue()
+   end
+   put(data)
+      self.wput.down()
+      self.data.enqueue(data)
+      self.wget.up()
+   end
+   get()
+      self.wget.down()
+      if self.wput.queue.count() > 0 then
+         self.wput.up()
+      end
+      return self.data.dequeue()
+   end
+   join(that)
+      src, dst = that.wput.queue, self.wput.queue
+      while src.count() > 0 do
+         dst.enqueue(src.dequeue())
+      end
+      src, dst = that.wget.queue, self.wget.queue
+      while src.count() > 0 do
+         dst.enqueue(src.dequeue())
+      end
+      src, dst = that.data, self.data
+      while src.count() > 0 do
+         dst.enqueue(src.dequeue())
+      end
+      self.wput.count += that.wput.count
+      self.wget.count += that.wget.count
+      return self
+   end
+end
+
+

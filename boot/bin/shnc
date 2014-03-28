@@ -1,0 +1,3 @@
+#!/usr/bin/env tvmjit
+(!call (!index (!call require "shnc") "start") (!call unpack arg))
+

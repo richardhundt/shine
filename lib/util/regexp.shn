@@ -1,0 +1,112 @@
+local ffi = require('ffi')
+
+local lib_path = package::searchpath('util', package::cpath)
+local lib = ffi::load(lib_path)
+
+ffi::cdef"""
+
+typedef struct TRex TRex;
+
+typedef struct {
+   const char *begin;
+   int len;
+} TRexMatch;
+
+TRex *trex_compile(const char *pattern,const char **error);
+
+void trex_free(TRex *exp);
+
+unsigned int trex_match(TRex* exp,const char* text);
+
+unsigned int trex_search(TRex* exp,const char* text, const char** out_begin,
+   const char** out_end);
+
+unsigned int trex_searchrange(TRex* exp,const char* text_begin,
+   const char* text_end,const char** out_begin, const char** out_end);
+
+int trex_getsubexpcount(TRex* exp);
+
+unsigned int trex_getsubexp(TRex* exp, int n, TRexMatch *subexp);
+
+"""
+
+class RegExp
+
+   self(source)
+      self.source  = source
+      local errors = ffi::new("const char*[1]")
+      local result = lib::trex_compile(source, errors)
+      if result == null then
+         error(ffi::string(errors[0]), 2)
+      end
+      self.pattern = result
+      ffi::gc(self.pattern, lib.trex_free)
+   end
+
+   test(str)
+      return lib::trex_match(self.pattern, str) == 1
+   end
+
+   match(str)
+      if self.test(str) then
+         local capt = { }
+         local subm = ffi::new('TRexMatch')
+         for i=0, lib::trex_getsubexpcount(self.pattern) - 1 do
+            lib::trex_getsubexp(self.pattern, i, subm)
+            capt[i] = ffi::string(subm.begin, subm.len)
+         end
+         return capt
+      else
+         return nil
+      end
+   end
+
+   local _beg = ffi::new('const char*[1]')
+   local _end = ffi::new('const char*[1]')
+   find(str)
+      local ptr = ffi::new('const char*', str)
+      if lib::trex_search(self.pattern, ptr, _beg, _end) == 1 then
+         return (_beg[0] - ptr + 1), _end[0] - ptr
+      else
+         return nil
+      end
+   end
+
+   gsub(str, rep)
+      -- this needs to be re-entrant, so allocate these here
+      local _beg = ffi::new('const char*[1]')
+      local _end = ffi::new('const char*[1]')
+
+      local pat = self.pattern
+      local ptr = ffi::new('const char*', str)
+      local len = #str
+      local buf = { }
+      local ofs = 0
+
+      while true do
+         if lib::trex_searchrange(
+            pat, ptr + ofs, ptr + len, _beg, _end
+         ) == 0 then break end
+
+         local idx_beg = _beg[0] - ptr
+         local idx_end = _end[0] - ptr
+
+         buf[#buf + 1] = ffi::string(ptr + ofs, idx_beg - ofs)
+         buf[#buf + 1] = rep(ffi::string(ptr + idx_beg, idx_end - idx_beg))
+
+         ofs += idx_end
+      end
+
+      return table::concat(buf)
+   end
+
+   __unapply(subj)
+      local capt = self.match(subj)
+      return ipairs(capt or { })
+   end
+
+   __tostring__()
+      return string::format('RegExp(%q)', tostring(self.source))
+   end
+end
+

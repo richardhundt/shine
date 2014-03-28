@@ -1,0 +1,61 @@
+class Point
+   self(x = 0, y = 0)
+      print("""
+         x: %{x},
+         y: %{y}
+      """)
+      self.move(x, y)
+   end
+   move(x, y)
+      self.x = x
+      self.y = y
+   end
+   get foo()
+      return self._foo
+   end
+   set foo(v)
+      self._foo = v
+   end
+   class Inner extends self
+      self()
+        super()
+      end
+   end
+end
+
+class Point3D extends Point
+   self(x, y, z = 0)
+      super(x, y)
+      self.z = z
+   end
+   move(x, y, z)
+      super.move(x, y)
+      self.z = z
+   end
+end
+
+foo = 42
+bar = 69
+t = { foo = foo, bar = bar }
+
+print(t.foo, t.bar)
+
+p = Point()
+print(p)
+
+p = Point3D(1,2,3)
+print p.x, p.y, p.z
+print "get", p.foo
+p.foo = 42
+print "set", p.foo
+
+print("is check 1:", p is Point)
+print("is check 2:", p is Point3D)
+a = [ i * 2 for i in 1..10 if i % 2 == 0 ]
+
+for i, v in a do
+   print(i, "val:", v)
+end
+
+print((x) => x * 2)
+

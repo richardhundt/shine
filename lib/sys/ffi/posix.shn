@@ -1,0 +1,179 @@
+local ffi = require("ffi")
+
+ffi::cdef"""
+/* common types */
+typedef long unsigned int size_t;
+typedef long int ssize_t;
+
+typedef int32_t pid_t;
+typedef int32_t clockid_t;
+
+typedef long time_t;
+typedef unsigned long clock_t;
+
+typedef uint16_t in_port_t;
+typedef uint32_t socklen_t;
+typedef uint8_t sa_family_t;
+
+typedef struct timeval timeval_t;
+typedef struct timespec timespec_t;
+
+struct timespec {
+  time_t ts_sec;
+  long   ts_nsec;
+};
+
+typedef struct tm {
+  int tm_sec;	/* seconds after the minute [0-60] */
+  int tm_min;	/* minutes after the hour [0-59] */
+  int tm_hour;	/* hours since midnight [0-23] */
+  int tm_mday;	/* day of the month [1-31] */
+  int tm_mon;	/* months since January [0-11] */
+  int tm_year;	/* years since 1900 */
+  int tm_wday;	/* days since Sunday [0-6] */
+  int tm_yday;	/* days since January 1 [0-365] */
+  int tm_isdst;	/* Daylight Savings Time flag */
+  long tm_gmtoff;	/* offset from CUT in seconds */
+  char *tm_zone;	/* timezone abbreviation */
+} tm_t;
+
+typedef struct timezone {
+   int tz_minuteswest; /* of Greenwich */
+   int tz_dsttime;     /* type of dst correction to apply */
+} timezone_t;
+
+time_t time(time_t *tloc);
+int gettimeofday(timeval_t *tp, timezone_t *tzp);
+size_t strftime(char *, size_t, const char *, tm_t *);
+
+char *asctime(tm_t *);
+clock_t clock(void);
+char *ctime(time_t *);
+double difftime(time_t, time_t);
+tm_t *getdate(const char *);
+tm_t *gmtime(time_t *);
+tm_t *localtime(time_t *);
+time_t mktime(tm_t *);
+
+int pipe(int *);
+int fork(void);
+int dup(int);
+int dup2(int, int);
+
+int open(const char *, int, ...);
+int close(int);
+int fcntl(int, int, ...);
+int execl(const char *, const char *, ...);
+int execlp(const char *, const char *, ...);
+int execv(const char *, char *const *);
+int execvp(const char *, char *const *);
+long int write(int, const void *, long unsigned int);
+long int read(int, void *, long unsigned int);
+long int send(int, const void *, long unsigned int, int);
+long int recv(int, void *, long unsigned int, int);
+int kill(int, int);
+int waitpid(int, int *, int);
+
+typedef void (*sig_t)(int);
+static const int SIGPIPE = 13;
+static const int SIG_IGN = 1;
+sig_t signal(int, sig_t);
+
+void *mmap(void *, long unsigned int, int, int, int, long int);
+
+int ioctl(int, long unsigned int, ...);
+unsigned int sleep(unsigned int);
+int usleep(unsigned int);
+int gettimeofday(struct timeval *restrict, struct timezone *restrict);
+char *realpath(const char *restrict, char *restrict);
+
+void *malloc(long unsigned int);
+void *calloc(long unsigned int, long unsigned int);
+void *realloc(void*, long unsigned int);
+void free(void *);
+
+char *strdup(const char *);
+char *strndup(const char *, long unsigned int);
+
+struct _IO_FILE *fopen(const char *restrict, const char *restrict);
+int fclose(struct _IO_FILE *);
+void clearerr(struct _IO_FILE *);
+int feof(struct _IO_FILE *);
+int ferror(struct _IO_FILE *);
+int fileno(struct _IO_FILE *);
+int printf(const char *, ...);
+int sprintf(char *, const char *, ...);
+int fprintf(struct _IO_FILE *restrict, const char *restrict, ...);
+int fputc(int, struct _IO_FILE *);
+char *strerror(int);
+
+struct addrinfo;
+struct sockaddr;
+
+int socket(int domain, int type, int protocol);
+int socketpair(int domain, int type, int protocol, int sv[2]);
+int bind(int sockfd, struct sockaddr *addr, socklen_t addrlen);
+int listen(int sockfd, int backlog);
+int connect(int sockfd, struct sockaddr *addr, socklen_t addrlen);
+int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+int accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags);
+int getsockname(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+int getpeername(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+
+static const int SHUT_RD   = 0;
+static const int SHUT_WR   = 1;
+static const int SHUT_RDWR = 2;
+
+int shutdown(int sockfd, int how);
+
+typedef struct fd_set {
+   int32_t fds_bits[32];
+} fd_set;
+
+int select(int nfds, fd_set *rfds, fd_set *wfds, fd_set *efds,
+   struct timeval *timeout);
+
+int getsockopt(int socket, int level, int option_name,
+   void *option_value, socklen_t *option_len);
+
+int setsockopt(int socket, int level, int option_name,
+   const void *option_value, socklen_t option_len);
+
+int getaddrinfo(const char *host, const char *port, struct addrinfo *hints, struct addrinfo **res);
+void freeaddrinfo(struct addrinfo *ai);
+
+struct pollfd {
+  int fd;
+  short int events;
+  short int revents;
+};
+
+int poll(struct pollfd *, long unsigned int, int);
+
+int mkdir(const char*, int);
+int rmdir(const char*);
+int unlink(const char*);
+
+typedef struct DIR DIR;
+typedef struct dirent dirent_t;
+
+DIR* opendir(const char*);
+dirent_t* readdir(DIR*);
+int closedir(DIR*);
+void rewinddir(DIR*);
+void seekdir(DIR*, long);
+long telldir(DIR*);
+
+typedef struct stat stat_t;
+
+/* these are macros on my Linux box :( */
+int fstat(int, stat_t*);
+int lstat(int, stat_t*);
+int stat(const char*, stat_t*);
+
+int chmod(const char*, int);
+char* getcwd(char *, size_t);
+char* mktemp(char *);
+int chdir(const char *);
+
+"""

@@ -1,0 +1,19 @@
+local a = [ 'a', 'b', 'c' ]
+
+a.map = function(self, f)
+   local _a = [ ]
+   for i=0, a.length - 1 do
+      _a[_a.length] = f(a[i])
+   end
+   return _a
+end
+
+a.map (_) => print(_)
+
+print #a == a.length
+
+for i,v in ipairs(["2", "3", "4"]) do
+   print(i, '=>', v)
+end
+
+print a

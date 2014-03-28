@@ -1,0 +1,6 @@
+function f1(a, b)
+   return a * b
+end
+
+print("test", f1(1, 2))
+

@@ -1,0 +1,161 @@
+local ffi = require('ffi')
+
+ffi::cdef"""
+static const int EPERM = 1;
+static const int ENOFILE = 2;
+static const int ENOENT = 2;
+static const int ESRCH = 3;
+static const int EINTR = 4;
+static const int EIO = 5;
+static const int ENXIO = 6;
+static const int E2BIG = 7;
+static const int ENOEXEC = 8;
+static const int EBADF = 9;
+static const int ECHILD = 10;
+static const int EAGAIN = 11;
+static const int ENOMEM = 12;
+static const int EACCES = 13;
+static const int EFAULT = 14;
+static const int EBUSY = 16;
+static const int EEXIST = 17;
+static const int EXDEV = 18;
+static const int ENODEV = 19;
+static const int ENOTDIR = 20;
+static const int EISDIR = 21;
+static const int EINVAL = 22;
+static const int ENFILE = 23;
+static const int EMFILE = 24;
+static const int ENOTTY = 25;
+static const int EFBIG = 27;
+static const int ENOSPC = 28;
+static const int ESPIPE = 29;
+static const int EROFS = 30;
+static const int EMLINK = 31;
+static const int EPIPE = 32;
+static const int EDOM = 33;
+static const int ERANGE = 34;
+static const int EDEADLOCK = 36;
+static const int EDEADLK = 36;
+static const int ENAMETOOLONG = 38;
+static const int ENOLCK = 39;
+static const int ENOSYS = 40;
+static const int ENOTEMPTY = 41;
+static const int EILSEQ = 42;
+
+char *strerror(int);
+
+typedef long time_t;
+typedef long off_t;
+typedef unsigned int dev_t;
+typedef short ino_t;
+typedef int pid_t;
+typedef unsigned short mode_t;
+typedef int sigset_t;
+
+static const int _MAX_FNAME = 256;
+typedef unsigned long fsize_t;
+
+typedef struct _finddata_t finddata_t;
+typedef struct _finddatai64_t finddatai64_t;
+typedef struct dirent dirent_t;
+
+struct dirent {
+   long	          d_ino;
+   unsigned short d_reclen;
+   unsigned short d_namlen;
+   char*          d_name;
+};
+
+typedef struct {
+   finddata_t  dd_info;
+   dirent_t    dd_dir;
+   long        dd_handle;
+   short       dd_stat;
+   char        dd_name[1];
+} DIR;
+
+struct _finddata_t {
+  unsigned  attrib;
+  time_t    time_create;
+  time_t    time_access;
+  time_t    time_write;
+  fsize_t   size;
+  char	    name[_MAX_FNAME];
+};
+
+struct _finddatai64_t {
+    unsigned    attrib;
+    time_t      time_create;
+    time_t      time_access;
+    time_t      time_write;
+    __int64     size;
+    char        name[_MAX_FNAME];
+};
+
+int _findfirst (const char*, struct _finddata_t*);
+int _findnext (int, struct _finddata_t*);
+int _findclose (int);
+
+int _chdir(const char*);
+char* _getcwd(char*, int);
+int _mkdir(const char*);
+char* _mktemp(char*);
+int _rmdir(const char*);
+
+int _access(const char*, int);
+int _chsize(int, long);
+int _close(int);
+int _creat(const char*, unsigned);
+int _dup(int);
+int _dup2(int, int);
+long _filelength(int);
+int _fileno(struct _IO_FILE*);
+long _get_osfhandle(int);
+int _isatty (int);
+int _eof(int);
+int _locking (int, int, long);
+long _lseek (int, long, int);
+int _open(const char*, int, ...);
+int _open_osfhandle(long, int);
+int _pipe(int *, unsigned int, int);
+int _read(int, void*, unsigned int);
+int _sopen(const char*, int, int, ...);
+long _tell(int);
+int _umask(int);
+int _unlink(const char*);
+int _write(int, const void*, unsigned int);
+
+static const int S_IFIFO  = 0x1000;
+static const int S_IFCHR  = 0x2000;
+static const int S_IFBLK  = 0x3000;
+static const int S_IFDIR  = 0x4000;
+static const int S_IFREG  = 0x8000;
+static const int S_IFMT   = 0xF000
+static const int S_IEXEC  = 0x0040;
+static const int S_IWRITE = 0x0080
+static const int S_IREAD  = 0x0100;
+static const int S_IRWXU  = 0x01C0; /* (S_IREAD | S_IWRITE | S_IEXEC) */
+static const int S_IXUSR  = S_IEXEC;
+static const int S_IWUSR  = S_IWRITE;
+static const int S_IRUSR  = S_IREAD;
+
+struct _stat {
+  dev_t   st_dev;
+  ino_t   st_ino;
+  mode_t  st_mode;
+  short   st_nlink;
+  short   st_uid;	
+  short   st_gid;
+  dev_t   st_rdev;
+  off_t   st_size;
+  time_t  st_atime;
+  time_t  st_mtime;
+  time_t  st_ctime;
+};
+
+int _fstat(int, struct _stat*);
+int _chmod(const char*, int);
+int _stat(const char*, struct _stat*);
+
+"""
+

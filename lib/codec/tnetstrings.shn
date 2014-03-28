@@ -1,0 +1,138 @@
+
+module TNetStrings
+
+   dump(data)
+      typ = type(data)
+      if typ == 'number' then
+         out = tostring(data)
+         if math::floor(data) == data then
+            return '%d:%s#'.format(#out, out)
+         else
+            return '%d:%s^'.format(#out, out)
+         end
+      elseif typ == 'string' then
+         return '%d:'.format(#data) ~ data ~ ',' 
+      elseif typ == 'table' then
+         if #data > 0 then
+            return self.dump_list(data)
+         else
+            return self.dump_dict(data)
+         end
+      elseif typ == 'nil' or data == null then
+         return '0:~'
+      elseif typ == 'boolean' then
+         out = tostring(data)
+         return '%d:%s!'.format(#out, out)
+      else
+         assert false, "Can't serialize stuff that's %s.".format(typ)
+      end
+   end
+
+
+   parse(data)
+      payload, payload_type, remain = self.parse_payload(data)
+
+      local value
+      if payload_type == '#' then
+         value = tonumber(payload)
+      elseif payload_type == '}' then
+         value = self.parse_dict(payload)
+      elseif payload_type == ']' then
+         value = self.parse_list(payload)
+      elseif payload_type == '!' then
+         value = payload == 'true'
+      elseif payload_type == '^' then
+         value = tonumber(payload)
+      elseif payload_type == '~' then
+         assert #payload == 0, "Payload must be 0 length for null."
+         value = null
+      elseif payload_type == ',' then
+         value = payload
+      else
+         assert false, "Invalid payload type: %s".format(payload_type)
+      end
+
+      return value, remain
+   end
+
+   parse_payload(data)
+      assert data, "Invalid data to parse, it's empty."
+      length, extra = data.split(':', 2)
+      length = tonumber(length)
+
+      payload, extra = extra.sub(1, length), extra.sub(length + 1)
+      assert extra, "No payload type: %s, %s".format(payload, extra)
+      payload_type, remain = extra.sub(1,1), extra.sub(2)
+
+      assert #payload == length, "Data is wrong length %s vs %s".format(length, #payload)
+      return payload, payload_type, remain
+   end
+
+   parse_list(data)
+      if #data == 0 then return { } end
+
+      result = { }
+      value, extra = self.parse(data)
+      result[#result + 1] = value
+
+      while extra != "" do
+         value, extra = self.parse(extra)
+         result[#result + 1] = value
+      end
+
+      return result
+   end
+
+   parse_pair(data)
+      key, extra = self.parse(data)
+      assert extra, "Unbalanced dictionary store."
+      value, extra = self.parse(extra)
+
+      return key, value, extra
+   end
+
+   parse_dict(data)
+      if #data == 0 then return { } end
+
+      key, value, extra = self.parse_pair(data)
+      assert type(key) == 'string', "Keys can only be strings."
+
+      result = { [key] = value }
+
+      while extra != "" do
+         key, value, extra = self.parse_pair(extra)
+         result[key] = value
+      end
+
+      return result
+   end
+
+
+   dump_dict(data)
+      result = { }
+      for k,v in data do
+        result[#result + 1] = self.dump(tostring(k))
+        result[#result + 1] = self.dump(v)
+      end
+      payload = table::concat(result)
+      return '%d:'.format(#payload) ~ payload ~ '}'
+   end
+
+   dump_list(data)
+      result = { }
+      for i=1, #data do
+         result[#result + 1] = self.dump(data[i])
+      end
+      payload = table::concat(result)
+      return '%d:'.format(#payload) ~ payload ~ ']'
+   end
+
+   encode(obj)
+      return self.dump(obj)
+   end
+   decode(str)
+      return self.parse(str)
+   end
+end
+
+

@@ -1,0 +1,275 @@
+local ffi = require("ffi")
+lib = ffi::load('czmq')
+
+ffi::cdef"""
+   char* strerror(int ern);
+
+   static const int ZMQ_PAIR = 0;
+   static const int ZMQ_PUB  = 1;
+   static const int ZMQ_SUB  = 2;
+   static const int ZMQ_REQ  = 3;
+   static const int ZMQ_REP  = 4;
+   static const int ZMQ_DEALER = 5;
+   static const int ZMQ_ROUTER = 6;
+   static const int ZMQ_PULL = 7;
+   static const int ZMQ_PUSH = 8;
+   static const int ZMQ_XPUB = 9;
+   static const int ZMQ_XSUB = 10;
+
+   static const int ZMQ_POLLIN  = 1;
+   static const int ZMQ_POLLOUT = 2;
+   static const int ZMQ_POLLERR = 4;
+
+   static const int ZMQ_IGNERR = 8;
+
+   static const int ZSOCKET_DYNFROM = 0xC000;
+   static const int ZSOCKET_DYNTO   = 0xFFFF;
+
+   static const int ZFRAME_MORE     = 1;
+   static const int ZFRAME_REUSE    = 2;
+   static const int ZFRAME_DONTWAIT = 4;
+
+   typedef struct zmq_pollitem_s zmq_pollitem_t;
+   int zmq_poll (zmq_pollitem_t *items, int nitems, long timeout);
+
+   void zclock_sleep(int msecs);
+   int64_t zclock_time (void);
+   void zclock_log(const char *format, ...);
+
+   typedef struct _zctx_t zctx_t;
+
+   zctx_t * zctx_new (void);
+   void zctx_destroy (zctx_t **self_p);
+   zctx_t * zctx_shadow (zctx_t *self);
+   void zctx_set_iothreads (zctx_t *self, int iothreads);
+   void zctx_set_linger (zctx_t *self, int linger);
+   void zctx_set_hwm (zctx_t *self, int hwm);
+   int zctx_hwm (zctx_t *self);
+   void * zctx_underlying (zctx_t *self);
+
+   extern volatile int zctx_interrupted;
+
+   void * zctx__socket_new (zctx_t *self, int type);
+   void zctx__socket_destroy (zctx_t *self, void *socket);
+
+   int zfile_delete (const char *filename);
+   int zfile_mkdir (const char *dirname);
+   int zfile_exists (const char *filename);
+   int32_t zfile_size (const char *filename);
+
+   typedef struct _zframe_t zframe_t;
+   typedef void (zframe_free_fn) (void *data, void *arg);
+   zframe_t * zframe_new (const void *data, size_t size);
+   zframe_t * zframe_new_zero_copy (void *data, size_t size, zframe_free_fn *free_fn, void *arg);
+   void zframe_destroy (zframe_t **self_p);
+
+   typedef struct _zsocket_t zsocket_t;
+
+   zframe_t * zframe_recv (zsocket_t *socket);
+   zframe_t * zframe_recv_nowait (zsocket_t *socket);
+
+   int zframe_send (zframe_t **self_p, zsocket_t *socket, int flags);
+   size_t zframe_size (zframe_t *self);
+   uint8_t * zframe_data (zframe_t *self);
+
+   zframe_t * zframe_dup (zframe_t *self);
+   char * zframe_strhex (zframe_t *self);
+   char * zframe_strdup (zframe_t *self);
+
+   bool zframe_streq (zframe_t *self, const char *string);
+   int zframe_zero_copy (zframe_t *self);
+
+   int zframe_more (const zframe_t *self);
+   bool zframe_eq (zframe_t *self, zframe_t *other);
+   void zframe_print (zframe_t *self, const char *prefix);
+   void zframe_reset (zframe_t *self, const void *data, size_t size);
+
+   typedef struct _zhash zhash_t;
+   typedef struct _zlist zlist_t;
+
+   typedef int (zhash_foreach_fn) (const char *key, void *item, void *argument);
+   typedef void (zhash_free_fn) (void *data);
+
+   zhash_t * zhash_new (void);
+   void zhash_destroy (zhash_t **self_p);
+   int zhash_insert (zhash_t *self, const char *key, void *item);
+   void zhash_update (zhash_t *self, const char *key, void *item);
+   void zhash_delete (zhash_t *self, const char *key);
+   void * zhash_lookup (zhash_t *self, const char *key);
+   int zhash_rename (zhash_t *self, const char *old_key, const char *new_key);
+   void * zhash_freefn (zhash_t *self, const char *key, zhash_free_fn *free_fn);
+   size_t zhash_size (zhash_t *self);
+   zhash_t * zhash_dup (zhash_t *self);
+   zlist_t * zhash_keys (zhash_t *self);
+   int zhash_foreach (zhash_t *self, zhash_foreach_fn *callback, void *argument);
+   int zhash_save (zhash_t *self, char *filename);
+   int zhash_load (zhash_t *self, char *filename);
+   void zhash_autofree (zhash_t *self);
+
+   typedef bool (zlist_compare_fn) (void *item1, void *item2);
+
+   zlist_t * zlist_new (void);
+   void zlist_destroy (zlist_t **self_p);
+   void * zlist_first (zlist_t *self);
+   void * zlist_last (zlist_t *self);
+   void * zlist_head (zlist_t *self);
+   void * zlist_tail (zlist_t *self);
+   void * zlist_next (zlist_t *self);
+   int zlist_append (zlist_t *self, void *item);
+   int zlist_push (zlist_t *self, void *item);
+   void * zlist_pop (zlist_t *self);
+   void zlist_remove (zlist_t *self, void *item);
+   zlist_t * zlist_dup (zlist_t *self);
+   zlist_t * zlist_copy (zlist_t *self);
+   size_t zlist_size (zlist_t *self);
+   void zlist_sort (zlist_t *self, zlist_compare_fn *compare);
+   void zlist_autofree (zlist_t *self);
+
+   typedef struct _zloop_t zloop_t;
+   typedef int (zloop_fn) (zloop_t *loop, zmq_pollitem_t *item, void *arg);
+   zloop_t * zloop_new (void);
+   void zloop_destroy (zloop_t **self_p);
+   int zloop_poller (zloop_t *self, zmq_pollitem_t *item, zloop_fn handler, void *arg);
+   void zloop_poller_end (zloop_t *self, zmq_pollitem_t *item);
+   int zloop_timer (zloop_t *self, size_t delay, size_t times, zloop_fn handler, void *arg);
+   int zloop_timer_end (zloop_t *self, void *arg);
+   void zloop_set_verbose (zloop_t *self, bool verbose);
+   int zloop_start (zloop_t *self);
+
+   typedef struct _zmsg_t zmsg_t;
+   zmsg_t * zmsg_new (void);
+   void zmsg_destroy (zmsg_t **self_p);
+
+   zmsg_t * zmsg_recv (zsocket_t *socket);
+   int zmsg_send (zmsg_t **self_p, zsocket_t *socket);
+   size_t zmsg_size (zmsg_t *self);
+   size_t zmsg_content_size (zmsg_t *self);
+   int zmsg_push (zmsg_t *self, zframe_t *frame);
+   zframe_t * zmsg_pop (zmsg_t *self);
+   int zmsg_add (zmsg_t *self, zframe_t *frame);
+   int zmsg_pushmem (zmsg_t *self, const void *src, size_t size);
+   int zmsg_addmem (zmsg_t *self, const void *src, size_t size);
+   int zmsg_pushstr (zmsg_t *self, const char *format, ...);
+   int zmsg_addstr (zmsg_t *self, const char *format, ...);
+   char * zmsg_popstr (zmsg_t *self);
+   void zmsg_wrap (zmsg_t *self, zframe_t *frame);
+   zframe_t * zmsg_unwrap (zmsg_t *self);
+   void zmsg_remove (zmsg_t *self, zframe_t *frame);
+   zframe_t * zmsg_first (zmsg_t *self);
+   zframe_t * zmsg_next (zmsg_t *self);
+   zframe_t * zmsg_last (zmsg_t *self);
+   int zmsg_save (zmsg_t *self, void *file);
+   zmsg_t * zmsg_load (zmsg_t *self, void *file);
+   size_t zmsg_encode (zmsg_t *self, uint8_t **buffer);
+   zmsg_t * zmsg_decode (uint8_t *buffer, size_t buffer_size);
+   zmsg_t * zmsg_dup (zmsg_t *self);
+   void zmsg_dump (zmsg_t *self);
+
+   typedef struct _zmutex_t zmutex_t;
+   zmutex_t * zmutex_new (void);
+   void zmutex_destroy (zmutex_t **self_p);
+   void zmutex_lock (zmutex_t *self);
+   void zmutex_unlock (zmutex_t *self);
+
+   zsocket_t * zsocket_new (zctx_t *self, int type);
+   void zsocket_destroy (zctx_t *self, zsocket_t *socket);
+   int zsocket_bind (zsocket_t *socket, const char *format, ...);
+   int zsocket_connect (zsocket_t *socket, const char *format, ...);
+   int zsocket_disconnect (zsocket_t *socket, const char *format, ...);
+   bool zsocket_poll (zsocket_t *socket, int msecs);
+   char * zsocket_type_str (zsocket_t *socket);
+
+   int zsocket_type (zsocket_t *zocket);
+   int zsocket_sndhwm (zsocket_t *zocket);
+   int zsocket_rcvhwm (zsocket_t *zocket);
+   int zsocket_affinity (zsocket_t *zocket);
+   char * zsocket_identity (zsocket_t *zocket);
+   int zsocket_rate (zsocket_t *zocket);
+   int zsocket_recovery_ivl (zsocket_t *zocket);
+   int zsocket_sndbuf (zsocket_t *zocket);
+   int zsocket_rcvbuf (zsocket_t *zocket);
+   int zsocket_linger (zsocket_t *zocket);
+   int zsocket_reconnect_ivl (zsocket_t *zocket);
+   int zsocket_reconnect_ivl_max (zsocket_t *zocket);
+   int zsocket_backlog (zsocket_t *zocket);
+   int zsocket_maxmsgsize (zsocket_t *zocket);
+   int zsocket_multicast_hops (zsocket_t *zocket);
+   int zsocket_rcvtimeo (zsocket_t *zocket);
+   int zsocket_sndtimeo (zsocket_t *zocket);
+   int zsocket_ipv4only (zsocket_t *zocket);
+   int zsocket_rcvmore (zsocket_t *zocket);
+   int zsocket_fd (zsocket_t *zocket);
+   int zsocket_events (zsocket_t *zocket);
+   char * zsocket_last_endpoint (zsocket_t *zocket);
+
+   void zsocket_set_sndhwm (zsocket_t *zocket, int sndhwm);
+   void zsocket_set_rcvhwm (zsocket_t *zocket, int rcvhwm);
+   void zsocket_set_affinity (zsocket_t *zocket, int affinity);
+   void zsocket_set_subscribe (zsocket_t *zocket, char * subscribe);
+   void zsocket_set_unsubscribe (zsocket_t *zocket, char * unsubscribe);
+   void zsocket_set_identity (zsocket_t *zocket, char * identity);
+   void zsocket_set_rate (zsocket_t *zocket, int rate);
+   void zsocket_set_recovery_ivl (zsocket_t *zocket, int recovery_ivl);
+   void zsocket_set_sndbuf (zsocket_t *zocket, int sndbuf);
+   void zsocket_set_rcvbuf (zsocket_t *zocket, int rcvbuf);
+   void zsocket_set_linger (zsocket_t *zocket, int linger);
+   void zsocket_set_reconnect_ivl (zsocket_t *zocket, int reconnect_ivl);
+   void zsocket_set_reconnect_ivl_max (zsocket_t *zocket, int reconnect_ivl_max);
+   void zsocket_set_backlog (zsocket_t *zocket, int backlog);
+   void zsocket_set_maxmsgsize (zsocket_t *zocket, int maxmsgsize);
+   void zsocket_set_multicast_hops (zsocket_t *zocket, int multicast_hops);
+   void zsocket_set_rcvtimeo (zsocket_t *zocket, int rcvtimeo);
+   void zsocket_set_sndtimeo (zsocket_t *zocket, int sndtimeo);
+   void zsocket_set_ipv4only (zsocket_t *zocket, int ipv4only);
+   void zsocket_set_delay_attach_on_connect (zsocket_t *zocket, int delay_attach_on_connect);
+   void zsocket_set_router_mandatory (zsocket_t *zocket, int router_mandatory);
+   void zsocket_set_router_raw (zsocket_t *zocket, int router_raw);
+   void zsocket_set_xpub_verbose (zsocket_t *zocket, int xpub_verbose);
+
+   void zsocket_set_hwm (zsocket_t *zocket, int hwm);
+
+   char * zstr_recv (zsocket_t *socket);
+   char * zstr_recv_nowait (zsocket_t *socket);
+   int zstr_send (zsocket_t *socket, const char *format, ...);
+   int zstr_sendm (zsocket_t *socket, const char *format, ...);
+
+   typedef void (zsys_handler_fn) (int signal_value);
+
+   typedef int mode_t;
+
+   void zsys_handler_set (zsys_handler_fn *handler_fn);
+   void zsys_handler_reset (void);
+   mode_t zsys_mode (const char *filename);
+   void zsys_mkdir (const char *pathname);
+   void zsys_rmdir (const char *pathname);
+   void zsys_unlink (const char *filename);
+   bool zsys_stable (const char *filename);
+
+   typedef struct _zthread_t zthread_t;
+   typedef void *(zthread_detached_fn) (void *args);
+   typedef void (zthread_attached_fn) (void *args, zctx_t *ctx, zsocket_t *pipe);
+   int zthread_new (zthread_detached_fn *thread_fn, void *args);
+
+   zsocket_t* zthread_fork(zctx_t *ctx, zthread_attached_fn *thread_fn, void *args);
+"""
+
+if ffi::os == 'WIN32' then
+   ffi.cdef"""
+      struct zmq_pollitem_s {
+         zsocket_t *socket;
+         SOCKET fd;
+         short events;
+         short revents;
+      };
+   """
+else
+   ffi::cdef"""
+      struct zmq_pollitem_s {
+         zsocket_t *socket;
+         int fd;
+         short events;
+         short revents;
+      };
+   """
+end
+

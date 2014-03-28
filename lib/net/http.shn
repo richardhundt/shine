@@ -1,0 +1,272 @@
+import Channel    from "async.util"
+import ByteStream from "async.io"
+
+import async from "async"
+
+module HTTPStatus
+   codes = {
+      [100] = 'Continue'
+      [101] = 'Switching Protocols'
+      [102] = 'Processing'
+      [200] = 'OK'
+      [201] = 'Created'
+      [202] = 'Accepted'
+      [203] = 'Non-Authoritative Information'
+      [204] = 'No Content'
+      [205] = 'Reset Content'
+      [206] = 'Partial Content'
+      [207] = 'Multi-Status'
+      [208] = 'Already Reported'
+      [226] = 'IM Used'
+
+      [300] = 'Multiple Choices'
+      [301] = 'Moved Permanently'
+      [302] = 'Found'
+      [303] = 'See Other'
+      [304] = 'Not Modified'
+      [305] = 'Use Proxy'
+      [307] = 'Temporary Redirect'
+      [308] = 'Permanent Redirect'
+
+      [400] = 'Bad Request'
+      [401] = 'Unauthorized'
+      [402] = 'Payment Required'
+      [403] = 'Forbidden'
+      [405] = 'Method Not Allowed'
+      [406] = 'Not Acceptable'
+      [407] = 'Proxy Authentication Required'
+      [408] = 'Request Timeout'
+      [409] = 'Conflict'
+      [410] = 'Gone'
+      [411] = 'Length Required'
+      [412] = 'Precondition Failed'
+      [413] = 'Request Entity Too Large'
+      [414] = 'Request-URI Too Long'
+      [415] = 'Unsupported Media Type'
+      [416] = 'Requested Range Not Satisfiable'
+      [417] = 'Expectation Failed'
+      [419] = 'Authentication Timeout'
+      [422] = 'Unprocessable Entity'
+      [423] = 'Locked'
+      [424] = 'Failed Dependency'
+      [424] = 'Method Failure'
+      [425] = 'Unordered Collection'
+      [426] = 'Upgrade Required'
+      [428] = 'Precondition Required'
+      [429] = 'Too Many Requests'
+      [431] = 'Request Header Fields Too Large'
+      [500] = 'Internal Server Error'
+      [501] = 'Not Implemented'
+      [502] = 'Bad Gateway'
+      [503] = 'Service Unavailable'
+      [504] = 'Gateway Timeout'
+      [505] = 'HTTP Version Not Supported'
+      [506] = 'Variant Also Negotiates'
+      [507] = 'Insufficient Storage'
+      [508] = 'Loop Detected'
+      [509] = 'Bandwidth Limit Exceeded'
+      [510] = 'Not Extended'
+      [511] = 'Network Authentication Required'
+   }
+
+   message(code)
+      return codes[code]
+   end
+
+   is_error(code)
+      return code >= 400
+   end
+   is_client_error(code)
+      return code >= 400 and code < 500
+   end
+   is_server_error(code)
+      return code >= 500
+   end
+   is_redirect(code)
+      return code >= 300 and code < 400
+   end
+end
+
+class HTTPHeaders
+   __tostring__()
+      buf = { }
+      for k, v in self do
+         buf[#buf + 1] = k ~ ': ' ~ v
+      end
+      return table::concat(buf, "\r\n")~"\r\n"
+   end
+end
+
+class HTTPEntity
+   self(headers, stream)
+      self.headers = headers
+      self.stream  = stream
+   end
+end
+
+class HTTPRequest
+   self(method, path, headers, entity, protocol = 'HTTP/1.1')
+      self.method   = method
+      self.path     = path
+      self.headers  = headers
+      self.entity   = entity
+      self.protocol = protocol
+   end
+   want_close()
+      if self.protocol == 'HTTP/1.0' then
+         if self.headers['Connection'] then
+            return self.headers['Connection'].lower() != 'keep-alive'
+         else
+            return true
+         end
+      else
+         if self.headers['Connection'] then
+            return self.headers['Connection'].lower() == 'close'
+         else
+            return false
+         end
+      end
+   end
+   __tostring__()
+      return "%{self.method} %{self.path} %{self.protocol}\r\n%{self.headers}\r\n"
+   end
+end
+
+class HTTPResponse
+   self(status, headers, entity, protocol = 'HTTP/1.1')
+      self.status   = status
+      self.headers  = headers
+      self.entity   = entity
+      self.protocol = protocol
+   end
+   __tostring__()
+      message = HTTPStatus.message(self.status)
+      return "%{self.protocol} %{self.status} %{message}\r\n%{self.headers}\r\n"
+   end
+end
+
+function HTTPFilter(input, output = Channel())
+   import tonumber from _G
+
+   function parse_headers(head)
+      line = head.find "\r\n", 1, true
+      stat = nil
+      if line then
+         stat = head.sub(1, line - 1)
+         head = head.sub(line + 2)
+      else
+         stat = head
+      end
+
+      hdrs = { }
+      for key, val in head.gmatch "(.-):%s*(.-)\r\n" do
+         if hdrs[key] then
+            hdrs[key] = hdrs[key] ~ ", " ~ val
+         else
+            hdrs[key] = val
+         end
+      end
+      return stat, hdrs as HTTPHeaders
+   end
+
+   async =>
+      buf = ""
+      while true do
+         head, rest = nil
+         while true do
+            if buf.find("\r\n\r\n", 1, true) then
+               head, rest = buf.split("\r\n\r\n", 2, true)
+               buf = rest
+               break
+            else
+               got = input.get()
+               if got == nil then
+                  output.put(nil)
+                  return
+               end
+               buf ~= got
+            end
+         end
+
+         stat, hdrs = parse_headers(head~"\r\n")
+
+         local mesg, pcol, meth
+         if stat.match "^[\r\n]*HTTP/" then
+            pcol, code, desc = stat.match "^[\r\n]*(HTTP/%d.%d) (%S+) (%S+)$"
+            code = tonumber(code)
+            mesg = HTTPResponse(code, hdrs, nil, pcol)
+         elseif stat.match "^[\r\n]*%u+%s" then
+            meth, path, pcol = stat.match "^[\r\n]*(%u+) (%S+) (HTTP/%d%.%d)$"
+            mesg = HTTPRequest(meth, path, hdrs, nil, pcol)
+         else
+            --bad request
+            break
+         end
+
+         if hdrs['Content-Length'] then
+            len = tonumber(hdrs['Content-Length'])
+            if len == nil then
+               break
+            end
+            body = ByteStream(len)
+            mesg.entity = HTTPEntity(hdrs, body)
+            body.write(buf)
+            len -= #buf
+            buf = ""
+            while len > 0 do
+               got = input.get()
+               if got == nil then
+                  break
+               end
+               body.write(got)
+               len -= #got
+            end
+            body.seek("set", 0)
+         elseif buf.find("%x+\r\n") == 1 then
+            body = ByteStream()
+            mesg.entity = HTTPEntity(hdrs, body)
+            while true do
+               len = nil
+               while not len do
+                  pos = buf.find "\r\n", 1, true
+                  if pos then
+                     len = buf.sub(1, pos - 1)
+                     len = tonumber(len, 16)
+                     buf = buf.sub(pos + 1)
+                  else
+                     got = input.get()
+                     if got == nil or got == "" then
+                        break
+                     end
+                     buf ~= got
+                  end
+               end
+               if not len or len == 0 then
+                  break
+               end
+               while #buf < len do
+                  got = input.get()
+                  if not got then
+                     buf = nil
+                     break
+                  end
+                  buf ~= got
+               end
+               if not buf then
+                  break
+               end
+               body.write(buf.sub(1, len + 1))
+               buf = buf.sub(len + 2)
+            end
+            body.seek("set", 0)
+         end
+
+         output.put(mesg)
+         yield
+      end
+      output.put(nil)
+   end
+   return output
+end
+
+

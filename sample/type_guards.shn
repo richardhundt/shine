@@ -1,0 +1,75 @@
+class enum
+   self(opts)
+      self.opts = opts
+      self.rmap = { }
+      for i=1, #opts do
+         self.rmap[opts[i]] = i
+      end
+   end
+   __is(b)
+      return self.rmap[b] != nil
+   end
+   __tostring__()
+      return 'enum { '~table::concat(self.opts, ', ')~' }'
+   end
+end
+
+opts = enum { "a", "b", "c" }
+
+function f(a is Number, b is opts = 'a')
+   print a
+end
+
+f 11, 'a'
+f 22, 'b'
+f 33, 'c'
+f 44
+
+try
+   f 55, 'd'
+catch e then
+   print "caught: %{e}"
+end
+
+class like
+   self(spec is Table)
+      self.spec = spec
+   end
+   __is(b)
+      if type(b) != 'table' then
+         return false
+      end
+      for k, v in self.spec do
+         if not b[k] is v then
+            return false
+         end
+      end
+      return true
+   end
+   __tostring__()
+      buf = { }
+      for k, v in self.spec do
+         buf[#buf + 1] = "%{k} = %{v}"
+      end
+      return 'like { ' ~ table::concat(buf, ', ') ~ ' }'
+   end
+end
+
+function g(o is like { x = Number, y = Number })
+   print "x: %{o.x}, y: %{o.y}"
+end
+
+g { x = 1, y = 2 }
+
+class Point
+   self(x is Number, y is Number)
+      print x, y
+   end
+end
+
+try
+   p = Point 'cheese', 2
+catch e then
+   print "caught %{e}"
+end
+

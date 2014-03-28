@@ -1,0 +1,9 @@
+class A
+   get foo()
+      return self._foo
+   end
+   set foo(v)
+      self._foo = v
+   end
+end
+

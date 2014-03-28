@@ -1,0 +1,65 @@
+class Node end
+
+function node(name)
+   return => (n)
+      n.tag = name
+      return n as Node
+   end
+end
+
+grammar MarkupGrammar
+   markup <- {|
+      <blank>* {| {:dent: " "* :} <chunk> (<blank> | =dent <chunk>)* |}
+   |}
+   chunk <- (
+      <heading> | <defn_list> | <para> | <verbatim> | <list>
+   )
+
+   indent <- {:out: {= dent =} :}
+   undent <- {:dent: {= out =} :}
+   bullet <- {:bullet: '-' | '*' | ([0-9]+ '.') :}
+   marker <- "[=* " | [0-9]+ "."
+
+   verbatim <- {|
+      " " <rest> (=dent " " <rest>)*
+   |} -> node 'verbatim'
+
+   heading <- {|
+      {:level: '='+ -> string::len :} " " <rest>
+   |} -> node 'heading'
+
+   para <- {|
+      <line> (=dent {`" "`} <line>)*
+   |} -> node 'para'
+
+   defn_list <- {|
+      <defn> (=dent <defn>)*
+   |} -> node 'defn_list'
+
+   defn <- {|
+      {:term: <defn_term> :} {:dent: =dent " "+ :}
+      <chunk> (<blank> | =dent <chunk>)*
+   |} <undent> -> node 'defn'
+
+   defn_term <- {|
+      (<span> | {~ <escp> | { !(<span> | "\n" | "::") . }+ ~})+ "::\n"
+   |} -> node 'defn_term'
+
+   list <- {|
+      <item> (=dent <item> | <nest>)*
+   |} -> node 'list'
+
+   nest <- <indent> {:dent: =dent " " " "+ :} <list> <undent>
+
+   line <- !<marker> <text>* "\n"
+   rest <- { (!"\n" .)* } "\n"
+   span <- <bold> | <emph> | <code>
+
+   escp <- {~ (
+        {: "\\*" {`'*'`} :}
+      | {: "\\_" {`'_'`} :}
+      | {: "\\+" {`'+'`} :}
+   )+ ~}
+end
+
+

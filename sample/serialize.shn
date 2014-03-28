@@ -1,0 +1,33 @@
+import Serializer, Serializable from "codec.serialize"
+
+local a = 42
+local function f()
+   print "a => ", a
+end
+
+s = Serializer.encode(f)
+g = Serializer.decode(s)
+g()
+
+class Point
+   include Serializable
+   self(x, y)
+      self.x = x
+      self.y = y
+   end
+   __encode__()
+      return { self.x, self.y }
+   end
+   __decode__(v)
+      return {
+         x = v[1]
+         y = v[2]
+      } as Point
+   end
+end
+
+p = Point(11, 22)
+print "encoded:", p
+s = Serializer.encode(p)
+o = Serializer.decode(s)
+print "decoded: ", o, o.x, o.y

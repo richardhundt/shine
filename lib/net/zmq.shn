@@ -1,0 +1,477 @@
+
+import ffi, C from "sys.ffi"
+import lib from "net.zmq.ffi"
+
+ZMQ = {
+   PAIR = C.ZMQ_PAIR;
+   PUB  = C.ZMQ_PUB;
+   SUB  = C.ZMQ_SUB;
+   REQ  = C.ZMQ_REQ;
+   REP  = C.ZMQ_REP;
+   PULL = C.ZMQ_PULL;
+   PUSH = C.ZMQ_PUSH;
+   XPUB = C.ZMQ_XPUB;
+   XSUB = C.ZMQ_XSUB;
+
+   DEALER = C.ZMQ_DEALER;
+   ROUTER = C.ZMQ_ROUTER;
+
+   POLLIN  = C.ZMQ_POLLIN;
+   POLLOUT = C.ZMQ_POLLOUT;
+   POLLERR = C.ZMQ_POLLERR;
+   IGNERR  = C.ZMQ_IGNERR;
+}
+
+ZSOCKET = {
+   DYNFROM = C.ZSOCKET_DYNFROM;
+   DYNTO   = C.ZSOCKET_DYNTO;
+}
+
+ZFRAME = {
+   MORE     = C.ZFRAME_MORE;
+   REUSE    = C.ZFRAME_REUSE;
+   DONTWAIT = C.ZFRAME_DONTWAIT;
+}
+
+module CType
+   local ctype = ...
+   function self.__included(into)
+      into.__ctype = ffi::typeof(ctype)
+      function into.__finalize()
+         ffi::metatype(self.__ctype, into)
+      end
+      function into.__is(that)
+         return ffi::istype(self.__ctype, that)
+      end
+   end
+end
+
+class ZMQCtx
+   include CType 'zctx_t'
+
+   function self.__apply(...)
+      return lib::zctx_new()
+   end
+
+   destroy()
+      ctx_destroy_p = ffi::new('zctx_t*[1]', self)
+      ctx_destroy_p[0] = self
+      lib::zctx_destroy(ctx_destroy_p)
+   end
+
+   function self.__gc()
+      self.destroy()
+   end
+
+   set iothreads(nthreads)
+      lib::zctx_set_iothreads(self, nthreads)
+   end
+   set hwm(hwm)
+      lib::zctx_set_hwm(self, hwm)
+   end
+   set linger(linger)
+      lib::zctx_set_linger(self, linger)
+   end
+
+end
+
+class ZMQSocket
+   include CType 'zsocket_t'
+
+   SOCK2CTX = { }
+
+   function self.__apply(zctx, type)
+      zock = lib::zsocket_new(zctx, type)
+      inst = ffi::cast('zsocket_t*', zock)
+      ffi::gc(inst, self.__members__.destroy)
+      SOCK2CTX[inst.key] = zctx
+      return inst
+   end
+
+   destroy()
+      key = self.key
+      ctx = SOCK2CTX[key]
+      SOCK2CTX[key] = nil
+      return lib::zsocket_destroy(ctx, self)
+   end
+
+   bind(addr)
+      return lib::zsocket_bind(self, addr)
+   end
+   connect(addr)
+      return lib::zsocket_connect(self, addr)
+   end
+   disconnect(addr)
+      return lib::zsocket_disconnect(self, addr)
+   end
+   poll(msecs)
+      return lib::zsocket_poll(self, msecs)
+   end
+   send(str)
+      return lib::zstr_send(self, str)
+   end
+   recv()
+      str = nil
+      buf = lib::zstr_recv(self)
+      if buf != null then
+         str = ffi::string(buf)
+         C::free(buf)
+      end
+      return str
+   end
+   get key()
+      return tonumber(ffi::cast('intptr_t', self))
+   end
+
+   get type_str()
+      return lib::zsocket_type_str(self)
+   end
+   get type()
+      return lib::zsocket_type(self)
+   end
+
+   get sndhwm()
+      return lib::zsocket_sndhwm(self)
+   end
+   get rcvhwm()
+      return lib::zsocket_rcvhwm(self)
+   end
+   get affinity()
+      return lib::zsocket_affinity(self)
+   end
+   get identity()
+      return lib::zsocket_identity(self)
+   end
+   get rate()
+      return lib::zsocket_rate(self)
+   end
+   get recovery_ivl()
+      return lib::zsocket_recovery_ivl(self)
+   end
+   get sndbuf()
+      return lib::zsocket_sndbuf(self)
+   end
+   get rcvbuf()
+      return lib::zsocket_rcvbuf(self)
+   end
+   get linger()
+      return lib::zsocket_linger(self)
+   end
+   get reconnect_ivl()
+      return lib::zsocket_reconnect_ivl(self)
+   end
+   get reconnect_ivl_max()
+      return lib::zsocket_reconnect_ivl_max(self)
+   end
+   get backlog()
+      return lib::zsocket_backlog(self)
+   end
+   get maxmsgsize()
+      return lib::zsocket_maxmsgsize(self)
+   end
+   get multicast_hops()
+      return lib::zsocket_multicast_hops(self)
+   end
+   get rcvtimeo()
+      return lib::zsocket_rcvtimeo(self)
+   end
+   get sndtimeo()
+      return lib::zsocket_sndtimeo(self)
+   end
+   get ipv4only()
+      return lib::zsocket_ipv4only(self)
+   end
+   get rcvmore()
+      return lib::zsocket_rcvmore(self)
+   end
+   get fd()
+      return lib::zsocket_fd(self)
+   end
+   get events()
+      return lib::zsocket_events(self)
+   end
+   get last_endpoint()
+      return lib::zsocket_last_endpoint(self)
+   end
+
+   set sndhwm(sndhwm)
+      lib::zsocket_set_sndhwm(self, sndhwm)
+   end
+   set rcvhwm(rcvhwm)
+      lib::zsocket_set_rcvhwm(self, rcvhwm)
+   end
+   set affinity(affinity)
+      lib::zsocket_set_affinity(self, affinity)
+   end
+   set subscribe(subscribe)
+      lib::zsocket_set_subscribe(self, subscribe)
+   end
+   set unsubscribe(unsubscribe)
+      lib::zsocket_set_unsubscribe(self, unsubscribe)
+   end
+   set identity(identity)
+      lib::zsocket_set_identity(self, identity)
+   end
+   set rate(rate)
+      lib::zsocket_set_rate(self, rate)
+   end
+   set recovery_ivl(recovery_ivl)
+      lib::zsocket_set_recovery_ivl(self, recovery_ivl)
+   end
+   set sndbuf(sndbuf)
+      lib::zsocket_set_sndbuf(self, sndbuf)
+   end
+   set rcvbuf(rcvbuf)
+      lib::zsocket_set_rcvbuf(self, rcvbuf)
+   end
+   set linger(linger)
+      lib::zsocket_set_linger(self, linger)
+   end
+   set reconnect_ivl(reconnect_ivl)
+      lib::zsocket_set_reconnect_ivl(self, reconnect_ivl)
+   end
+   set reconnect_ivl_max(reconnect_ivl_max)
+      lib::zsocket_set_reconnect_ivl_max(self, reconnect_ivl_max)
+   end
+   set backlog(backlog)
+      lib::zsocket_set_backlog(self, backlog)
+   end
+   set maxmsgsize(maxmsgsize)
+      lib::zsocket_set_maxmsgsize(self, maxmsgsize)
+   end
+   set multicast_hops(multicast_hops)
+      lib::zsocket_set_multicast_hops(self, multicast_hops)
+   end
+   set rcvtimeo(rcvtimeo)
+      lib::zsocket_set_rcvtimeo(self, rcvtimeo)
+   end
+   set sndtimeo(sndtimeo)
+      lib::zsocket_set_rcvtimeo(self, sndtimeo)
+   end
+   set ipv4only(ipv4only)
+      lib::zsocket_set_ipv4only(self, ipv4only)
+   end
+   set delay_attach_on_connect(delay_attach_on_connect)
+      lib::zsocket_set_delay_attach_on_connect(self, delay_attach_on_connect)
+   end
+   set router_mandatory(router_mandatory)
+      lib::zsocket_set_router_mandatory(self, router_mandatory)
+   end
+   set router_raw(router_raw)
+      lib::zsocket_set_router_raw(self, router_raw)
+   end
+   set xpub_verbose(xpub_verbose)
+      lib::zsocket_set_xpub_verbose(self, xpub_verbose)
+   end
+   set hwm(hwm)
+      lib::zsocket_set_hwm(self, hwm)
+   end
+end
+
+class ZMQMsg
+   include CType 'zmsg_t'
+
+   function self.__apply()
+      msg = lib::zmsg_new()
+      ffi::gc(msg, self.__members__.destroy)
+      return msg
+   end
+
+   zmsg_send_p    = ffi::new('zmsg_t*[1]')
+   zmsg_destroy_p = ffi::new('zmsg_t*[1]')
+
+   send(socket)
+      zmsg_send_p[0] = self
+      return lib::zmsg_send(zmsg_send_p, socket)
+   end
+
+   recv(socket)
+      return lib::zmsg_recv(socket)
+   end
+
+   destroy()
+      zmsg_destroy_p[0] = self
+      return lib::zmsg_destroy(zmsg_destroy_p)
+   end
+
+   get size()
+      return lib::zmsg_size(self)
+   end
+   get content_size()
+      return lib::zmsg_content_size(self)
+   end
+   push(frame)
+      return lib::zmsg_push(self, frame)
+   end
+   pop()
+      return lib::zmsg_pop(self)
+   end
+   add(frame)
+      return lib::zmsg_add(self, frame)
+   end
+   pushmem(src)
+      return lib::zmsg_pushmem(self, src, #src)
+   end
+   addmem(src)
+      return lib::zmsg_addmem(self, src, #src)
+   end
+   pushstr(str)
+      return lib::zmsg_pushstr(self, str)
+   end
+   addstr(str)
+      return lib::zmsg_addstr(self, str)
+   end
+   popstr()
+      return lib::zmsg_popstr(self)
+   end
+   wrap(frame)
+      return lib::zmsg_wrap(self, frame)
+   end
+   unwrap()
+      return lib::zmsg_unwrap(self)
+   end
+   remove(frame)
+      return lib::zmsg_remove(self, frame)
+   end
+   get first()
+      return lib::zmsg_first(self)
+   end
+   get next()
+      return lib::zmsg_next(self)
+   end
+   get last()
+      return lib::zmsg_last(self)
+   end
+   save(file)
+      return lib::zmsg_save(self, file)
+   end
+   load(file)
+      return lib::zmsg_load(self, file)
+   end
+   encode(buffer)
+      return lib::zmsg_encode(self, buffer)
+   end
+   decode(buffer, buffer_size)
+      return lib::zmsg_decode(self, buffer, buffer_size)
+   end
+   dup()
+      return lib::zmsg_dup(self)
+   end
+   dump()
+      return lib::zmsg_dump(self)
+   end
+end
+
+module ZMQClock
+   sleep(msecs)
+      lib::zclock_sleep(msecs)
+   end
+   time()
+      lib::zclock_time()
+   end
+   log(fmt, ...)
+      lib::zclock_log(fmt, ...)
+   end
+end
+
+class ZMQPollItem
+   include CType 'zmq_pollitem_t'
+   function self.__apply(socket, fd, events)
+      return ffi::new 'zmq_pollitem_t', {
+         socket = socket, fd = fd, events = events
+      }
+   end
+end
+
+class ZMQThread
+   import Serializer from "codec.serialize"
+
+   -- TODO: move these Lua definitions somewhere central
+   ffi::cdef"""
+      typedef struct lua_State lua_State;
+      lua_State *luaL_newstate(void);
+      void luaL_openlibs(lua_State *L);
+      void lua_close(lua_State *L);
+      int lua_pcall(lua_State *L, int nargs, int nresults, int errfunc);
+
+      void lua_pushlightuserdata(lua_State *L, void *p);
+
+      static const int LUA_GLOBALSINDEX = -10002;
+      void lua_getfield(lua_State *L, int index, const char *k);
+      void lua_setfield(lua_State *L, int index, const char *k);
+
+      void lua_pushnil(lua_State *L);
+      void lua_pushinteger(lua_State *L, ptrdiff_t n);
+      void lua_pushnumber(lua_State *L, ptrdiff_t n);
+      const char *lua_pushlstring(lua_State *L, const char *s, size_t len);
+      const char *lua_setupvalue(lua_State *L, int funcindex, int n);
+
+      ptrdiff_t lua_tointeger(lua_State *L, int index);
+      void lua_settop(lua_State *L, int index);
+      const char *lua_tolstring(lua_State *L, int index, size_t*);
+      int tvm_loadbuffer(lua_State*, const char*, size_t, const char*);
+   """
+   
+   local ctx = ZMQCtx()
+
+   self(enter)
+      local buf = Serializer.encode(enter)
+
+      local L = C::luaL_newstate()
+      assert(L != nil)
+
+      C::luaL_openlibs(L)
+
+      local prelude = """
+         (!assign (!index package "path") %{"%q".format(package::path)})
+         (!assign (!index package "cpath") %{"%q".format(package::cpath)})
+         (!let __magic__ (!index (!call1 require "core") "__magic__"))
+         (!call (!index _G "module") "thread" (!index __magic__ "environ"))
+         (!call require "net.zmq")
+         (!let ffi (!call1 require "ffi"))
+         (!let str !vararg)
+         (!let slz (!index (!call require "codec.serialize") "Serializer"))
+         (!let thr (!callmeth slz decode str))
+         (!call setfenv thr (!call getfenv 1))
+         (!assign (!index _G "__thr_ptr__")
+            (!call1 tonumber
+               (!call1 (!index ffi "cast") "intptr_t"
+                  (!call1 (!index ffi "cast") "zthread_attached_fn*" thr))))
+      """
+
+      if C::tvm_loadbuffer(L, prelude, #prelude, "thread") != 0 then
+         msg = ffi::string(C::lua_tolstring(L, -1, null))
+         C::lua_close(L)
+         error(msg)
+      end
+
+      C::lua_pushlstring(L, buf, #buf)
+
+      if C::lua_pcall(L, 1, 1, 0) != 0 then
+         msg = ffi::string(C::lua_tolstring(L, -1, null))
+         C::lua_close(L)
+         error(msg)
+      end
+
+      C::lua_getfield(L, C.LUA_GLOBALSINDEX, '__thr_ptr__')
+      local func_ptr = C::lua_tointeger(L, -1)
+
+      C::lua_settop(L, -2)
+
+      self.pipe = lib::zthread_fork(
+         ctx, ffi::cast("zthread_attached_fn*", func_ptr), nil
+      )
+   end
+   fork(thread)
+      return ZMQThread (_, _1, _2) =>
+         setfenv(thread, getfenv(1))
+         ok, er = pcall(thread, _1, _2)
+         if not ok then
+            io.stderr.setvbuf "no"
+            io.stderr.write(er~"\n")
+         end
+         return ok, er
+      end
+   end
+end
+

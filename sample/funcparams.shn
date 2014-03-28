@@ -1,0 +1,12 @@
+ffi = require 'ffi'
+char_ptr = ffi::typeof('char*')
+function f(buf is char_ptr, len is 'number')
+   print ffi::string(buf, len)
+end
+
+local m = "Hello World!"
+local b = ffi::new('char[?]', #m)
+ffi::copy(b, m)
+
+f(ffi::cast('char*',b), #m)
+

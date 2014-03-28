@@ -1,0 +1,26 @@
+import Random from "util.random"
+import Clock  from "util.time"
+
+module UUID
+   import floor from math
+
+   local rand = Random(Clock.gettime())
+
+   local function mapper(c)
+      r = floor(rand.generate() * 16) | 0
+      v = nil
+      if c == 'x' then
+         v = r
+      else
+         v = r & 0x3 | 0x8
+      end
+      return "%x".format(v)
+   end
+
+   generate()
+      uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.gsub "([xy])", mapper
+      return uuid
+   end
+end
+
+

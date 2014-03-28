@@ -1,0 +1,33 @@
+o = { }
+d = { k1 = [ 42, { answer = 101 }, 69 ] }
+
+{ k1 = [ a, { answer = b }, o.x ] } = d
+print a, b, o.x
+
+a = [ 42, 69, "cheese" ]
+[x, _, y] = a
+print(x, y)
+
+class Point
+   self(x, y)
+      self.x = x
+      self.y = y
+   end
+   function self.__unapply(o)
+      return ipairs{ o.x, o.y }
+   end
+end
+
+
+p = Point(11, 22)
+
+given p
+   case 42 then
+      print "forty-two"
+   case { x = x, y = y } then
+      print("Point: %{x}, %{y}")
+end
+
+Point(x, y) = p
+print x, y
+

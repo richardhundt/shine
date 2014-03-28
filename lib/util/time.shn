@@ -1,0 +1,96 @@
+import ffi, C from "sys.ffi"
+
+class TimeVal
+   ctype = ffi::typeof('timeval_t')
+   function self.__apply(time = 0.0)
+      self = ctype()
+      if time then
+         integ, fract = math::modf(tonumber(time))
+         self.tv_sec  = integ
+         self.tv_usec = fract * 1000000
+      end
+      return self
+   end
+   get sec()
+      return self.tv_sec
+   end
+   get usec()
+      return self.tv_usec
+   end
+   toDate()
+      Date(self.sec)
+   end
+   ffi::metatype(ctype, self)
+end
+
+class TimeZone
+   ctype = ffi::typeof('timezone_t')
+   function self.__apply(...)
+      return ctype(...)
+   end
+   get minuteswest()
+      return self.tz_minuteswest
+   end
+   get dsttime()
+      return self.tz_dsttime
+   end
+   ffi::metatype(ctype, self)
+end
+
+class TimeSpec
+   ctype = ffi::typeof('timespec_t')
+   function self.__apply(...)
+      return ctype(...)
+   end
+   get sec()
+      return self.tv_sec
+   end
+   get nsec()
+      return self.tv_nsec
+   end
+   toDate()
+      return Date(self.sec)
+   end
+   ffi::metatype(ctype, self)
+end
+
+class Date
+   ctype = ffi::typeof('tm_t')
+
+   function self.getTimeOfDay()
+      tv = TimeVal()
+      tz = TimeZone()
+      ok = C::gettimeofday(tv, tz)
+      if ok == 0 then
+         return tv, tz
+      end
+   end
+
+   function self.__apply(time = C::time(ffi::new('time_t[1]')))
+      self = ctype()
+      if not ffi::istype('time_t*', time) then
+         temp = ffi::new('time_t[1]')
+         temp[0] = time
+         time = temp
+      end 
+      C::localtime(time, self)
+      return self
+   end
+
+   format(fmt, len = 256)
+      buf = ffi::new('char[?]', len)
+      C::strftime(buf, len, fmt, self)
+      return ffi::string(buf)
+   end
+
+   ffi::metatype(ctype, self)
+end
+
+module Clock
+   local now = ffi::new("timeval_t")
+   gettime()
+      C::gettimeofday(now, nil)
+      return tonumber(now.tv_sec) * 1000 + tonumber(now.tv_usec) / 1000
+   end
+end
+

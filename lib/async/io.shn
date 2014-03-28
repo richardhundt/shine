@@ -1,0 +1,361 @@
+
+import ffi, C from "sys.ffi"
+import Poller from "async.loop"
+import Queue  from "data.queue"
+
+import Semaphore, Channel from "async.util"
+
+import Fiber from "async.fiber"
+import yield, async from "async"
+
+import
+   _TCPSocket = TCPSocket,
+   _TCPServer = TCPServer,
+   _TCPClient = TCPClient
+from "net.socket"
+
+function PassFilter(input, output = Channel())
+   async =>
+      while true do
+         data = input.get()
+         output.put(data)
+         if data == nil then
+            break
+         end
+      end
+   end
+   return output
+end
+
+function SplitFilter(input, sep = "\n", max = math.huge, output = Channel())
+   async =>
+      while true do
+         buf = ""
+         while max > 1 do
+            pos = buf.find(sep, 1, true)
+            if pos then
+               max -= 1
+               got = buf.sub(1, pos - 1)
+               buf = buf.sub(pos + #sep)
+               output.put(got)
+            else
+               str = input.get()
+               if str == nil then
+                  output.put(nil)
+                  return
+               end
+               buf = buf ~ str
+            end
+         end
+         output.put(buf)
+      end
+   end
+   return output
+end
+
+function StreamReader(stream, output = Channel(), size = 4096)
+   async =>
+      while true do
+         got = stream.read(size)
+         output.put(got)
+         if got == nil then
+            break
+         end
+      end
+   end
+   return output
+end
+
+function StreamWriter(stream, input = Channel())
+   async =>
+      while true do
+         got = input.get()
+         if got == nil then
+            break
+         end
+         stream.write(got)
+      end
+   end
+   return input
+end
+
+module AsyncStream
+
+   get poller()
+      if not self._poller then
+	 assert(self.fd, "need a file descriptor")
+	 self._rdsem = Semaphore(0)
+	 self._wrsem = Semaphore(0)
+	 self._ersem = Semaphore(0)
+
+	 self._poller = Poller self.fd, 0, (poll, evts) =>
+	    if evts.find "e", 1, true then
+	       self._ersem.up()
+	    end
+	    if evts.find "r", 1, true then
+	       self._rdsem.up()
+	    end
+	    if evts.find "w", 1, true then
+	       self._wrsem.up()
+	    end
+	 end
+      end
+      return self._poller
+   end
+
+   get readable()
+      if self.is_eof then
+         return 0
+      end
+      self.poller.start()
+      self.poller.modify "+r"
+      self._rdsem.down()
+      if self._ersem.count > 0 then
+         self.poller.stop()
+         return -1
+      else
+         return 1
+      end
+   end
+
+   get writable()
+      self.poller.start()
+      self.poller.modify "+w"
+      self._wrsem.down()
+      self.poller.modify "-w"
+      if self._ersem.count > 0 then
+         self.poller.stop()
+         return -1
+      else
+         return 1
+      end
+   end
+
+end
+
+class ByteStream
+   self(size = 4096)
+      self.size = size
+      self.base = ffi::new('char[?]', size)
+      self.head = 0
+      self.have = 0
+      self.wput = Queue()
+      self.wget = Queue()
+   end
+   set eof(v)
+      self.is_eof = v
+      while self.wget.count() > 0 do
+         wait = self.wget.dequeue()
+         wait.ready()
+      end
+   end
+   get eof()
+      return self.is_eof
+   end
+   get writable()
+      if self.size == 0 then
+         return -1
+      end
+      return 1
+   end
+   get readable()
+      if self.size == 0 then
+         return -1
+      end
+      if self.have - self.head > 0 or self.is_eof then
+         return 1
+      end
+      curr = Fiber::current
+      self.wget.enqueue(curr)
+      while not self.is_eof and self.have - self.head == 0 do
+         curr.pause()
+         yield
+      end
+      return 1
+   end
+
+   read(len)
+      local out
+      if self.readable > 0 then
+         if self.have == self.head then
+            return nil
+         end
+         if len + self.head > self.have then
+            len = self.have - self.head
+         end
+         out = ffi::string(self.base + self.head, len)
+         self.head += len
+         if self.wput.count() > 0 then
+            wait = self.wput.dequeue()
+            wait.ready()
+         end
+      end
+      return out
+   end
+
+   write(str)
+      len = #str
+      if self.writable > 0 then
+         want = self.have + len
+         if want > self.size then
+            while self.size < want do
+               self.size *= 2
+            end
+            base = self.base
+            self.base = ffi::new('char[?]', self.size)
+            ffi::copy(self.base, base, self.have)
+         end 
+
+         ffi::copy(self.base + self.head, str, len)
+         self.head += len
+
+         if self.head > self.have then
+            self.have = self.head
+         end
+
+         if self.wget.count() > 0 then
+            wait = self.wget.dequeue()
+            wait.ready()
+         end
+
+         return len
+      end
+   end
+
+   seek(whence = "cur", offset = 0)
+      local base
+      given whence 
+         case "set" then
+            base = 0
+         case "cur" then
+            base = self.head
+         case "end" then
+            base = self.have
+         else
+            error("bad argument #1 to 'seek' (invalid option '%{whence}')", 2)
+      end
+      self.head = base + offset
+      return self.head
+   end
+
+   close()
+      if self.size > 0 then
+         self.base = nil
+         self.size = 0
+         while #self.wput > 0 do
+            wait = self.wput.dequeue()
+            wait.ready()
+         end
+         while #self.wget > 0 do
+            wait = self.wget.dequeue()
+            wait.ready()
+         end
+      end
+   end
+end
+
+class FileStream
+   include AsyncStream
+
+   self(stream)
+      self.stream = stream
+      self.fd = C::fileno(stream)
+   end
+
+   read(len = 4096)
+      if self.readable > 0 then
+         buf = ffi::new('char[?]', len)
+         got = C::read(self.fd, buf, len)
+         if got < 0 then
+            self.poller.stop()
+            return nil, ffi::string(C::strerror(ffi::errno()))
+         elseif got == 0 then
+            self.is_eof = true
+            self.poller.stop()
+         end
+         return ffi::string(buf, got)
+      end
+   end
+
+   write(str)
+      if self.writable > 0 then
+         retv, errs = self.stream.write(str)
+         if retv == nil then
+            self.poller.stop()
+            return nil, errs
+         end
+         return retv
+      end
+   end
+
+   seek(whence, offset)
+      return self.stream.seek(whence, offset)
+   end
+
+   close()
+      self.poller.stop()
+      return self.stream.close()
+   end
+end
+
+module AsyncSocket
+   include AsyncStream
+   super = ...
+   close()
+      self.poller.stop()
+      self.poller = nil
+      super.close()
+   end
+end
+
+class TCPSocket extends _TCPSocket
+   include AsyncSocket super
+end
+
+class TCPServer extends _TCPServer
+   include AsyncSocket super
+   accept()
+      if self.readable > 0 then
+         return super.accept() as TCPClient
+      else
+         return nil
+      end
+   end
+end
+
+class TCPClient extends _TCPClient
+   include AsyncSocket super
+   read(len = 4096)
+      if self.readable > 0 then
+         r = super.read(len)
+         if r == nil then
+            self.poller.stop()
+         end
+         return r
+      else
+         self.poller.stop()
+         return nil
+      end
+   end
+   write(buf)
+      len = #buf
+      out = 0
+      while #buf > 0 do
+         if self.writable > 0 then
+            w = super.write(buf)
+            if w == nil then
+               self.poller.stop()
+               break
+            else
+               out += w
+               buf = buf.sub(tonumber(w) + 1)
+            end
+         else
+            self.poller.stop()
+            return out
+         end
+      end
+      return out
+   end
+end
+

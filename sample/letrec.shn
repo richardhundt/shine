@@ -1,0 +1,11 @@
+class Foo
+   local function bar()
+      print "bar!"
+   end
+   greet()
+      bar()
+   end
+end
+
+f = Foo()
+f.greet()

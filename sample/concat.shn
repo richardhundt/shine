@@ -1,0 +1,3 @@
+s1 = "foo" ~ "bar"
+print s1
+

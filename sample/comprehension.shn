@@ -1,0 +1,5 @@
+a1 = [ i * 2 for i in 1..10 if i % 2 == 0 ]
+print(a1)
+
+a2 = [ i * j for i in 1..5 for j in 1..5 ]
+print(a2)

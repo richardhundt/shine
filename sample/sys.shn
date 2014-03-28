@@ -1,0 +1,21 @@
+local sys = require "sys"
+
+local dir = sys::opendir(".")
+print dir
+
+while true do
+   ent = sys::readdir(dir)
+   if ent == nil then
+      break
+   end
+   print ent
+end
+
+sys::closedir(dir)
+
+stat = sys::stat('./a.shn')
+for k, v in stat do
+   print "stat:", k, v
+end
+
+print sys::getcwd()

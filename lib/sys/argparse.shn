@@ -1,0 +1,141 @@
+class ArgumentParser
+   self(name = _G.arg[0])
+      self.name  = name
+      self.rules = { }
+      self.specs = { }
+   end
+
+   local boolarg = / { '0' | 'false' !%alnum } | %S+ {`true`} /
+   local strarg  = / ("'" { [^']+ } "'") | ('"' { [^"]+ } '"') | { %S+ } / -- "
+   local numarg  = / { '-'? [0-9]+ ('.' [0-9]+) } /
+
+   local ptypes = { }
+   function ptypes::string()
+      return strarg
+   end
+   function ptypes::number()
+      return numarg % tonumber
+   end
+   function ptypes::integer()
+      return / { %digit+ } / % tonumber
+   end
+   function ptypes::boolean()
+      return boolarg % (v) =>
+         if v == '0' or v == 'false' then
+            return false
+         end
+         return true
+      end
+   end
+
+   add(name, spec)
+      local patt
+      if name[1..1] == '-' then
+         patt = / <{name}> /
+         if spec.arity and spec.arity > 0 then
+            for i=1, spec.arity do
+               patt *= / %s+ | '=' /
+               patt *= ptypes[spec.type or 'string']()
+            end
+            if spec.arity > 1 then
+               patt = / {| <{patt}> |} /
+            end
+         else
+            patt *= / {`true`} /
+         end
+      else
+         patt = / !'-' / * ptypes[spec.type or 'string']()
+      end
+      patt = / (%1 <{patt}>) / % (o, v) =>
+         o[name] = v
+      end
+
+      spec.help or= ''
+
+      self.rules[#self.rules + 1] = {
+         patt = patt
+         name = name
+         spec = spec
+      }
+   end
+   usage()
+      buf  = { "usage %{self.name}" }
+      opts = { }
+      args = { }
+      cols = 1
+      for i=1, #self.rules do
+         rule = self.rules[i]
+         if #rule.name > cols then
+            cols = #rule.name
+         end
+         if rule.name[1..1] == '-' then
+            opts[#opts + 1] = rule
+         else
+            args[#args + 1] = rule
+         end
+      end
+      if #opts > 0 then
+         buf[#buf + 1] = ' [options]...'
+      end
+      if #args > 0 then
+         for i=1, #args do
+            a = args[i]
+            buf[#buf + 1] = " %{a.name}"
+         end
+      end
+      buf[#buf + 1] = "\n"
+
+      for i=1, #opts do
+         o = opts[i]
+         s = opts[i].spec
+         a = ' '
+         if s.type then
+            a ~= "<%{s.type}>"
+            if s.arity and s.arity > 1 then
+               a ~= ", <%{s.type}>".rep(s.arity - 1)
+            end
+         end
+         buf[#buf + 1] = o.name ~ a
+         buf[#buf] ~= " ".rep(cols - #buf[#buf]) ~ "\t\t" ~ s.help ~ "\n"
+      end
+
+      return table::concat(buf, "")
+   end
+
+   parse(argv = { })
+      capt = { }
+      argv = table::concat(argv, ' ')
+      opts = / !. /
+      args = / %s* /
+      narg = 0
+      nopt = 0
+      for i=1, #self.rules do
+         rule = self.rules[i]
+         if rule.name[1..1] == '-' then
+            nopt += 1
+            if nopt > 1 then
+               opts *= / %s+ /
+            end
+            opts += rule.patt
+         else
+            narg += 1
+            if narg > 1 then
+               args *= / %s+ /
+            end
+            args *= rule.patt + =>
+               error "%{rule.name} required"
+            end
+         end
+      end
+      opts += / %s* { '-' %S+ } / % (c) =>
+         error "Unknown option '%{c}'."
+      end
+
+      patt = (opts ** 0) * args
+      patt.match(argv, 1, capt)
+
+      return capt
+   end
+end
+
+

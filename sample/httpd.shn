@@ -1,0 +1,56 @@
+import async, yield from "async"
+
+import TCPServer, StreamReader from "async.io"
+import HTTPFilter, HTTPHeaders, HTTPResponse from "net.http"
+
+class HTTPServer
+   import ffi, C from "sys.ffi"
+
+   self(config = { })
+      self.config = config
+   end
+   start(host, port)
+      C::signal(C.SIGPIPE, ffi::cast('sig_t', C.SIG_IGN))
+
+      server = TCPServer()
+      server.reuseaddr(true)
+      server.bind(host, port)
+      server.listen(128)
+
+      return async =>
+         print "server listening on http://%{host}:%{port}/"
+         while true do
+            client = server.accept()
+            async =>
+               filter = HTTPFilter(StreamReader(client, nil, 1024))
+               while true do
+                  req = filter.get()
+                  if req == nil then
+                     client.close()
+                     break
+                  end
+                  mesg = "Hello World!\n"
+                  hdrs = {
+                     ['Connection'] = 'Keep-Alive'
+                     ['Host'] = '127.0.0.1'
+                     ['Content-Type'] = 'text/plain'
+                     ['Content-Length'] = #mesg
+                  } as HTTPHeaders
+
+                  rsp = HTTPResponse(200, hdrs)
+                  wrt = client.write(tostring(rsp)~mesg)
+                  if wrt == 0LL or req.want_close() then
+                     client.close()
+                     break
+                  end
+               end
+            end
+         end
+      end
+   end
+end
+
+httpd = HTTPServer()
+httpd.start('127.0.0.1', 8000).join()
+print "TERM"
+

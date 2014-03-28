@@ -1,0 +1,18 @@
+ffi = require("ffi")
+C   = ffi.C
+
+if ffi::os == "Linux" then
+   require("sys.ffi.linux")
+elseif ffi::os == "OSX" then
+   require("sys.ffi.osx")
+elseif ffi::os == "BSD" then
+   require("sys.ffi.bsd")
+elseif ffi::os == 'WIN32' then
+   require("sys.ffi.win32")
+elseif ffi::os == "POSIX" then
+   require("sys.ffi.posix")
+else
+   error("unsupported platform")
+end
+
+export ffi, C

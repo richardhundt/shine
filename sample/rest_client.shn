@@ -1,0 +1,58 @@
+import async, yield from "async"
+import Channel from "async.util"
+
+import TCPClient, StreamReader from "async.io"
+import HTTPFilter, HTTPHeaders, HTTPRequest from "net.http"
+
+class RESTClient
+   self()
+      self.socket = TCPClient()
+      self.input  = Channel()
+      self.output = Channel()
+   end
+   connect(host, port)
+      ok, er = self.socket.connect(host, port)
+      if not ok then
+         return ok, er
+      end
+      async =>
+         HTTPFilter(StreamReader(self.socket), self.output)
+         while true do
+            req = self.input.get()
+            if req == nil then
+               break
+            end
+            self.socket.write(tostring(req))
+         end
+      end
+   end
+   get(path, hdrs = { })
+      req = HTTPRequest('GET', path, hdrs as HTTPHeaders)
+      self.input.put(req)
+      return self.output.get()
+   end
+   close()
+      self.socket.close()
+   end
+end
+
+count = 0
+for i=1, 100 do
+   client = RESTClient()
+   assert client.connect('127.0.0.1', 8000)
+
+   async =>
+      for i=1, 1000 do
+         rsp = client.get '/', { ['Accept'] = '*/*' }
+         count += 1
+         --print rsp.entity.stream.read(1024)
+         --print "response:", rsp
+      end
+      client.close()
+   end
+end
+
+yield
+--assert(count == 100 * 1000)
+
+

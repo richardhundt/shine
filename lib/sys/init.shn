@@ -1,0 +1,7 @@
+import ffi from "sys.ffi"
+if ffi::os == 'WIN32' then
+   return require("sys.win32")
+else
+   return require("sys.unix")
+end
+

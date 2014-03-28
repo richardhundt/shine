@@ -1,0 +1,74 @@
+
+class Random
+   local N = 624
+   local M = 397
+
+   local MATRIX_A   = 0x9908b0df
+   local UPPER_MASK = 0x80000000
+   local LOWER_MASK = 0x7fffffff
+
+   self(s)
+      self.i = 0
+      self.v = { }
+      if s == nil then
+         s = tonumber("%p".format(self.v))
+      end
+      self.seed(s)
+   end
+
+   seed(s)
+      v = self.v
+      v[0] = s & 0xffffffff
+      self.i = 1
+      i = self.i
+      while i < N do
+         v[i] = (1812433253 * (v[i-1] ^ (v[i-1] >> 30)) + i)
+         v[i] &= 0xffffffff
+         i += 1
+      end
+      self.i = i
+   end
+
+   local mag01 = { [0] = 0x0, MATRIX_A }
+   generate_int32()
+      local v, y = self.v
+      if self.i >= N then
+         if self.i == N + 1 then
+            self.seed(5489)
+         end
+
+         kk = 0
+         while kk < N - M do
+            y = (v[kk] & UPPER_MASK) | (v[kk + 1] & LOWER_MASK)
+            v[kk] = v[kk + M] ^ (y >> 1) ^ mag01[y & 0x1]
+            kk += 1
+         end
+         while kk < N - 1 do
+            y = (v[kk] & UPPER_MASK) | (v[kk + 1] & LOWER_MASK)
+            v[kk] = v[kk + (M - N)] ^ (y >> 1) ^ mag01[y & 0x1]
+            kk += 1
+         end
+         y = (v[N - 1] & UPPER_MASK) | (v[0] & LOWER_MASK)
+         v[N - 1] = v[M - 1] ^ (y >> 1) ^ mag01[y & 0x1]
+
+         self.i = 0;
+      end
+      
+      y = v[self.i]
+      self.i += 1
+
+      y ^= (y >> 11)
+      y ^= (y << 7 ) & 0x9d2c5680
+      y ^= (y << 15) & 0xefc60000
+      y ^= (y >> 18)
+
+      return y
+   end
+
+   generate()
+      a = self.generate_int32() >> 5
+      b = self.generate_int32() >> 6
+      return (a * 67108864.0 + b) * (1.0/9007199254740992.0)
+   end
+end
+

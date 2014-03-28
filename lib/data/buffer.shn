@@ -1,0 +1,198 @@
+import ffi, C from "sys.ffi"
+
+ffi::cdef"""
+   typedef struct nga_buffer_t {
+      char*    base;
+      size_t   size;
+      size_t   nput;
+      size_t   nget;
+   } nga_buffer_t;
+"""
+
+class Buffer
+   ctype = ffi::typeof('nga_buffer_t')
+   function self.__apply(size = 4096)
+      self = ctype()
+      self.nput = 0
+      self.nget = 0
+      self.size = size
+      self.base = C::malloc(size)
+      ffi::fill(self.base, size, 0)
+      return self
+   end
+   function self.__len()
+      return self.nput - self.nget
+   end
+   function self.__gc()
+      C::free(self.base)
+   end
+   clear()
+      ffi::fill(self.base, self.size, 0)
+      self.nput = 0
+      self.nget = 0
+   end
+   write(data, len, offs = self.nput)
+      if len + offs > self.size then
+         want = offs + len
+         while want > offs + self.size do
+            self.size *= 2
+         end
+         base = C::realloc(self.base, self.size)
+         assert(base != null, "Out of memory!")
+         self.base = base
+      end
+      ffi::copy(self.base + offs, data, len)
+      if offs + len > self.nput then
+         self.nput = offs + len
+      end
+      return len
+   end
+   read(len, offs = self.nget)
+      if offs > self.nput then
+         return 0, nil
+      end
+      have = self.nput - offs
+      if len > have then
+         len = have
+      end
+      if offs + len > self.nget then
+         self.nget = offs + len
+      end
+      return len, ffi::string(self.base + offs, len)
+   end
+   readall()
+      return ffi::string(self.base, self.nput)
+   end
+   ffi::metatype('nga_buffer_t', self)
+end
+
+class ByteArray
+   import type, rawset, assert from __magic__
+
+   self(source)
+      if type(source) == 'string' then
+         self.size = #source
+         self.data = ffi::cast('char*', C::calloc(1, self.size))
+         ffi::copy(self.data, source, self.size)
+         self.have = self.size
+      elseif type(source) == 'number' then
+         self.size = source
+         self.data = ffi::cast('char*', C::calloc(1, self.size))
+         self.have = 0
+      else
+         error "invalid argument to ByteArray(): '%{source}'", 2
+      end
+   end
+
+   local function _need(self, len)
+      if self.size - self.have < len then
+         want = self.have + len
+         size = self.size * 2
+         while size < want do
+            size *= 2
+         end
+         data = ffi::cast('char*', C::realloc(self.data, size))
+         if data == null then
+            error "Out of memory!"
+         end
+         self.data = data
+         self.size = size
+      end
+   end
+
+   append(n)
+      _need(self, 1)
+      self.data[self.have] = n
+      self.have += 1
+   end
+
+   extend(x)
+      if type(x) == 'string' then
+         _need(self, #x)
+         bytes = ffi::cast('const char*', x)
+         ffi::copy(self.data + self.have, bytes, #x)
+         self.have += #x
+      else
+         for i, n in x do
+            self.append(n)
+         end
+      end
+   end
+
+   reverse()
+      x = 0
+      y = self.have - 1
+      while x < y do
+         t = self.data[x]
+         self.data[x] = self.data[y]
+         self.data[y] = t
+         x += 1
+         y -= 1
+      end
+   end
+
+   decode(ofs = 0, len = self.have - ofs, decoder = ffi::string)
+      assert(ofs <= self.have, "decode offset out of bounds")
+      assert(len <= ofs + self.have, "decode length out of bounds")
+      return decoder(self.data + ofs, len)
+   end
+
+   find(str, ofs = 0)
+      buf = ffi::cast('char*', str)
+      for i=ofs, self.have - #str do
+         if self.data[i] == buf[0] then
+            found = true
+            for j=1, #str - 1 do
+               if self.data[i + j] != buf[j] then
+                  found = false
+                  break
+               end
+            end
+            if found then
+               return i
+            end
+         end
+      end
+   end
+
+   clear()
+      self.have = 0
+   end
+
+   function self.__len()
+      return self.have
+   end
+
+   function self.__pairs()
+      return function(self, ctrl)
+         i = ctrl + 1
+         if i < self.have then
+            return i, self.data[i]
+         end
+      end, self, -1
+   end
+   function self.__getindex(x)
+      if type(x) != 'number' then
+         error("no such member %{x}", 2)
+      end
+      if x < 0 then
+         x = self.have + x
+      end
+      assert(x < self.have, 'index out of range')
+      return self.data[x]
+   end
+   function self.__setindex(x, n)
+      if type(x) != 'number' then
+         rawset(self, x, n)
+         return
+      end
+      if x < 0 then
+         x = self.have + x
+      end
+      assert(x < self.have, 'index out of range')
+      self.data[x] = n
+   end
+
+end
+
+

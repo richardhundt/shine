@@ -1,0 +1,42 @@
+import sleep, async, yield from "async"
+import TCPServer from "async.io"
+
+async =>
+   sleep 1000
+   print "tick 1"
+end
+
+print "waiting..."
+answer = async =>
+   sleep 200
+   print "tick 2"
+   return 42
+end
+print "answer %{answer.join()}."
+
+async =>
+   sleep 500
+   print "tick 3"
+end
+
+async =>
+   server = TCPServer('127.0.0.1', 8080)
+   server.listen(128)
+   print "listening on 127.0.0.1:8080"
+   while true do
+      client = server.accept()
+      async =>
+         while true do
+            data = client.read()
+            if data then
+               client.write("you said %{data}")
+            else
+               client.close()
+               break
+            end
+         end
+      end
+   end
+end
+
+yield

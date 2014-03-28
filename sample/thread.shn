@@ -1,0 +1,58 @@
+--[[
+import ZMQThread from "net.zmq"
+
+local up1 = { answer = 42 }
+
+local thr = ZMQThread.fork (ctx, pipe) =>
+   print "Hello from a thread! ctx => %{ctx}, pipe => %{pipe.fd}, up1.answer => %{up1.answer}"
+   while true do
+      mesg = pipe.recv()
+      if mesg == 'ping' then
+         print "parent said: %{mesg}"
+         pipe.send("pong")
+      else
+         pipe.send("quit")
+         break
+      end
+   end
+end
+
+for i=1, 5 do
+   thr.pipe.send("ping")
+   print "child said: %{thr.pipe.recv()}"
+end
+thr.pipe.send("quit")
+print thr.pipe.recv()
+
+--]]
+
+import Thread, Pipe from "sys.thread"
+
+local ch1 = Pipe(64)
+
+local th1 = Thread.create =>
+   print "Hello from a th1"
+   print "ch1:", ch1
+   for i=1, 100000 do
+      --print "[1] tick %{i}"
+      ch1.put("[1] %{i}")
+   end
+end
+
+local th2 = Thread.create =>
+   print "Hello from th2"
+   local got
+   for i=1, 100000 do
+      got = ch1.get()
+      assert(got != null)
+      --print "[2] got: %{got}"
+   end
+   print "got: %{got}"
+end
+
+th2.join()
+th1.join()
+print "HERE:", ch1.$c
+ch1 = nil
+--collectgarbage "collect"
+

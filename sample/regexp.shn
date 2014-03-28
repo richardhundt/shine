@@ -1,0 +1,15 @@
+import RegExp from "util.regexp"
+local rx1 = RegExp('(\w+) (\w+)')
+local rx1(x, y) = "two words"
+print(x, y)
+
+local rx2 = RegExp('(\w+)')
+local str = "word"
+print("%q".format(string::sub(str, rx2.find(str))))
+
+local sub = rx2.gsub str, (m) =>
+   return "world"
+end
+
+print sub
+

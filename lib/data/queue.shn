@@ -1,0 +1,98 @@
+
+class Queue
+   local free = newproxy()
+   local hole = newproxy()
+
+   self(size = 32)
+      self.size = size
+      self.head = 0
+      self.tail = 0
+   end
+
+   function self.__ipairs()
+      return function(self, ctrl)
+         if ctrl < self.count() then
+            slot = (self.head + ctrl) % self.size
+            return ctrl + 1, self[slot]
+         end
+      end, self, 0
+   end
+
+   function self.__iter()
+      return ipairs(self)
+   end
+   function self.__len()
+      return self.count()
+   end
+
+   each(iter)
+      self.enqueue(hole)
+      while true do
+         item = self.dequeue()
+         if item == hole then
+            break
+         end
+         if iter(item) != false then
+            self.enqueue(item)
+         end
+      end
+   end
+
+   count()
+      return self.tail - self.head
+   end
+   empty()
+      return self.count() == 0
+   end
+   enqueue(item)
+      if self.count() < self.size then
+         slot = self.tail % self.size
+         self[slot] = item
+         self.tail += 1
+      else
+         -- blunt resize, but shouldn't happen too often
+         temp = { }
+         while true do
+            v = self.dequeue()
+            if v != nil then
+               temp[#temp + 1] = v
+            else
+               temp[#temp + 1] = item
+               break
+            end
+         end
+         self.size = self.size * 2
+         self.head = 0
+         self.tail = 0
+         for i=1, #temp do
+            self.enqueue(temp[i])
+         end
+      end
+   end
+   dequeue()
+      if self.count() > 0 then
+         slot = self.head % self.size
+         self.head += 1
+         item = self[slot]
+         self[slot] = free
+         assert(item != free)
+         return item
+      end
+   end
+   remove(item)
+      size = self.size
+      seen = false
+      local slot, next
+      for i = self.head, self.tail - 1 do
+         slot = i % size
+         next = (i + 1) % size
+         if seen or self[slot] == item then
+            seen = true
+            self[slot] = self[next]
+         end
+      end
+      self[self.tail % size] = free
+      self.tail -= 1
+   end
+end
+

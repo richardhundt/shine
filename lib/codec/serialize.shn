@@ -1,0 +1,293 @@
+import ffi, C from "sys.ffi"
+
+class SerializeBuffer
+   self(size = 32, data = "")
+      self.size = size + 0
+      self.data = ffi::cast('char*', C::calloc(1, size))
+      if self.data == null then
+         error "Out of memory!"
+      end
+      self.offs = 0
+      self.seek = 0
+      self.put_bytes(data)
+   end
+   need(size)
+      if self.size < self.offs + size then
+         new_size = self.offs + size
+         while new_size < self.size do
+            new_size *= 2
+         end
+         self.data = ffi::cast('char*', C::realloc(self::data, new_size))
+         if self.data == null then
+            error "Out of memory!"
+         end
+         self.size = new_size
+      end
+   end
+
+   put_char(v)
+      self.need(1)
+      self.data[self.offs] = v
+      self.offs += 1
+   end
+
+   get_char()
+      v = self.data[self.seek]
+      self.seek += 1
+      return v
+   end
+
+   local int32_t = ffi::typeof('int32_t')
+   local int32_t_1 = ffi::new('int32_t[1]')
+   put_int32(v)
+      self.need(4)
+      ptr = self.data + self.offs
+      int32_t_1[0] = ffi::cast(int32_t, v)
+      ffi::copy(ptr, int32_t_1, 4)
+      self.offs += 4
+   end
+
+   local int32_t_p = ffi::typeof('int32_t*')
+   get_int32()
+      ptr = self.data + self.seek
+      v = ffi::cast(int32_t_p, ptr)
+      self.seek += 4
+      return v[0]
+   end
+
+   double_p = ffi::new('double[1]')
+   put_double(v)
+      self.need(8)
+      offs = self.offs
+      double_p[0] = v
+      char = ffi::cast('char*', double_p)
+      ffi::copy(self.data + offs, char, 8)
+      self.offs = offs + 8
+   end
+   get_double()
+      s = self.seek
+      self.seek += 8
+      d = ffi::cast('double*', self.data + s)
+      v = d[0]
+      return v
+   end
+
+   put_bytes(v)
+      offs = self.offs
+      if v == '' then return offs end
+      self.need(#v)
+      ffi::copy(self.data + offs, v)
+      self.offs = offs + #v
+   end
+
+   get_bytes(l)
+      s = self.seek
+      self.seek = s + l
+      d = self.data + s
+      return ffi::string(d, l)
+   end
+
+   decode()
+      return ffi::string(self.data, self.offs)
+   end
+
+   release()
+      C::free(self.data)
+   end
+
+   clear()
+      ffi::fill(self.data, self.size, 0) 
+      self.offs = 0
+      self.seek = 0
+   end
+end
+
+module Serializer
+   local NIL = 0
+   local BIT = 1
+   local NUM = 2
+   local STR = 3
+   local TAB = 4
+   local FUN = 5
+   local EXT = 6
+   local CDT = 7
+   local REF = 8
+   local THR = 9
+
+   local BUF = SerializeBuffer(128)
+
+   local INT_MAX = 2147483647
+
+   import type, pairs, debug from _G
+
+   local encode_table, encode_value, decode_value
+
+   local encoders = {
+      ['string'] = function(val, reg, buf)
+         buf.put_char(STR)
+         buf.put_int32(#val)
+         buf.put_bytes(val, #val)
+      end
+      ['number'] = function(val, reg, buf)
+         buf.put_char(NUM)
+         buf.put_double(val)
+      end
+      ['boolean'] = function(val, reg, buf)
+         buf.put_char(BIT)
+         buf.put_char(val == true and 1 or 0)
+      end
+      ['nil'] = function(val, reg, buf)
+         buf.put_char(NIL)
+      end
+      ['function'] = function(val, reg, buf)
+         if reg[val] then
+            ref = reg[val]
+            buf.put_char(REF)
+            buf.put_int32(ref)
+         else
+            reg[#reg + 1] = true
+            reg[val] = #reg
+            buf.put_char(FUN)
+            s = string::dump(val)
+            buf.put_int32(#s)
+            buf.put_bytes(s, #s)
+            u = debug::getinfo(val, 'u').nups
+            buf.put_char(u)
+            for i = 1, u do
+               n, v = debug::getupvalue(val, i)
+               encode_value(v, reg, buf)
+            end
+         end
+      end
+      ['table'] = function(val, reg, buf)
+         if reg[val] then
+            ref = reg[val]
+            buf.put_char(REF)
+            buf.put_int32(ref)
+         else
+            reg[#reg + 1] = true
+            reg[val] = #reg
+            if val.__codec__ then
+               f, v = val.__codec__()
+               buf.put_char(EXT)
+               encode_value(f, reg, buf)
+               encode_value(v, reg, buf)
+            else
+               encode_table(val, reg, buf)
+            end
+         end
+      end
+   }
+
+   function encode_table(val, reg, buf)
+      buf.put_char(TAB)
+      for k,v in pairs(val) do
+         encode_value(k, reg, buf)
+         encode_value(v, reg, buf)
+      end
+      encode_value(nil, reg, buf)
+   end
+
+   function encode_value(val, reg, buf)
+      t = type(val)
+      return encoders[t](val, reg, buf)
+   end
+
+   local decoders = {
+      [STR] = function(reg, buf)
+         l = buf.get_int32()
+         return buf.get_bytes(l)
+      end
+      [NUM] = function(reg, buf)
+         return buf.get_double()
+      end
+      [BIT] = function(reg, buf)
+         v = buf.get_char()
+         return v == 1
+      end
+      [NIL] = function(reg, buf)
+         return nil
+      end
+      [TAB] = function(reg, buf)
+         o = { }
+         reg[#reg + 1] = o
+         reg[o] = #reg
+         while true do
+            k = decode_value(reg, buf)
+            if k == nil then break end
+            v = decode_value(reg, buf)
+            o[k] = v
+         end
+         return o
+      end
+      [EXT] = function(reg, buf)
+         f = decode_value(reg, buf)
+         v = decode_value(reg, buf)
+         setfenv(f, __magic__)
+         o = f(v)
+         reg[#reg + 1] = o
+         reg[o] = #reg
+         return o
+      end
+      [REF] = function(reg, buf)
+         ref = tonumber(buf.get_int32())
+         return reg[ref]
+      end
+      [FUN] = function(reg, buf)
+         l = buf.get_int32()
+         s = buf.get_bytes(l)
+         f = assert(loadstring(s))
+         u = buf.get_char()
+         for i = 1, u do
+            v = decode_value(reg, buf)
+            debug::setupvalue(f, i, v)
+         end
+         return f
+      end
+   }
+
+   function decode_value(reg, buf)
+      t = buf.get_char()
+      return decoders[t](reg, buf)
+   end
+
+   encode(obj)
+      buf = BUF
+      reg = { }
+      buf.clear()
+      encode_value(obj, reg, buf)
+      return buf.decode()
+   end
+
+   decode(str)
+      buf = BUF
+      buf.clear()
+      buf.put_bytes(str, #str)
+      reg = { }
+      return decode_value(reg, buf)
+   end
+end
+
+module Serializable
+   self.registry = { }
+   function self.__included(into)
+      self.registry[into.__name] = into
+      local name = into.__name
+      local path = _NAME
+      function into.__codec__()
+         local class_path = getfenv(2)._NAME
+         return function()
+            return require(class_path)[name]
+         end
+      end
+      function into.__members__.__codec__()
+         return function(v)
+            meta = require(path).Serializable::registry[name]
+            return meta.__decode__(v)
+         end, self.__encode__()
+      end
+   end
+end
+
+export Serializer, Serializable
+

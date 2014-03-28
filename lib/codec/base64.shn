@@ -1,0 +1,155 @@
+-- ported to Shine from:
+--- MIME BASE64 Encoding and Decoding Routines
+-- Copyright 2013 Jeff Solinsky
+--
+-- Licensed under the Apache License, Version 2.0 (the "License");
+-- you may not use this file except in compliance with the License.
+-- You may obtain a copy of the License at
+--
+-- http://www.apache.org/licenses/LICENSE-2.0
+--
+-- Unless required by applicable law or agreed to in writing, software
+-- distributed under the License is distributed on an "AS IS" BASIS,
+-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-- See the License for the specific language governing permissions and
+-- limitations under the License.
+
+module Base64
+
+   import ffi   from "sys.ffi"
+   import floor from math
+
+   local mime64chars = ffi::new(
+      "uint8_t[64]",
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+   )
+   local mime64lookup = ffi::new("uint8_t[256]")
+   ffi::fill(mime64lookup, 256, 0xFF)
+   for i = 0, 63 do
+       mime64lookup[mime64chars[i]] = i
+   end
+
+   local u8arr = ffi::typeof 'uint8_t[?]'
+   local u8ptr = ffi::typeof 'uint8_t*'
+
+   decode(str, sz)
+      if type(str) == "string" and sz == nil then
+         sz = #str
+      end
+      local m64, b1
+      local bin_arr = ffi::new(u8arr, floor(sz * 3 >> 2))
+      local mptr = ffi::cast(u8ptr, bin_arr)
+      local bptr = ffi::cast(u8ptr, str)
+      local i = 0
+      while true do
+         repeat
+            if i >= sz then goto done end
+            m64 = mime64lookup[bptr[i]]
+            i += 1
+         until m64 != 0xFF
+
+         b1 = m64 << 2
+         repeat
+            if i >= sz then goto done end
+            m64 = mime64lookup[bptr[i]]
+            i += 1
+         until m64 != 0xFF
+
+         mptr[0] = b1 | (m64 >> 4)
+         mptr += 1
+
+         b1 = m64 << 4
+         repeat
+            if i >= sz then goto done end
+            m64 = mime64lookup[bptr[i]]
+            i += 1
+         until m64 != 0xFF
+
+         mptr[0] = b1 | (m64 >> 2)
+         mptr += 1
+
+         b1 = m64 << 6
+         repeat
+            if i >= sz then goto done end
+            m64 = mime64lookup[bptr[i]]
+            i += 1
+         until m64 != 0xFF
+
+         mptr[0] = b1 | m64
+         mptr += 1
+      end
+
+    done:
+      return ffi::string(bin_arr, (mptr-bin_arr))
+   end
+
+   local mime64shorts = ffi::new('uint16_t[4096]')
+   for i = 0, 63 do
+      for j = 0, 63 do
+         local v
+         if ffi::abi("le") then
+            v = mime64chars[j] * 256 + mime64chars[i]
+         else
+            v = mime64chars[i] * 256 + mime64chars[j]
+         end
+         mime64shorts[i * 64 + j]=v
+      end
+   end
+
+   local u16arr = ffi::typeof "uint16_t[?]"
+   local crlf16 = ffi::new("uint16_t[1]")
+   if ffi::abi("le") then
+      crlf16[0] = 0x0A * 256 + 0x0D
+   else
+      crlf16[0] = 0x0D * 256 + 0x0A
+   end
+
+   local eq = string::byte('=')
+   encode(str, sz)
+      if type(str) == "string" and sz == nil then
+         sz = #str
+      end
+      outlen = floor(sz * 2 / 3)
+      outlen = outlen + floor(outlen / 19) + 3
+      m64arr = ffi::new(u16arr, outlen)
+      l, p, v = 0, 0
+      bptr = ffi::cast(u8ptr,str)
+      c = 38
+      i, k = 0, 0
+    while_3bytes:
+      if i + 3 > sz then
+         goto break3
+      end
+      v = bptr[i] << 16 | bptr[i+1] << 8 | bptr[i + 2]
+      i += 3
+    encode_last3:
+      if c == k then
+         m64arr[k] = crlf16[0]
+         k += 1
+         c = k + 38
+      end
+      m64arr[k]     = mime64shorts[v >> 12]
+      m64arr[k + 1] = mime64shorts[v & 4095]
+      k += 2
+      goto while_3bytes
+    break3:
+      if l > 0 then
+         if l == 1 then
+            m64arr[k - 1] = eq << 8 | eq
+         else
+            (ffi::cast(u8ptr, m64arr))[(k << 1) - 1] = eq
+         end
+      else
+         l = sz - i
+         if l > 0 then
+            v = bptr[i] << 16
+            if l == 2 then
+               v |= bptr[i + 1] << 8
+            end
+            goto encode_last3
+         end
+      end
+      return ffi::string(m64arr, k << 1)
+   end
+end
+

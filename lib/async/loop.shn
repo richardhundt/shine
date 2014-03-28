@@ -1,0 +1,355 @@
+import ffi, C from "sys.ffi"
+
+import Queue from "data.queue"
+
+local lib_path = assert(package::searchpath("async", package.cpath))
+local lib = ffi::load(lib_path, true)
+
+ffi::cdef"
+   static const int UPOLL_CTL_ADD = 1;
+   static const int UPOLL_CTL_DEL = 2;
+   static const int UPOLL_CTL_MOD = 3;
+
+   static const int UPOLLIN  = 0x01;
+   static const int UPOLLOUT = 0x02;
+   static const int UPOLLET  = 0x04;
+   static const int UPOLLERR = 0x08;
+
+   typedef struct upoll_ upoll_t;
+
+   typedef union upoll_data {
+     void      *ptr;
+     intptr_t  fd;
+     uint32_t  u32;
+     uint64_t  u64;
+   } upoll_data_t;
+
+   typedef struct upoll_event {
+     uint32_t      events;
+     upoll_data_t  data;
+   } upoll_event_t;
+
+   upoll_t* upoll_create(uint32_t size);
+   int upoll_ctl(upoll_t* upq, int op, intptr_t fd, upoll_event_t *event);
+   int upoll_wait(upoll_t* upq, upoll_event_t *events, int maxevents, int timeout);
+   void upoll_destroy(upoll_t* upq);
+
+   intptr_t usocket(int domain, int type, int proto);
+   intptr_t uaccept(intptr_t sock);
+
+   int ubind(intptr_t sock, const char* name, const char* serv);
+   int ulisten(intptr_t sock, int backlog);
+   int uconnect(intptr_t sock, const char* name, const char* serv);
+   int uclose(intptr_t sock);
+   int uread(intptr_t fd, char* buf, size_t len);
+   int uwrite(intptr_t fd, const char* buf, size_t len);
+"
+
+function strerror(errno)
+   return ffi::string(C::strerror(errno))
+end
+
+class Timer
+   self(delay, times = 0, react, data)
+      self.delay = delay
+      self.times = times
+      self.react = react
+      self.data  = data
+      self.when  = -1
+   end
+   start(loop = IOLoop)
+      loop.add_timer(self)
+   end
+   stop(loop = IOLoop)
+      loop.del_timer(self)
+   end
+end
+
+class Idle
+   self(react)
+      self.react = react
+   end
+   start(loop = IOLoop)
+      loop.add_idle(self)
+   end
+   stop(loop = IOLoop)
+      loop.del_idle(self)
+   end
+end
+
+class Poller
+   local evbits
+
+   self(fd, events, react)
+      self.fd    = fd
+      self.react = react
+      self.event = ffi::new('upoll_event_t')
+      if type(events) == "string" then
+         self.event.events = evbits(events)
+      else
+         self.event.events = events
+      end
+   end
+
+   start(loop = IOLoop)
+      loop.add_poller(self)
+   end
+   stop(loop = IOLoop)
+      loop.del_poller(self)
+   end
+
+   function evbits(events = '', evbits = 0)
+      if events == '+r' then
+         evbits |= C.UPOLLIN
+      elseif events == '-r' then
+         evbits &= ~C.UPOLLIN
+      elseif events == '+w' then
+         evbits |= C.UPOLLOUT
+      elseif events == '-w' then
+         evbits &= ~C.UPOLLOUT
+      else
+         local bits = 0
+         if events.find 'r' then
+            bits |= C.UPOLLIN
+         end
+         if events.find 'w' then
+            bits |= C.UPOLLOUT
+         end
+         evbits = bits
+      end
+      return evbits
+   end
+
+   modify(events, loop = IOLoop)
+      self.event.events = evbits(events, self.event.events)
+      loop.mod_poller(self)
+   end
+end
+
+module IOLoop
+
+   local upoll = lib::upoll_create(1024)
+
+   local timers  = Queue()
+   local idles   = Queue()
+   local pollers = { }
+
+   local poll_max = 128
+   local poll_evt = ffi::new('upoll_event_t[?]', 128)
+   local poll_dur = -1
+   local poll_cnt = 0
+
+   timer(delay, times = 0, react, data)
+      return Timer(delay, times, react, data)
+   end
+   add_timer(timer)
+      if not timer.queued then
+         timer.queued = true
+         timers.enqueue(timer)
+      end
+      timer.active = true
+   end
+   del_timer(timer)
+      timer.active = false
+   end
+
+   idle(react)
+      return Idle(react)
+   end
+   add_idle(idle)
+      if not idle.queued then
+         idle.queued = true
+         idles.enqueue(idle)
+      end
+      idle.active = true
+   end
+   del_idle(idle)
+      idle.active = false
+   end
+
+   poller(fd, events, react)
+      return Poller(fd, events, react)
+   end
+
+   add_poller(poller)
+      if not poller.index then
+         poller.index = tonumber(poller.fd)
+         pollers[poller.index] = poller
+         poller.event.data.fd = poller.index
+         lib::upoll_ctl(upoll, lib.UPOLL_CTL_ADD, poller.fd, poller.event)
+         poll_cnt += 1
+         if poll_cnt > poll_max then
+            poll_max *= 2
+            poll_evt = nil
+         end
+      end
+   end
+   del_poller(poller)
+      if poller.index then
+         poller.event.events = -1
+         lib::upoll_ctl(upoll, lib.UPOLL_CTL_DEL, poller.fd, nil)
+         pollers[poller.index] = nil
+         poller.index = nil
+         poll_cnt -= 1
+      end
+   end
+   mod_poller(poller)
+      if poller.index then
+         lib::upoll_ctl(upoll, lib.UPOLL_CTL_MOD, poller.fd, poller.event)
+      end
+   end
+
+   local now = ffi::new("struct timeval")
+   local function gettime()
+      C::gettimeofday(now, nil)
+      return tonumber(now.tv_sec * 1000 + now.tv_usec / 1000)
+   end
+
+   local _running = false
+
+   run_init()
+      _running = true
+      tloop = gettime()
+      for _, timer in timers do
+         timer.when = timer.delay + tloop
+      end
+   end
+   
+   run()
+      self.run_init()
+      again = true
+      while _running and again do
+         again = self.run_once()
+      end
+      if again and not _running then
+         -- interrupted
+         return again
+      end
+   end
+
+   stop()
+      _running = false
+   end
+
+   running()
+      return _running
+   end
+
+   count()
+      return timers.count() + poll_cnt
+   end
+
+   local zombie_count = 0
+   run_once(timeout = -1)
+      if not _running then
+	 self.run_init()
+      end
+
+      -- calculate timers
+      tloop = gettime()
+      tnext = tloop + 3600 * 1000
+      if timers.count() > 0 then
+         timers.each (timer) =>
+            if timer.when == -1 then
+               timer.when = timer.delay + tloop
+            end
+            if tnext > timer.when then
+               tnext = timer.when
+            end
+            if not timer.active then
+               timer.queued = false
+               return false
+            end
+         end
+      end
+
+      if timeout == 0 then
+	 poll_dur = 0
+      elseif timeout > 0 then
+	 poll_dur = tnext - tloop
+	 if poll_dur > timeout then
+	    poll_dur = timeout
+	 end
+      else
+	 poll_dur = tnext - tloop
+	 if poll_dur < 0 then
+	    poll_dur = 0
+	 end
+      end
+
+      -- run idle handlers
+      if self.count() == 0 and self.idles.count() > 0 then
+	 idles.each (idle) =>
+	    idle.react(self)
+	    if not idle.active then
+	       idle.queued = false
+	       return false
+	    end
+	 end
+      end
+
+      -- check poll set
+      if poll_evt == nil then
+         poll_evt = ffi::new("upoll_event_t[?]", poll_max)
+      end
+
+      -- poll
+      --print "upoll_wait:", poll_dur
+      rv = lib::upoll_wait(upoll, poll_evt, poll_max, poll_dur)
+
+      -- run expired timers
+      if timers.count() > 0 then
+         tloop = gettime()
+         timers.each (timer) =>
+            if timer.when != -1 and tloop >= timer.when then
+               timer.times -= 1
+               if timer.times == 0 then
+                  timer.active = false
+               end
+               timer.when = timer.delay + tloop
+               timer.react()
+               tloop = gettime()
+               if not timer.active then
+                  timer.queued = false
+                  return false
+               end
+            end
+         end
+      end
+
+      -- run poll handlers
+      if rv > 0 then
+         for i = 0, rv - 1 do
+            evbits = poll_evt[i].events
+            poller = pollers[tonumber(poll_evt[i].data.fd)]
+            if poller then
+               local events = ''
+               if (evbits & C.UPOLLIN) > 0 then
+                  events ~= 'r'
+               end
+               if (evbits & C.UPOLLOUT) > 0 then
+                  events ~= 'w'
+               end
+               if (evbits & C.UPOLLERR) > 0 then
+                  events ~= 'e'
+               end
+               poller.react(events)
+            else
+               zombie_count += 1
+               warn("no poller for: %{poll_evt[i].data.fd}, evbits %{evbits}")
+               if zombie_count > 10 then
+                  os::exit(1)
+               end
+               lib::upoll_ctl(upoll, lib.UPOLL_CTL_DEL, poll_evt[i].data.fd, nil)
+            end
+         end
+      elseif rv < 0 then
+         errno = ffi::errno()
+         throw strerror(errno)
+      end
+
+      return self.count() > 0
+   end
+end
+
+

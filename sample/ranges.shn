@@ -1,0 +1,6 @@
+r = 1..10
+print r
+
+x = 5
+given x
+   case 1..10 then

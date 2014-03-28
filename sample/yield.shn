@@ -1,0 +1,12 @@
+function* gen()
+   try
+      for i=1, 10 do
+         yield i
+      end
+   catch (e)
+      print "arse"
+   end
+end
+
+co1 = gen()
+print co1()

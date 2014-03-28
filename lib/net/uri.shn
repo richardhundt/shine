@@ -1,0 +1,43 @@
+
+class URI
+   local pattern = /{|
+      {:scheme:    {[^:/?#]+}":" :}?
+      {:authority: "//"{[^/?#]*} :}?
+      {:path:      {[^?#]*}      :}
+      {:query:     "?"{[^#]*}    :}?
+      {:fragment:  "#"{.*}       :}?
+   |}/
+
+   self(uristr)
+      if uristr then
+         self.parse(uristr)
+      end
+   end
+   parse(uristr)
+      {
+         scheme    = self.scheme,
+         authority = self.authority,
+         path      = self.path,
+         fragment  = self.fragment
+      } = pattern.match(uristr)
+   end
+
+   __tostring__()
+      buf = { }
+      if self.scheme then
+         buf[#buf + 1] = self.scheme ~ ":"
+      end
+      if self.authority then
+         buf[#buf + 1] = "//" ~ self.authority
+      end
+      buf[#buf + 1] = self.path
+      if self.query then
+         buf[#buf + 1] = "?" ~ self.query
+      end
+      if self.fragment then
+         buf[#buf + 1] = "#" ~ self.fragment
+      end
+      return table::concat(buf)
+   end
+end
+

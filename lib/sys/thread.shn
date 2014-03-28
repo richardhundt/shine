@@ -1,0 +1,430 @@
+import ffi, C from "sys.ffi"
+import Serializer from "codec.serialize"
+
+local lib_path = package::searchpath("sys", package::cpath)
+local lib = ffi::load(lib_path)
+
+ffi::cdef"""
+   typedef struct _uthread_t uthread_t;
+   typedef struct _umutex_t umutex_t;
+   typedef struct _ucond_t ucond_t;
+   typedef void (*uthread_start_t)(void*);
+
+   umutex_t* umutex_create(void);
+   int umutex_init(umutex_t* handle);
+   void umutex_destroy(umutex_t* handle);
+   void umutex_lock(umutex_t* handle);
+   int umutex_trylock(umutex_t* handle);
+   void umutex_unlock(umutex_t* handle);
+
+   ucond_t* ucond_create(void);
+   int ucond_init(ucond_t* cond);
+   void ucond_destroy(ucond_t* cond);
+   void ucond_signal(ucond_t* cond);
+   void ucond_broadcast(ucond_t* cond);
+   void ucond_wait(ucond_t* cond, umutex_t* mutex);
+   int ucond_timedwait(ucond_t* cond, umutex_t* mutex, uint64_t timeout);
+
+   uthread_t* uthread_create(uthread_start_t, void *arg);
+   unsigned long uthread_self(void);
+   int uthread_join(uthread_t *tid);
+"""
+
+class Mutex
+   function self.__apply()
+      o = { }
+      o.$c = lib::umutex_create()
+      if o.$c == null then
+         return nil, C::strerror(ffi::errno())
+      end
+      return o as self
+   end
+   destroy()
+      lib::umutex_destroy(self.$c)
+   end
+   lock()
+      return lib::umutex_lock(self.$c)
+   end
+   unlock()
+      return lib::umutex_unlock(self.$c)
+   end
+
+   function self.__codec__()
+      return (name) =>
+         import Mutex from name
+         return Mutex
+      end, _NAME
+   end
+   __codec__()
+      return (v) =>
+         import ffi from "sys.ffi"
+         import Mutex from "sys.thread"
+         return {
+            $c = ffi::cast('umutex_t*', ffi::cast('intptr_t', v))
+         } as Mutex
+      end, tonumber(ffi::cast('intptr_t', self.$c))
+   end
+end
+
+class Cond
+   function self.__apply()
+      o = { }
+      o.$c = lib::ucond_create()
+      if o.$c == null then
+         return nil, C::strerror(ffi::errno())
+      end
+      return o as self
+   end
+   destroy()
+      lib::ucond_destroy(self.$c)
+   end
+   wait(mtx)
+      return lib::ucond_wait(self.$c, mtx.$c)
+   end
+   signal()
+      return lib::ucond_signal(self.$c)
+   end
+   broadcast()
+      return lib::ucond_broadcast(self.$c)
+   end
+
+   function self.__codec__()
+      return (name) =>
+         import Cond from name
+         return Cond
+      end, _NAME
+   end
+   __codec__()
+      return (v) =>
+         import ffi from "sys.ffi"
+         import Cond from "sys.thread"
+         return {
+            $c = ffi::cast('ucond_t*', ffi::cast('intptr_t', v))
+         } as Cond
+      end, tonumber(ffi::cast('intptr_t', self.$c))
+   end
+end
+
+class Pipe
+   ffi::cdef"""
+      typedef struct thrd_mesg thrd_mesg_t;
+      typedef struct thrd_pipe thrd_pipe_t;
+
+      struct thrd_pipe {
+         thrd_mesg_t* head;
+         thrd_mesg_t* tail;
+         int          nref;
+         ucond_t*     cnd_put;
+         ucond_t*     cnd_get;
+         umutex_t*    mtx;
+         size_t       count;
+         size_t       size;
+      };
+
+      struct thrd_mesg {
+         thrd_mesg_t* next;
+         union {
+            void*     ptr;
+            double    num;
+            int64_t   i64;
+            uint64_t  u64;
+            char      bit;
+         } u;
+         size_t       size;
+         int          type;
+      };
+   """
+
+   self(size = 64)
+      self.$c = ffi::cast('thrd_pipe_t*', C::malloc(ffi::sizeof('thrd_pipe_t')))
+
+      self.mutex  = Mutex()
+      self.on_put = Cond()
+      self.on_get = Cond()
+
+      self.$c.mtx     = self.mutex.$c
+      self.$c.cnd_get = self.on_put.$c
+      self.$c.cnd_put = self.on_get.$c
+
+      self.$c.size  = size
+      self.$c.head  = null
+      self.$c.tail  = null
+      self.$c.count = 0
+      self.$c.nref  = 1
+      ffi::gc(self.$c, Pipe.__gc)
+   end
+
+   local BIT = 1
+   local PTR = 2
+   local NUM = 3
+   local NIL = 4
+   local I64 = 5
+   local U64 = 6
+   local STR = 7
+
+   get()
+      self.mutex.lock()
+      $c = self.$c
+      while $c.count == 0 do
+         self.on_put.wait(self.mutex)
+      end
+
+      msg = $c.head
+      $c.head = msg.next
+
+      $c.count -= 1
+
+      local val
+      local typ = msg.type
+      if typ == NUM then
+         val = tonumber(msg.u.num)
+      elseif typ == BIT then
+         val = msg.u.bit == 1
+      elseif typ == I64 then
+         val = msg.u.i64
+      elseif typ == U64 then
+         val = msg.u.u64
+      elseif typ == STR then
+         val = ffi::string(msg.u.ptr, msg.size)
+         C::free(msg.u.ptr)
+      elseif typ == NIL then
+         val = nil
+      else
+         assert(typ == PTR)
+         enc = ffi::string(msg.u.ptr, msg.size)
+         val = Serializer.decode(enc)
+         C::free(msg.u.ptr)
+      end
+
+      C::free(msg)
+
+      self.mutex.unlock()
+      self.on_get.signal()
+      return val
+   end
+
+   put(val)
+      self.mutex.lock()
+      $c = self.$c
+      while $c.count >= $c.size do
+         self.on_get.wait(self.mutex)
+      end
+
+      msg = ffi::cast('thrd_mesg_t*', C::malloc(ffi::sizeof('thrd_mesg_t')))
+      typ = type(val)
+      if typ == 'number' then
+         msg.u.num = val
+         msg.type = NUM
+      elseif typ == 'boolean' then
+         msg.u.bit = typ and 1 or 0
+         msg.type = BIT
+      elseif typ == 'cdata' then
+         if ffi::istype('int64_t', val) then
+            msg.u.i64 = val
+            msg.type = I64
+         elseif ffi::istype('uint64_t', val) then
+            msg.u.u64 = val
+            msg.type = U64
+         else
+            error "cannot pass %s through thread boundary".format(tostring(val))
+         end
+      elseif typ == 'string' then
+         msg.type = STR
+         msg.u.ptr = C::calloc(1, #val)
+         ffi::copy(msg.u.ptr, val, #val)
+         msg.size  = #val
+      elseif typ == 'nil' then
+         msg.type = NIL
+      else
+         enc = Serializer.encode(val)
+         msg.u.ptr = C::calloc(1, #enc)
+         ffi::copy(msg.u.ptr, enc)
+         msg.size = #enc
+      end
+
+      msg.next = null
+      if $c.head == null then
+         $c.head = msg
+         $c.tail = msg
+      else
+         $c.tail.next = msg
+         $c.tail = msg
+      end
+      $c.count += 1
+
+      self.mutex.unlock()
+      self.on_put.signal()
+   end
+
+   function self::__gc($c)
+      lib::umutex_lock($c.mtx)
+      $c.nref -= 1
+      if $c.nref == 0 then
+         lib::ucond_destroy($c.cnd_put)
+         lib::ucond_destroy($c.cnd_get)
+         next = $c.head
+         while next != null do
+            next = next.next
+            if next.type == PTR then
+               C::free(next.ptr)
+            end
+            C::free(next)
+         end
+         -- TODO: racey?
+         lib::umutex_unlock($c.mtx)
+         lib::umutex_destroy($c.mtx)
+         C::free($c)
+      else
+         lib::umutex_unlock($c.mtx)
+      end
+   end
+
+   __codec__()
+      return (v) =>
+         import ffi  from "sys.ffi"
+         import Pipe from "sys.thread"
+         $c = ffi::cast('thrd_pipe_t*', ffi::cast('intptr_t', v[1]))
+         local inst = {
+            $c = $c
+            mutex  = v[2]
+            on_put = v[3]
+            on_get = v[4]
+         } as Pipe
+
+         inst.mutex.lock()
+         $c.nref += 1
+         ffi::gc($c, Pipe.__gc)
+         inst.mutex.unlock()
+
+         return inst
+      end, {
+         tonumber(ffi::cast('intptr_t', self.$c)),
+         self.mutex, self.on_put, self.on_get
+      }
+   end
+end
+
+class Thread
+   import Serializer from "codec.serialize"
+
+   -- TODO: move these Lua definitions somewhere central
+   ffi::cdef"""
+      typedef struct lua_State lua_State;
+      lua_State *luaL_newstate(void);
+      void luaL_openlibs(lua_State *L);
+      void lua_close(lua_State *L);
+      int lua_pcall(lua_State *L, int nargs, int nresults, int errfunc);
+
+      void lua_pushlightuserdata(lua_State *L, void *p);
+
+      static const int LUA_GLOBALSINDEX = -10002;
+      void lua_getfield(lua_State *L, int index, const char *k);
+      void lua_setfield(lua_State *L, int index, const char *k);
+
+      void lua_pushnil(lua_State *L);
+      void lua_pushinteger(lua_State *L, ptrdiff_t n);
+      void lua_pushnumber(lua_State *L, ptrdiff_t n);
+      const char *lua_pushlstring(lua_State *L, const char *s, size_t len);
+      const char *lua_setupvalue(lua_State *L, int funcindex, int n);
+
+      ptrdiff_t lua_tointeger(lua_State *L, int index);
+      void lua_settop(lua_State *L, int index);
+      const char *lua_tolstring(lua_State *L, int index, size_t*);
+      int tvm_loadbuffer(lua_State*, const char*, size_t, const char*);
+      int luaopen_lpeg(lua_State*);
+   """
+   
+   self(enter)
+      local buf = Serializer.encode(enter)
+
+      local L = C::luaL_newstate()
+      assert(L != nil)
+
+      C::luaL_openlibs(L)
+      C::luaopen_lpeg(L)
+      self.L = L
+
+      local prelude = """
+         (!assign (!index package "path") %{"%q".format(package::path)})
+         (!assign (!index package "cpath") %{"%q".format(package::cpath)})
+         (!let __magic__ (!index (!call1 require "core") "__magic__"))
+         (!call (!index _G "module") "thread" (!index __magic__ "environ"))
+         (!call require "sys.thread")
+         (!let ffi (!call1 require "ffi"))
+         (!let str !vararg)
+         (!let slz (!index (!call require "codec.serialize") "Serializer"))
+         (!let thr (!callmeth slz decode str))
+         (!call setfenv thr (!call getfenv 1))
+         (!assign (!index _G "__thr_ptr__")
+            (!call1 tonumber
+               (!call1 (!index ffi "cast") "intptr_t"
+                  (!call1 (!index ffi "cast") "uthread_start_t" thr))))
+      """
+
+      if C::tvm_loadbuffer(L, prelude, #prelude, "thread") != 0 then
+         msg = ffi::string(C::lua_tolstring(L, -1, null))
+         C::lua_close(L)
+         error(msg)
+      end
+
+      C::lua_pushlstring(L, buf, #buf)
+
+      if C::lua_pcall(L, 1, 1, 0) != 0 then
+         msg = ffi::string(C::lua_tolstring(L, -1, null))
+         C::lua_close(L)
+         error(msg)
+      end
+
+      C::lua_getfield(L, C.LUA_GLOBALSINDEX, '__thr_ptr__')
+      local func_ptr = C::lua_tointeger(L, -1)
+
+      C::lua_settop(L, -2)
+
+      tid = lib::uthread_create(ffi::cast('uthread_start_t', func_ptr), nil)
+      self.tid = tid
+   end
+   create(thread)
+      return Thread (...) =>
+         import Serializer from "codec.serialize"
+         setfenv(thread, getfenv(1))
+         ok, rv = pcall(thread, ...)
+         if not ok then
+            io.stderr.setvbuf "no"
+            io.stderr.write(rv ~ "\n")
+         end
+         enc = Serializer.encode { ok, rv }
+         _G.__thr_ret__ = enc
+      end
+   end
+   join()
+      rc = lib::uthread_join(self.tid)
+      if rc == -1 then
+         return nil
+      else
+         L = self.L
+         C::lua_getfield(L, C.LUA_GLOBALSINDEX, '__thr_ret__')
+         len = ffi::new('size_t[1]')
+         buf = C::lua_tolstring(L, -1, len)
+         enc = ffi::string(buf, len[0])
+         out = Serializer.decode(enc)
+         C::lua_close(L)
+         return ...out
+      end
+   end
+
+   sleep(msec)
+      tv = ffi::new('struct timeval')
+      s, f = math::modf(msec / 1000)
+      tv.tv_sec  = s
+      tv.tv_usec = f * 1000000
+      C::select(0, null, null, null, tv)
+   end
+
+   function self.__codec__()
+      return (name) =>
+         import Thread from name
+         return Thread
+      end, _NAME
+   end
+end
+

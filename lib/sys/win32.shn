@@ -1,0 +1,40 @@
+import ffi, C from "sys.ffi"
+
+function opendir(name is 'string')
+   dir = ffi::new('DIR')
+   if name and #name > 0 then
+      ffi::copy(dir.dd_name, name, 256)
+
+      last = name.sub(-1)
+      path = nil
+      if last == "/" or last == "\\" then
+         path = name ~ "*"
+      else
+         path = name ~ "/*"
+      end
+      
+      handle = C::_findfirst(path, dir.dd_info)
+      if handle == -1 then
+         return nil, C::strerror(ffi::errno())
+      end
+      dir.dd_handle = handle
+   else
+      return nil, C::strerror(C::EINVAL)
+   end
+end
+
+function readdir(dir)
+
+end
+
+function closedir(dir)
+
+end
+
+function telldir()
+
+end
+
+function rewinddir()
+
+end 

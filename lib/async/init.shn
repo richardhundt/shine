@@ -1,0 +1,43 @@
+
+import IOLoop from "async.loop"
+import Fiber from "async.fiber"
+
+function Fiber::idle()
+   while IOLoop.count() > 0 and Fiber.nready() == 0 do
+      IOLoop.run_once()
+   end
+end
+
+local loop_idle = IOLoop.idle =>
+   Fiber::schedule()
+end
+
+loop_idle.start()
+
+function yield()
+   local coro, main = coroutine::running()
+   if main then
+      return Fiber::schedule()
+   else
+      return coroutine::yield()
+   end
+end
+
+function async(body)
+   fiber = Fiber(body)
+   fiber.ready()
+   return fiber
+end
+
+function sleep(msec)
+   curr, main = Fiber::running()
+   timer = IOLoop.timer msec, 1, =>
+      curr.ready()
+   end
+   timer.start()
+   curr.pause()
+   yield
+end
+
+export Fiber, async, yield, sleep
+

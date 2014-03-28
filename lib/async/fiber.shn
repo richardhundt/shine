@@ -1,0 +1,123 @@
+
+class Fiber
+   import unpack from _G
+   import status, resume from coroutine
+
+   local coro, main = coroutine::running()
+   self::main = { coro = coro, args = [ ] } as Fiber
+   self::idle = function() end
+
+   self::current = self::main
+
+   local ready = { }
+
+   self(func, ...args)
+      self.coro = coroutine::create(func)
+      self.args = args
+   end
+
+   __call__(...)
+      prev = Fiber::current
+      Fiber::current = self
+      _1, _2 = resume(self.coro, ...)
+      Fiber::current = prev
+      return _1, _2
+   end
+
+   function self.nready()
+      return #ready
+   end
+
+   function self.running()
+      return Fiber::current, Fiber::current == Fiber::main
+   end
+
+   function self.schedule()
+      while true do
+         if #ready == 0 then
+            Fiber::idle()
+            if #ready == 0 then
+               break
+            end
+         end
+         local alive = ready
+         ready = { }
+         for i=1, #alive do
+            fiber = alive[i]
+            if fiber.active and fiber.status() != "dead" then
+               Fiber::current = fiber
+               ok, rv = resume(fiber.coro, unpack(fiber.args))
+               Fiber::current = Fiber::main
+               if not ok then
+                  error(rv, 2)
+               end
+               if fiber.status() == "dead" then
+                  fiber.finish(rv)
+               else
+                  ready[#ready + 1] = fiber
+               end
+            else
+               fiber.queued = false
+            end
+         end
+      end
+   end
+
+   ready()
+      if not self.queued then
+         ready[#ready + 1] = self
+         self.queued = true
+      end
+      self.active = true
+   end
+
+   pause()
+      self.active = false
+   end
+
+   cancel(...)
+      self.cancelled = true
+      self.finish(...)
+   end
+
+   join()
+      curr, main = Fiber::running()
+      if not main then
+         self.on_cleanup =>
+            curr.ready()
+         end
+         curr.pause()
+         yield()
+         return self.retv
+      else
+         if self.status() == "suspended" then
+            Fiber::schedule()
+         end
+         return self.retv
+      end
+   end
+
+   finish(...)
+      self.active = false
+      self.retv = ...
+      if self._cleanup then
+         for _, on_cleanup in self._cleanup do
+            on_cleanup(self, ...)
+         end
+      end
+   end
+ 
+   on_cleanup(func)
+      self._cleanup or= [ ]
+      self._cleanup.push(func)
+   end
+
+   status()
+      if self.cancelled then
+         return "dead"
+      end
+      return status(self.coro)
+   end
+end
+
+
