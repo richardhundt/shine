@@ -55,9 +55,9 @@
 Shine is a general purpose, dynamic, multi-paradigm programming
 language which is based on, and extends, Lua with features geared
 more to programming in the large. For maximum performance it uses
-a modified version of the LuaJIT virtual machine, which is known
-for its small footprint and impressive performance which rivals
-that of C.
+a [modified](https://github.com/fperrad/tvmjit) version of the
+[LuaJIT](http://luajit.org) virtual machine, which is known for its
+small footprint and impressive performance which rivals that of C.
 
 Most of the language features are those of the underlying LuaJIT
 VM, and the extensions are implemented in terms of lower level
@@ -86,29 +86,11 @@ network oriented concurrent applications.
 Shine strives for a pragmatic balance between safety and syntactic
 and semantic flexibility.
 
-Like Lua, Shine is a dynamic language with late binding. Unlike
-Lua, however, Shine will raise an error at compile-time if a symbol
-is referenced which is not in scope. This means that the only globals
-are those which are pre-defined by the runtime which the compiler
-knows about. The only way a symbol can come into scope is if it is
-pre-defined, imported, or defined locally.
-
 Summary of safety features:
 
 * Static local variable name resolution.
 * Default declaration scope is localized.
 * Function and method parameter guards.
-
-Although some safety features were added, Shine's philosophy is
-that whereas safety can be extended by the user through testing,
-if the language isn't flexible, then there is nothing the user can
-do about it.
-
-In this spirit, Shine gives you the power to create new syntax in
-the same way that Ruby or Perl do, by making parentheses optional
-around function and method call parameters, introducing a short
-function syntax, and by extending support for hooks for operator
-overloading and builtin events.
 
 Summary of flexibility features:
 
@@ -121,6 +103,22 @@ Summary of flexibility features:
 Additionally, all constructs can be nested. Classes can be declared
 inside other classes and even inside functions, which allows for
 run-time construction of classes, modules and grammars.
+
+Other notable extensions to Lua:
+
+* Bitwise operators.
+* Standard libraries.
+* Tight LPeg integration.
+* Classes and modules .
+* `continue` statement.
+* `try`, `catch`, `finally`
+* Destructuring assignment.
+* Pattern matching.
+* Default function parameters.
+* Function parameter guards.
+* Richer type system.
+* Concurrency primitives
+* OS Threads
 
 ## <a name="getting-started"></a>Getting Started
 
