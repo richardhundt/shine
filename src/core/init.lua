@@ -257,7 +257,7 @@ local Array = class("Array", function(self)
          length = select('#', ...), [0] = select(1, ...), select(2, ...)
       }, self)
    end
-   function self.__iter(a)
+   function self.__each(a)
       local l = a.length
       local i = -1
       return function(a)
@@ -474,8 +474,8 @@ local function each(o, ...)
       return o, ...
    end
    local m = getmetatable(o)
-   if m and m.__iter then
-      return m.__iter(o, ...)
+   if m and m.__each then
+      return m.__each(o, ...)
    end
    return pairs(o)
 end
@@ -492,7 +492,7 @@ end
 function Range.__tostring(self)
    return string.format("Range(%s, %s)", self.left, self.right)
 end
-function Range.__iter(self)
+function Range.__each(self)
    local i, r = self.left, self.right
    local n = i <= r and 1 or -1
    return function()
@@ -596,6 +596,9 @@ local TablePattern = class("TablePattern", function(self)
    end
 
    self.__match = function(self, that)
+      if type(that) ~= 'table' then
+         return false
+      end
       local desc = self.desc
       local meta = self.meta
       if meta and getmetatable(that) ~= meta then
@@ -653,6 +656,9 @@ local ArrayPattern = class("ArrayPattern", function(self)
    end
 
    self.__match = function(self, that)
+      if type(that) ~= 'table' then
+         return false
+      end
       if getmetatable(that) ~= Array then
          return false
       end
@@ -949,7 +955,7 @@ __magic__ = setmetatable({
    __spread__ = spread;
    __match__ = __match__;
    __extract__ = extract;
-   __each__   = each;
+   __each__ = each;
    __var__ = __var__;
    __in__ = __in__;
    __is__ = __is__;
