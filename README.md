@@ -391,7 +391,7 @@ marks:
 '''a triple quoted verbatim string'''
 ```
 
-##### <a name="string-operations">String Operations
+##### <a name="string-operations"></a>String Operations
 
 Strings have a metatable with all the methods supported by Lua,
 namely: `len`, `match`, `uppper`, `sub`, `char`, `rep`, `lower`,
@@ -547,7 +547,7 @@ precedence. Operators marked with a trailing `_` are unary operators.
 | `<=`     | 5          | left          | less than or equal to |
 | `>`      | 5          | left          | greater than |
 | `<`      | 5          | left          | less than |
-| `|`      | 6          | left          | bitwise or |
+| `&#124;` | 6          | left          | bitwise or |
 | `^`      | 7          | left          | bitwise exclusive or |
 | `&`      | 8          | left          | bitwise and |
 | `<<`     | 9          | left          | bitwise left shift |
@@ -573,7 +573,7 @@ The following operators are used in [patterns](#patterns):
 | `~>`     | 1          | left          | fold capture |
 | `->`     | 1          | left          | production capture |
 | `+>`     | 1          | left          | match-time capture |
-| `|`      | 2          | left          | ordered choice |
+| `&#124;` | 2          | left          | ordered choice |
 | `&_`     | 3          | right         | lookahead assertion |
 | `!_`     | 3          | right         | negative lookahead assertion |
 | `+`      | 3          | left          | one or more repetitions |
@@ -700,7 +700,7 @@ a1 = [ i * 2 for i in 1..10 if i % 2 == 0 ]
 a2 = [ i * j for i in 1..5 for j in 1..5 ]
 ```
 
-#### <a name="lambda-expressions">Lambda Expressions
+#### <a name="lambda-expressions"></a>Lambda Expressions
 
 Shine has two syntactically similar short-hand forms for creating
 functions. The body of the first form must have a line-break after
