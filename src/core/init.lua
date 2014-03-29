@@ -944,6 +944,8 @@ function __is__(a, b)
    end
    if type(a) == 'cdata' then
       return ffi.istype(b, a)
+   elseif getmetatable(a) == b then
+      return true
    elseif native[b] then
       return type(a) == native[b]
    elseif b == Pattern then
@@ -954,8 +956,6 @@ function __is__(a, b)
          if m == b then return true end
          m = m.__base
       end
-   elseif getmetatable(a) == b then
-      return true
    end
    return false
 end
