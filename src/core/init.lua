@@ -77,7 +77,7 @@ function Module.__tostring(self)
    if self.__tostring__ then
       return self:__tostring__()
    else
-      return string.format('Module<%s>', self.__name)
+      return string.format('%s', self.__name)
    end
 end
 function Module.__call(self, ...)
@@ -87,12 +87,17 @@ function Module.__call(self, ...)
    module.__getters__ = { }
    module.__setters__ = { }
    module.__members__ = { }
+   module.__include__ = { }
 
    module.__is = function(self, that)
+      local m = getmetatable(that)
+      if m and m.__include__[self] then
+         return true
+      end
       return that == self
    end
 
-   setfenv(body, setmetatable({ }, { __index = getfenv(2) }))
+   setfenv(body, setmetatable({ __self__ = module }, { __index = getfenv(2) }))
    body(setmetatable(module, Module), ...)
    return module
 end
@@ -102,12 +107,17 @@ local function module(name, body)
    module.__getters__ = { }
    module.__setters__ = { }
    module.__members__ = { }
+   module.__include__ = { }
 
    module.__is = function(self, that)
+      local m = getmetatable(that)
+      if m and m.__include__[self] then
+         return true
+      end
       return that == self
    end
 
-   setfenv(body, setmetatable({ }, { __index = getfenv(2) }))
+   setfenv(body, setmetatable({ __self__ = module }, { __index = getfenv(2) }))
    body(setmetatable(module, Module))
    return module
 end
@@ -129,9 +139,6 @@ end
 function Class.__tostring(class)
    return string.format("%s", class.__name)
 end
-function Class.__index(class, key)
-   return class.__members__[key]
-end
 
 Object = setmetatable({ }, Class)
 Object.__name = 'Object'
@@ -139,6 +146,7 @@ Object.__body = function(self) end
 Object.__getters__ = { }
 Object.__setters__ = { }
 Object.__members__ = { }
+Object.__include__ = { }
 
 local special = {
    __add__ = { mmname = '__add', method = function(a, b) return a:__add__(b) end };
@@ -173,14 +181,17 @@ local function class(name, body, ...)
    local __getters__ = { }
    local __setters__ = { }
    local __members__ = { }
+   local __include__ = { }
 
    setmetatable(__getters__, { __index = base.__getters__ })
    setmetatable(__setters__, { __index = base.__setters__ })
    setmetatable(__members__, { __index = base.__members__ })
+   setmetatable(__include__, { __index = base.__include__ })
 
    class.__getters__ = __getters__
    class.__setters__ = __setters__
    class.__members__ = __members__
+   class.__include__ = __include__
 
    function __getters__.__class(self)
       return class
@@ -211,7 +222,7 @@ local function class(name, body, ...)
       return string.format('<%s>: %p', tostring(class.__name), o)
    end
 
-   setfenv(body, setmetatable({ }, { __index = getfenv(2) }))
+   setfenv(body, setmetatable({ __self__ = class }, { __index = getfenv(2) }))
    body(setmetatable(class, Class), base.__members__)
 
    for name, delg in pairs(special) do
@@ -250,6 +261,7 @@ local function include(into, ...)
       if from.__included then
          from:__included(into)
       end
+      into.__include__[from] = true
    end
 end
 

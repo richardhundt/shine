@@ -907,7 +907,6 @@ function match:ModuleDeclaration(node)
    self.ctx:enter("module")
    self.ctx:define('self')
    self.ctx:define('__self__')
-   self.ctx:hoist(Op{'!let', '__self__', 'self' })
 
    local body = self:get(node.body)
 
@@ -934,7 +933,6 @@ function match:ClassDeclaration(node)
    self.ctx:define('self')
    self.ctx:define('super')
    self.ctx:define('__self__')
-   self.ctx:hoist(Op{'!let', '__self__', 'self' })
 
    local body = self:get(node.body)
 
@@ -1214,7 +1212,6 @@ function match:GrammarDeclaration(node)
    self.ctx:enter("module")
    self.ctx:define('self')
    self.ctx:define('__self__')
-   self.ctx:hoist(Op{'!let', '__self__', 'self' })
 
    local body = OpChunk{ }
    local init = nil
