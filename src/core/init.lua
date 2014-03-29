@@ -982,6 +982,7 @@ __magic__ = setmetatable({
    Array = Array;
    Error = Error;
    Module = Module;
+   Grammar = Grammar;
    Class = Class;
    Object = Object;
    Pattern = Pattern;

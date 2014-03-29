@@ -210,7 +210,7 @@ local match = { }
 local globals = {
    'Nil','Number','Boolean', 'String', 'Function', 'Coroutine',
    'UserData', 'Table', 'Array', 'Error', 'Module', 'Class', 'Object',
-   'Pattern', 'ArrayPattern', 'TablePattern', 'ApplyPattern',
+   'Grammar', 'Pattern', 'ArrayPattern', 'TablePattern', 'ApplyPattern',
    '__magic__', 'yield', 'take', 'typeof', 'null', 'warn',
    '__FILE__', '__LINE__', '_M', '_PACKAGE', '_NAME'
 }
