@@ -134,7 +134,7 @@ ${BUILD}/deps/libtvmjit.a: ${TJ}
 
 ${TJ}:
 	git submodule update --init ${DEPDIR}/tvmjit
-	${MAKE} PREFIX=${BUILD} -C ${DEPDIR}/tvmjit
+	${MAKE} PREFIX=${BUILD} TRAVIS=1 -C ${DEPDIR}/tvmjit
 
 ${LPEG}:
 	make -C ${DEPDIR}/lpeg ${LPEG_BUILD}
