@@ -277,31 +277,47 @@ Shine includes all of LuaJIT's builtin types:
 * `string`
 * `table`
 * `function`
-* `userdata`
 * `thread` (coroutine)
+* `userdata`
 * `cdata`
 
 All other extensions are built primarily using `table`s and `cdata`.
-These include additional primitives:
 
-* `null`
+These include:
+
+Primitive meta types:
+
+* `Nil`
+* `Boolean`
+* `Number`
+* `String`
+* `Table`
+* `Function`
+* `Coroutine`
+* `UserData`
+* `CData`
+
+Additional builtins:
+
+* `null` (CData meta type)
 * `Array`
 * `Range`
 * `Error`
 
-nominal meta types:
+Nominal meta types:
 
 * `Class`
 * `Module`
+* `Grammar`
 
-pattern matching meta types:
+Pattern matching meta types:
 
 * `Pattern`
 * `ArrayPattern`
 * `TablePattern`
 * `ApplyPattern`
 
-and the meta meta type:
+The meta meta type:
 
 * `Meta`
 
