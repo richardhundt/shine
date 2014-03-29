@@ -91,6 +91,7 @@ Summary of safety features:
 * Static local variable name resolution.
 * Default declaration scope is localized.
 * Function and method parameter guards.
+* Self-type assertions in methods.
 
 Summary of flexibility features:
 
