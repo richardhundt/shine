@@ -571,7 +571,7 @@ The following operators are used in [patterns](#patterns):
 | `~>`     | 1          | left          | fold capture |
 | `->`     | 1          | left          | production capture |
 | `+>`     | 1          | left          | match-time capture |
-| `&#124;` | 2          | left          | ordered choice |
+| &#124;   | 2          | left          | ordered choice |
 | `&_`     | 3          | right         | lookahead assertion |
 | `!_`     | 3          | right         | negative lookahead assertion |
 | `+`      | 3          | left          | one or more repetitions |
