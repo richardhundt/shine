@@ -314,9 +314,11 @@ local Array = class("Array", function(self)
       return v
    end
    function self.__members__:unshift(v)
-      for i = l - 1, 0 do
+      local l = self.length
+      for i = l - 1, 0, -1 do
          self[i + 1] = self[i]
       end
+      self.length = l + 1
       self[0] = v
    end
    function self.__members__:slice(offset, count)
