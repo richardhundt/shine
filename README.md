@@ -887,8 +887,8 @@ exported.
 ### <a name="functions"></a>Functions
 
 Functions are closures with all the same semantics as in Lua, however
-Shine extends function declarations with /default parameter expressions/,
-/parameter guards/, and /rest arguments/.
+Shine extends function declarations with _default parameter expressions_,
+_parameter guards_, and _rest arguments_.
 
 Default parameter expressions can be any valid Shine expression and are
 scoped to the body of the function. That is, they are evaluate at the top
@@ -911,7 +911,7 @@ function addone(n = assert(type(n) == 'number') and n)
 end
 ```
 
-However, this can be better achieved using /parameter guards/. Guards
+However, this can be better achieved using _parameter guards_. Guards
 are checked against by using the `is` operator, and if they evaluate
 to `false`, an error is raised.
 
