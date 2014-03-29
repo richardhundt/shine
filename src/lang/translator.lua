@@ -814,21 +814,32 @@ function match:FunctionDeclaration(node)
 	    "bad argument #%s to '%%s' (%%s expected got %%s)", i
 	 )
          local level = node.level or 1
-         local cons = Op{'!call', 'error',
-	    Op{'!callmeth', Op(mesg), 'format',
-	       Op{'!or',
-		  Op{'!index',
-		     Op{'!call1',
-			Op{'!index', 'debug', Op"getinfo"},
-			Op(level), Op"n" },
-		     Op"name"
-		  },
-		  Op('?')
-	       },
-	       Op{'!call1', 'tostring', expr },
-	       Op{'!call1', 'typeof', name }
-	    }, Op(level + 1)
-	 }
+         local cons
+         if node.name then
+            cons = Op{'!call', 'error',
+               Op{'!callmeth', Op(mesg), 'format',
+                  Op(node.name),
+                  Op{'!call1', 'tostring', expr },
+                  Op{'!call1', 'typeof', name }
+               }, Op(level + 1)
+            }
+         else
+            cons = Op{'!call', 'error',
+               Op{'!callmeth', Op(mesg), 'format',
+                  Op{'!or',
+                     Op{'!index',
+                        Op{'!call1',
+                           Op{'!index', 'debug', Op"getinfo"},
+                           Op(level), Op"n" },
+                        Op"name"
+                     },
+                     Op('?')
+                  },
+                  Op{'!call1', 'tostring', expr },
+                  Op{'!call1', 'typeof', name }
+               }, Op(level + 1)
+            }
+         end
          prelude[#prelude + 1] = Op{'!if', Op{'!not', test }, cons }
       end
    end
@@ -930,24 +941,28 @@ function match:ClassBody(node)
       if node.body[i].type == "PropertyDefinition" then
          local prop = node.body[i]
 
-         -- hack to skip a frame for the constructor
-         if prop.key.name == 'self' then
-            prop.value.level = 2
-         end
-
          if prop.kind == "get" then
             -- self.__getters__[key] = desc.get
+            prop.value.name = prop.key.name
+            prop.value.level = 2
             body[#body + 1] = OpList{line, Op{'!assign',
                Op{'!index',
                   Op{'!index', 'self', Op"__getters__" },
                Op(prop.key.name) }, self:get(prop) }}
          elseif prop.kind == "set" then
             -- self.__setters__[key] = desc.set
+            prop.value.name = prop.key.name
+            prop.value.level = 2
             body[#body + 1] = OpList{line, Op{'!assign',
                Op{'!index',
                   Op{'!index', 'self', Op"__setters__" },
                Op(prop.key.name) }, self:get(prop) }}
          else
+            -- hack to skip a frame for the constructor
+            if prop.key.name == 'self' then
+               prop.value.level = 2
+            end
+
             -- self.__members__[key] = desc.value
             body[#body + 1] = OpList{line, Op{'!assign',
                Op{'!index',
