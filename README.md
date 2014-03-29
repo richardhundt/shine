@@ -375,7 +375,7 @@ concatenated in a single VM instruction without creating short-lived
 temporary strings.
 
 ```
-"answer = ${40 + 2}" -- interpolated
+"answer = %{40 + 2}" -- interpolated
 ```
 
 Both types of strings can be delimited with single and triple
