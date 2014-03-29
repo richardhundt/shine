@@ -208,7 +208,7 @@ end
 local match = { }
 
 local globals = {
-   'Nil','Number','Boolean', 'String', 'Function', 'Coroutine',
+   'Nil','Number','Boolean', 'String', 'Function', 'Coroutine', 'Range',
    'UserData', 'Table', 'Array', 'Error', 'Module', 'Class', 'Object',
    'Grammar', 'Pattern', 'ArrayPattern', 'TablePattern', 'ApplyPattern',
    '__magic__', 'yield', 'take', 'typeof', 'null', 'warn',
@@ -810,15 +810,20 @@ function match:FunctionDeclaration(node)
       if node.guards[i] then
          local expr = self:get(node.guards[i])
          local test = Op{'!call', '__is__', name, expr }
-	 local mesg = string.format(
-	    "bad argument #%s to '%%s' (%%s expected got %%s)", i
-	 )
+         local mesg
+         if i == 1 and expr == '__self__' then
+            mesg = "calling '%s' on bad self (%s expected got %s)"
+         else
+	    mesg = string.format(
+               "bad argument #%s to '%%s' (%%s expected got %%s)", i
+            )
+         end
          local level = node.level or 1
          local cons
          if node.name then
             cons = Op{'!call', 'error',
                Op{'!callmeth', Op(mesg), 'format',
-                  Op(node.name),
+                  Op(self:get(node.name)),
                   Op{'!call1', 'tostring', expr },
                   Op{'!call1', 'typeof', name }
                }, Op(level + 1)
@@ -901,7 +906,11 @@ function match:ModuleDeclaration(node)
 
    self.ctx:enter("module")
    self.ctx:define('self')
+   self.ctx:define('__self__')
+   self.ctx:hoist(Op{'!let', '__self__', 'self' })
+
    local body = self:get(node.body)
+
    self.ctx:unhoist(body)
    self.ctx:leave()
 
@@ -924,7 +933,11 @@ function match:ClassDeclaration(node)
 
    self.ctx:define('self')
    self.ctx:define('super')
+   self.ctx:define('__self__')
+   self.ctx:hoist(Op{'!let', '__self__', 'self' })
+
    local body = self:get(node.body)
+
    self.ctx:unhoist(body)
    self.ctx:leave()
 
@@ -938,10 +951,9 @@ function match:ClassBodyStatement(node, body)
    line = Op{'!line', line }
    if node.type == "PropertyDefinition" then
       local prop = node
-
       if prop.kind == "get" then
          -- self.__getters__[key] = desc.get
-         prop.value.name = prop.key.name
+         prop.value.name = prop.key
          prop.value.level = 2
          body[#body + 1] = OpList{line, Op{'!assign',
             Op{'!index',
@@ -949,7 +961,7 @@ function match:ClassBodyStatement(node, body)
             Op(prop.key.name) }, self:get(prop) }}
       elseif prop.kind == "set" then
          -- self.__setters__[key] = desc.set
-         prop.value.name = prop.key.name
+         prop.value.name = prop.key
          prop.value.level = 2
          body[#body + 1] = OpList{line, Op{'!assign',
             Op{'!index',
@@ -1113,7 +1125,7 @@ function match:ForInStatement(node)
    return Op{'!for', OpList{Op(left), Op{iter}}, body}
 end
 function match:RangeExpression(node)
-   return Op{'!call1', '__range__', self:get(node.min), self:get(node.max) }
+   return Op{'!call1', '__range__', self:get(node.left), self:get(node.left) }
 end
 function match:ArrayExpression(node)
    return Op{'!call1', 'Array', unpack(self:list(node.elements))}
@@ -1201,6 +1213,8 @@ function match:GrammarDeclaration(node)
 
    self.ctx:enter("module")
    self.ctx:define('self')
+   self.ctx:define('__self__')
+   self.ctx:hoist(Op{'!let', '__self__', 'self' })
 
    local body = OpChunk{ }
    local init = nil
@@ -1225,11 +1239,11 @@ function match:GrammarDeclaration(node)
    if not init then
       self.ctx:abort("no initial rule in grammar '"..name.."'")
    end
-   body = Op{'!lambda', Op{ 'self' }, body }
 
    self.ctx:unhoist(body)
    self.ctx:leave()
 
+   body = Op{'!lambda', Op{ 'self' }, body }
    return Op{'!assign',
       name, Op{'!call1', 'grammar', Op(name), body }
    }

@@ -192,7 +192,7 @@ class Pipe
       else
          assert(typ == PTR)
          enc = ffi::string(msg.u.ptr, msg.size)
-         val = Serializer.decode(enc)
+         val = Serializer::decode(enc)
          C::free(msg.u.ptr)
       end
 
@@ -236,7 +236,7 @@ class Pipe
       elseif typ == 'nil' then
          msg.type = NIL
       else
-         enc = Serializer.encode(val)
+         enc = Serializer::encode(val)
          msg.u.ptr = C::calloc(1, #enc)
          ffi::copy(msg.u.ptr, enc)
          msg.size = #enc
@@ -335,7 +335,7 @@ class Thread
    """
    
    self(enter)
-      local buf = Serializer.encode(enter)
+      local buf = Serializer::encode(enter)
 
       local L = C::luaL_newstate()
       assert(L != nil)
@@ -353,7 +353,7 @@ class Thread
          (!let ffi (!call1 require "ffi"))
          (!let str !vararg)
          (!let slz (!index (!call require "codec.serialize") "Serializer"))
-         (!let thr (!callmeth slz decode str))
+         (!let thr (!call (!index slz "decode") str))
          (!call setfenv thr (!call getfenv 1))
          (!assign (!index _G "__thr_ptr__")
             (!call1 tonumber
@@ -383,7 +383,8 @@ class Thread
       tid = lib::uthread_create(ffi::cast('uthread_start_t', func_ptr), nil)
       self.tid = tid
    end
-   create(thread)
+
+   function self::create(thread)
       return Thread (...) =>
          import Serializer from "codec.serialize"
          setfenv(thread, getfenv(1))
@@ -392,10 +393,11 @@ class Thread
             io.stderr.setvbuf "no"
             io.stderr.write(rv ~ "\n")
          end
-         enc = Serializer.encode { ok, rv }
+         enc = Serializer::encode { ok, rv }
          _G.__thr_ret__ = enc
       end
    end
+
    join()
       rc = lib::uthread_join(self.tid)
       if rc == -1 then
@@ -406,7 +408,7 @@ class Thread
          len = ffi::new('size_t[1]')
          buf = C::lua_tolstring(L, -1, len)
          enc = ffi::string(buf, len[0])
-         out = Serializer.decode(enc)
+         out = Serializer::decode(enc)
          C::lua_close(L)
          return ...out
       end

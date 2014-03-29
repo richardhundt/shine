@@ -30,7 +30,7 @@ import Thread, Pipe from "sys.thread"
 
 local ch1 = Pipe(64)
 
-local th1 = Thread.create =>
+local th1 = Thread::create =>
    print "Hello from a th1"
    print "ch1:", ch1
    for i=1, 100000 do
@@ -39,7 +39,7 @@ local th1 = Thread.create =>
    end
 end
 
-local th2 = Thread.create =>
+local th2 = Thread::create =>
    print "Hello from th2"
    local got
    for i=1, 100000 do

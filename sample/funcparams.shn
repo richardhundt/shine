@@ -1,6 +1,6 @@
 ffi = require 'ffi'
 char_ptr = ffi::typeof('char*')
-function f(buf is char_ptr, len is 'number')
+function f(buf is char_ptr, len is Number)
    print ffi::string(buf, len)
 end
 

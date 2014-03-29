@@ -82,7 +82,7 @@ local patt = [=[
    decexp <- ("e"/"E") "-"? %digit+
 
    double <- (
-      %digit+ ("." %digit+ <decexp>? / <decexp>)
+      %digit+ ("." !"." %digit+ <decexp>? / <decexp>)
    ) -> double
 
    integer <- ((
@@ -381,7 +381,13 @@ local patt = [=[
    ) -> givenStmt
 
    given_case <- (
-      s "case" <idsafe> s <bind_left> s "then" <idsafe> s <block_stmt>
+      s "case" <idsafe> s (
+           <array_patt>
+         / <table_patt>
+         / <apply_patt>
+         / <expr>
+      )
+      s "then" <idsafe> s <block_stmt>
    ) -> givenCase
 
    for_stmt <- (

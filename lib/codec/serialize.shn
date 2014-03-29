@@ -251,7 +251,7 @@ module Serializer
       return decoders[t](reg, buf)
    end
 
-   encode(obj)
+   function self::encode(obj)
       buf = BUF
       reg = { }
       buf.clear()
@@ -259,7 +259,7 @@ module Serializer
       return buf.decode()
    end
 
-   decode(str)
+   function self::decode(str)
       buf = BUF
       buf.clear()
       buf.put_bytes(str, #str)

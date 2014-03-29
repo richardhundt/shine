@@ -394,7 +394,7 @@ function defs.propDefn(k, n, h, b)
       func.guards[i + 1] = func.guards[i]
    end
    func.defaults[1] = nil
-   func.guards[1] = nil
+   func.guards[1] = defs.identifier('__self__')
    return { type = "PropertyDefinition", kind = k, key = n, value = func }
 end
 function defs.exprStmt(line, expr)

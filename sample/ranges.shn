@@ -1,6 +1,20 @@
 r = 1..10
 print r
 
+s = "hello"
+assert s[1 .. -2] == 'hell'
+
+n = 0
+for i in 1 .. 5 do
+   n = i
+end
+assert n == 5
+
 x = 5
 given x
-   case 1..10 then
+   case 1 .. 10 then
+      print "in range"
+   else
+      print "dunno"
+end
+

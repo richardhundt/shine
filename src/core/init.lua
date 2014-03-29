@@ -77,7 +77,7 @@ function Module.__tostring(self)
    if self.__tostring__ then
       return self:__tostring__()
    else
-      return string.format('<%s>:%p', self.__name, self)
+      return string.format('Module<%s>', self.__name)
    end
 end
 function Module.__call(self, ...)
@@ -87,6 +87,10 @@ function Module.__call(self, ...)
    module.__getters__ = { }
    module.__setters__ = { }
    module.__members__ = { }
+
+   module.__is = function(self, that)
+      return that == self
+   end
 
    setfenv(body, setmetatable({ }, { __index = getfenv(2) }))
    body(setmetatable(module, Module), ...)
@@ -98,6 +102,10 @@ local function module(name, body)
    module.__getters__ = { }
    module.__setters__ = { }
    module.__members__ = { }
+
+   module.__is = function(self, that)
+      return that == self
+   end
 
    setfenv(body, setmetatable({ }, { __index = getfenv(2) }))
    body(setmetatable(module, Module))
@@ -574,7 +582,7 @@ local function extract(patt, subj)
    return expand(patt:bind(subj))
 end
 
-local TablePattern = class("TablePattern", function(self)
+TablePattern = class("TablePattern", function(self)
    self.__apply = function(self, keys, desc, meta)
       return setmetatable({
          keys = keys;
@@ -638,7 +646,7 @@ local TablePattern = class("TablePattern", function(self)
    end
 end)
 
-local ArrayPattern = class("ArrayPattern", function(self)
+ArrayPattern = class("ArrayPattern", function(self)
    self.__apply = function(self, ...)
       return setmetatable({
          length = select('#', ...), [0] = select(1, ...), select(2, ...)
@@ -687,7 +695,7 @@ local ArrayPattern = class("ArrayPattern", function(self)
 
 end)
 
-local ApplyPattern = class("ApplyPattern", function(self)
+ApplyPattern = class("ApplyPattern", function(self)
    self.__apply = function(self, base, ...)
       return setmetatable({
          base = base,
@@ -737,7 +745,6 @@ local ApplyPattern = class("ApplyPattern", function(self)
          end
       end, self, nil
    end
-
 end)
 
 local Pattern = setmetatable(getmetatable(lpeg.P(1)), Meta)
