@@ -5,8 +5,8 @@ local function f()
    print "a => ", a
 end
 
-s = Serializer.encode(f)
-g = Serializer.decode(s)
+s = Serializer::encode(f)
+g = Serializer::decode(s)
 g()
 
 class Point
@@ -19,15 +19,13 @@ class Point
       return { self.x, self.y }
    end
    __decode__(v)
-      return {
-         x = v[1]
-         y = v[2]
-      } as Point
+      self.x = v[1]
+      self.y = v[2]
    end
 end
 
 p = Point(11, 22)
 print "encoded:", p
-s = Serializer.encode(p)
-o = Serializer.decode(s)
+s = Serializer::encode(p)
+o = Serializer::decode(s)
 print "decoded: ", o, o.x, o.y

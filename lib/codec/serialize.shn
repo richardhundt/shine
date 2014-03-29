@@ -283,7 +283,9 @@ module Serializable
       function into.__members__.__codec__()
          return function(v)
             meta = require(path).Serializable::registry[name]
-            return meta.__decode__(v)
+            inst = setmetatable({ }, meta)
+            inst.__decode__(v)
+            return inst
          end, self.__encode__()
       end
    end
