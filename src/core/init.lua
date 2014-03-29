@@ -551,8 +551,10 @@ function __match__(that, this)
    if meta_that then
       if meta_that.__match then
          return meta_that.__match(that, this)
+      elseif __is__(this, that) then
+         return true
       else
-         return __is__(this, that)
+         return this == that
       end
    elseif type_this ~= type_that then
       return false
@@ -886,9 +888,7 @@ function __is__(a, b)
          if m == b then return true end
          m = m.__base
       end
-   elseif type(a) == type(b) then
-      return a == b
-   elseif getmetatable(a) == getmetatable(b) then
+   elseif getmetatable(a) == b then
       return true
    end
    return false

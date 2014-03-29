@@ -13,7 +13,7 @@ local p = Point(11, 22)
 local x = / { [a-z]+ } " " { [a-z]+ } /
 local s = "two words"
 
-given p
+given s
    case [ 42, X ] then
       print X
    case { answer = X } then
