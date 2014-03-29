@@ -56,7 +56,7 @@ syn keyword shineBool true false nil null __FILE__ __LINE__
 
 syn region shineComment matchgroup=shineComment start="--" end="$" keepend contains=shineTodo
 syn region shineComment matchgroup=shineComment start="--\[\z(.*\)\[" end="\]\z1\]" contains=shineTodo,@Spell
-syn region shineComment matchgroup=shineComment start="--:\z([^(]*\)([^)]*)\?:" end=":\z1:" contains=shineTodo,@Spell
+syn region shineComment matchgroup=shineComment start="--:\z([^(]*\)\(([^)]*)\)\?:" end=":\z1:" contains=shineTodo,@Spell
 syn match shineSharpBang "\%^#!.*" display
 
 " Numbers
