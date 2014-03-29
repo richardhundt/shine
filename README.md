@@ -1403,7 +1403,8 @@ See [./lib/async/fiber.shn](./lib/async/fiber.shn),
 
 #### <a name="threads"></a>Threads
 
-See [./lib/sys/thread.shn](./lib/sys/thread.shn)
+See [./lib/sys/thread.shn](./lib/sys/thread.shn) and the
+[czmq bindings](https://github.com/richardhundt/shine-zsys).
 
 ### <a name="serialization"></a>Serialization
 

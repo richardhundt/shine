@@ -55,11 +55,8 @@ ${BUILD}/libs/net.so:
 	${SHC} -n "net.socket" net/socket.shn  ${BUILD}/net_socket.o
 	${SHC} -n "net.http" net/http.shn  ${BUILD}/net_http.o
 	${SHC} -n "net.uri" net/uri.shn  ${BUILD}/net_uri.o
-	${SHC} -n "net.zmq" net/zmq.shn  ${BUILD}/net_zmq.o
-	${SHC} -n "net.zmq.ffi" net/zmq/ffi.shn  ${BUILD}/net_zmq_ffi.o
 	${CC} ${SOFLAGS} -o ${BUILD}/libs/net.so ${LDFLAGS} \
-	${BUILD}/net_socket.o ${BUILD}/net_http.o ${BUILD}/net_uri.o \
-	${BUILD}/net_zmq.o ${BUILD}/net_zmq_ffi.o
+	${BUILD}/net_socket.o ${BUILD}/net_http.o ${BUILD}/net_uri.o
 
 ${BUILD}/libs/codec.so:
 	${SHC} -n "codec.base64" codec/base64.shn  ${BUILD}/codec_base64.o
