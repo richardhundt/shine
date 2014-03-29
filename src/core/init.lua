@@ -90,11 +90,12 @@ function Module.__call(self, ...)
    module.__include__ = { }
 
    module.__is = function(self, that)
+      if that == self then return true end
       local m = getmetatable(that)
-      if m and m.__include__[self] then
+      if m and m.__include__ and m.__include__[self] then
          return true
       end
-      return that == self
+      return false
    end
 
    setfenv(body, setmetatable({ __self__ = module }, { __index = getfenv(2) }))
@@ -110,11 +111,12 @@ local function module(name, body)
    module.__include__ = { }
 
    module.__is = function(self, that)
+      if that == self then return true end
       local m = getmetatable(that)
-      if m and m.__include__[self] then
+      if m and m.__include__ and m.__include__[self] then
          return true
       end
-      return that == self
+      return false
    end
 
    setfenv(body, setmetatable({ __self__ = module }, { __index = getfenv(2) }))
