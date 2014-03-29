@@ -1297,24 +1297,32 @@ g.ignite() -- also crashes your program
 
 ### <a name="grammars"></a>Grammars
 
-Shine grammars are exactly [LPeg](http://www.inf.puc-rio.br/~roberto/lpeg/)
-grammars constructed with `lpeg.P(<table>)`.
+Shine grammars are a special kind of [module](#modules) which can
+contain [patterns](#patterns) as well as module body declarations
+such as methods, properties and statements. Grammar bodies have
+a lexical scope, just as with classes and modules.
 
-Grammars in Shine are simply named [patterns](#patterns) which have
-sub-rules which can be referenced recursively. Patterns are just
-the expression form, whereas grammars are named. Otherwise there
-is no difference and all the constructs allowed in one are allowed
-in the other.
+Grammars are composable via `include` statements.
 
-To illustrate this identity, the following two examples compile to
-the same patterns:
+Grammars override the `__call` metamethod for matching.
 
-Using the `grammar <ident> ... end` notation:
 
 ```
 grammar Macro
+   function fail(err)
+      return (s, i) =>
+         local msg = (#s < i + 20) and s.sub(i)
+         msg = "error %{err} near '%s'".format(msg)
+         error(msg, 2)
+      end
+   end
+
+   function expect(tok)
+      return / <{tok}> | <{fail("'%{tok}' expected")}> /
+   end
+
    text  <- {~ <item>* ~}
-   item  <- <macro> | [^()] | '(' <item>* ')'
+   item  <- <macro> | [^()] | '(' <item>* <{expect(')')}>
    arg   <- ' '* {~ (!',' <item>)* ~}
    args  <- '(' <arg> (',' <arg>)* ')'
    macro <- (
@@ -1325,29 +1333,8 @@ grammar Macro
 end
 
 local s = "add(mul(a,b),apply(f,x))"
-print(Macro.match(s))
+print(Macro(s))
 ```
-
-This same thing, but as an expression:
-
-```
-Macro = /
-   text  <- {~ <item>* ~}
-   item  <- <macro> | [^()] | '(' <item>* ')'
-   arg   <- ' '* {~ (!',' <item>)* ~}
-   args  <- '(' <arg> (',' <arg>)* ')'
-   macro <- (
-        ('apply' <args>) -> '%1(%2)'
-      | ('add'   <args>) -> '%1 + %2'
-      | ('mul'   <args>) -> '%1 * %2'
-   )
-/
-local s = "add(mul(a,b),apply(f,x))"
-print(Macro.match(s))
-```
-
-This distinction may change in future, so that the `grammar`
-notation's body becomes a lexically scoped block.
 
 ## <a name="standard-libaries"></a>Standard Libraries
 

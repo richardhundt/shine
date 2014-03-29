@@ -933,55 +933,59 @@ function match:ClassDeclaration(node)
    return Op{'!assign', name, init}
 end
 
+function match:ClassBodyStatement(node, body)
+   local line = self.ctx:sync(node)
+   line = Op{'!line', line }
+   if node.type == "PropertyDefinition" then
+      local prop = node
+
+      if prop.kind == "get" then
+         -- self.__getters__[key] = desc.get
+         prop.value.name = prop.key.name
+         prop.value.level = 2
+         body[#body + 1] = OpList{line, Op{'!assign',
+            Op{'!index',
+               Op{'!index', 'self', Op"__getters__" },
+            Op(prop.key.name) }, self:get(prop) }}
+      elseif prop.kind == "set" then
+         -- self.__setters__[key] = desc.set
+         prop.value.name = prop.key.name
+         prop.value.level = 2
+         body[#body + 1] = OpList{line, Op{'!assign',
+            Op{'!index',
+               Op{'!index', 'self', Op"__setters__" },
+            Op(prop.key.name) }, self:get(prop) }}
+      else
+         -- hack to skip a frame for the constructor
+         if prop.key.name == 'self' then
+            prop.value.level = 2
+         end
+
+         -- self.__members__[key] = desc.value
+         body[#body + 1] = OpList{line, Op{'!assign',
+            Op{'!index',
+               Op{'!index', 'self', Op"__members__" },
+            Op(prop.key.name) }, self:get(prop) }}
+      end
+   elseif node.type == 'ClassDeclaration'
+       or node.type == 'ModuleDeclaration'
+   then
+      body[#body + 1] = self:get(node)
+      if node.scope ~= 'local' then
+         local inner_name = self:get(node.id)
+         body[#body + 1] = OpList{line,
+            Op{'!assign', Op{'!index', 'self', Op(inner_name)}, inner_name }
+         }
+      end
+   else
+      body[#body + 1] = OpList{line, self:get(node)}
+   end
+end
+
 function match:ClassBody(node)
    local body = { }
    for i=1, #node.body do
-      local line = self.ctx:sync(node.body[i])
-      line = Op{'!line', line }
-      if node.body[i].type == "PropertyDefinition" then
-         local prop = node.body[i]
-
-         if prop.kind == "get" then
-            -- self.__getters__[key] = desc.get
-            prop.value.name = prop.key.name
-            prop.value.level = 2
-            body[#body + 1] = OpList{line, Op{'!assign',
-               Op{'!index',
-                  Op{'!index', 'self', Op"__getters__" },
-               Op(prop.key.name) }, self:get(prop) }}
-         elseif prop.kind == "set" then
-            -- self.__setters__[key] = desc.set
-            prop.value.name = prop.key.name
-            prop.value.level = 2
-            body[#body + 1] = OpList{line, Op{'!assign',
-               Op{'!index',
-                  Op{'!index', 'self', Op"__setters__" },
-               Op(prop.key.name) }, self:get(prop) }}
-         else
-            -- hack to skip a frame for the constructor
-            if prop.key.name == 'self' then
-               prop.value.level = 2
-            end
-
-            -- self.__members__[key] = desc.value
-            body[#body + 1] = OpList{line, Op{'!assign',
-               Op{'!index',
-                  Op{'!index', 'self', Op"__members__" },
-               Op(prop.key.name) }, self:get(prop) }}
-         end
-      elseif node.body[i].type == 'ClassDeclaration'
-          or node.body[i].type == 'ModuleDeclaration'
-      then
-         body[#body + 1] = self:get(node.body[i])
-         if node.body[i].scope ~= 'local' then
-            local inner_name = self:get(node.body[i].id)
-            body[#body + 1] = OpList{line,
-               Op{'!assign', Op{'!index', 'self', Op(inner_name)}, inner_name }
-            }
-         end
-      else
-         body[#body + 1] = OpList{line, self:get(node.body[i])}
-      end
+      match.ClassBodyStatement(self, node.body[i], body)
    end
    return OpChunk(body)
 end
@@ -1182,10 +1186,9 @@ function match:ComprehensionBlock(node, body)
 end
 
 function match:RegExp(node)
-   local body = Op{'!call1',
+   return Op{'!call1',
       Op{'!index', '__rule__', Op'P' }, self:get(node.pattern)
    }
-   return Op{'!call1', 'grammar', '!nil', body}
 end
 function match:GrammarDeclaration(node)
    local name = self:get(node.id)
@@ -1196,18 +1199,48 @@ function match:GrammarDeclaration(node)
       self.ctx:hoist(Op{'!define', name})
    end
 
+   self.ctx:enter("module")
+   self.ctx:define('self')
+
+   local body = OpChunk{ }
+   local init = nil
+   for i=1, #node.body do
+      local n = node.body[i]
+      if n.type == 'PatternRule' then
+         if not init then
+            init = n.name
+            body[#body + 1] = Op{'!assign',
+               Op{'!index', Op{'!index', 'self', Op"__members__" }, Op(1) },
+               Op(n.name)
+            }
+         end
+         body[#body + 1] = Op{'!assign',
+            Op{'!index', Op{'!index', 'self', Op"__members__"}, Op(n.name) }, 
+            self:get(n.body)
+         }
+      else
+         match.ClassBodyStatement(self, n, body)
+      end
+   end
+   if not init then
+      self.ctx:abort("no initial rule in grammar '"..name.."'")
+   end
+   body = Op{'!lambda', Op{ 'self' }, body }
+
+   self.ctx:unhoist(body)
+   self.ctx:leave()
+
    return Op{'!assign',
-      name, Op{'!call1', 'grammar', Op(name), self:get(node.body)}
+      name, Op{'!call1', 'grammar', Op(name), body }
    }
 end
 function match:PatternGrammar(node)
-   local tab = { }
-   for i=1, #node.rules, 2 do
-      if i == 1 then
-         tab[1] = Op(node.rules[i])
-      end
-      local key, val = Op(node.rules[i]), self:get(node.rules[i + 1])
-      tab[key] = OpList{ Op{'!line', self.ctx:sync(node.rules[i + 1]) }, val }
+   local tab = { [1] = Op(node.rules[1].name) }
+   for i=1, #node.rules do
+      local n = node.rules[i]
+      local key = Op(n.name)
+      local val = self:get(n.body)
+      tab[key] = OpList{ Op{'!line', self.ctx:sync(n.body) }, val }
    end
    return Op{'!call1', Op{'!index', '__rule__', Op'P'}, Op(tab) }
 end

@@ -1,19 +1,23 @@
-function fail(err)
-   return (s, i) =>
-      local msg = (#s < i + 20) and s.sub(i)
-      msg = "error %{err} near '%s'".format(msg)
-      error(msg, 2)
-   end
-end
-
-function expect(tok)
-   return / <{tok}> | <{fail("'%{tok}' expected")}> /
+grammar A
+   arg   <- ' '* {~ (!',' <item>)* ~}
 end
 
 grammar Macro
+   include A
+   function fail(err)
+      return (s, i) =>
+         local msg = (#s < i + 20) and s.sub(i)
+         msg = "error %{err} near '%s'".format(msg)
+         error(msg, 2)
+      end
+   end
+
+   function expect(tok)
+      return / <{tok}> | <{fail("'%{tok}' expected")}> /
+   end
+
    text  <- {~ <item>* ~}
    item  <- <macro> | [^()] | '(' <item>* <{expect(')')}>
-   arg   <- ' '* {~ (!',' <item>)* ~}
    args  <- '(' <arg> (',' <arg>)* ')'
    macro <- (
         ('apply' <args>) -> '%1(%2)'
@@ -23,7 +27,7 @@ grammar Macro
 end
 
 local s = "add(mul(a,b),apply(f,x))"
-print(Macro.match(s))
+print(Macro(s))
 
 g2 = /
    text  <- {~ <item>* ~}

@@ -553,6 +553,9 @@ end
 function defs.grammarDecl(scope, name, body)
    return { type = "GrammarDeclaration", id = name, body = body, scope = scope }
 end
+function defs.pattRule(name, body)
+   return { type = "PatternRule", name = name, body = body }
+end
 function defs.pattGrammar(rules)
    return { type = "PatternGrammar", rules = rules }
 end

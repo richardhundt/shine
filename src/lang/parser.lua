@@ -530,7 +530,7 @@ local patt = [=[
    ) -> compBlock
 
    regex_expr <- (
-      "/" s <patt_expr> s ("/" / %s => error)
+      "/" s (<patt_grammar> / <patt_expr>) s ("/" / %s => error)
    ) -> regexExpr
 
    grammar_decl <- (
@@ -539,17 +539,23 @@ local patt = [=[
       (<end> / %1 => error)
    ) -> grammarDecl
 
-   grammar_body <- <patt_expr>
+   grammar_body <- {|
+      (<grammar_body_stmt> (<sep> s <grammar_body_stmt>)* <sep>?)?
+   |}
 
-   patt_expr <- (('' -> curline)(<patt_grammar> / <patt_alt>)) -> pattExpr
+   grammar_body_stmt <- (
+      <patt_rule> / <class_body_stmt>
+   )
+
+   patt_expr <- (('' -> curline) <patt_alt>) -> pattExpr
 
    patt_grammar <- {|
-      <patt_decl> (s <patt_decl>)*
+      <patt_rule> (s <patt_rule>)*
    |} -> pattGrammar
 
-   patt_decl <- (
-      <patt_name> s '<-' s <patt_expr>
-   )
+   patt_rule <- (
+      <patt_name> hs '<-' s <patt_expr>
+   ) -> pattRule
 
    patt_sep <- '|' !'}'
    patt_alt <- {|
@@ -644,7 +650,6 @@ local patt = [=[
 
    patt_ref <- (
       '<' <patt_name> '>'
-      / !<keyword> <patt_name> !(s '<-')
    ) -> pattRef
 
    patt_arg <- (

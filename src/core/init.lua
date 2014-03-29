@@ -34,7 +34,7 @@ Meta.__tostring = function(o)
    return tostring(rawget(o, '__name') or type(o))
 end
 
-local Function = setmetatable({ }, Meta)
+local Function = setmetatable({ __name = 'Function' }, Meta)
 Function.__tostring = function(self)
    local info = debug.getinfo(self, 'un')
    local nparams = info.nparams
@@ -56,10 +56,7 @@ Function.clone = function(self)
 end
 debug.setmetatable(function() end, Function)
 
-local Module = setmetatable({ }, Meta)
-function Module.__tostring(self)
-   return string.format("Module<%s>", self.__name)
-end
+local Module = setmetatable({ __name = 'Module' }, Meta)
 function Module.__index(self, k)
    if self.__getters__[k] then
       return self.__getters__[k](self)
@@ -107,7 +104,7 @@ local function module(name, body)
    return module
 end
 
-Class = setmetatable({ }, Meta)
+Class = setmetatable({ __name = 'Class' }, Meta)
 function Class.__call(class, ...)
    local obj
    if class.__apply then
@@ -757,8 +754,70 @@ end
 Pattern.__index.__unapply = function(self, subj)
    return ipairs{ self:match(subj) }
 end
-local function grammar(name, patt)
-   return patt
+
+Grammar = setmetatable({ __name = 'Grammar' }, Meta)
+
+function Grammar.__tostring(self)
+   return string.format("Grammar<%s>", self.__name)
+end
+function Grammar.__index(self, k)
+   if self.__getters__[k] then
+      return self.__getters__[k](self)
+   end
+   if self.__members__[k] then
+      return self.__members__[k]
+   end
+   return nil
+end
+function Grammar.__newindex(self, k, v)
+   if self.__setters__[k] then
+      self.__setters__[k](self, v)
+   else
+      rawset(self, k, v)
+   end
+end
+function Grammar.__call(self, subj, ...)
+   return self:__match(subj, ...)
+end
+
+local function grammar(name, body)
+   local members = { }
+   local getters = { }
+   local setters = { }
+
+   local gram = setmetatable({
+      __name      = name,
+      __members__ = members,
+      __getters__ = getters,
+      __setters__ = setters
+   }, Grammar)
+
+   setfenv(body, setmetatable({ }, { __index = getfenv(2) }))
+   body(gram)
+
+   local patt = { }
+   for k, v in pairs(members) do
+      if lpeg.type(v) == 'pattern' then
+         patt[k] = v
+      end
+   end
+
+   patt[1] = gram[1]
+
+   gram.__unapply = function(self, subj)
+      if not self.__patt then
+         self.__patt = lpeg.P(patt)
+      end
+      return self.__patt:__unapply(subj)
+   end
+   gram.__match = function(self, subj, ...)
+      if not self.__patt then
+         self.__patt = lpeg.P(patt)
+      end
+      return self.__patt:__match(subj, ...)
+   end
+
+   return gram
 end
 
 local rule = { }
