@@ -58,7 +58,7 @@ function defs.escape(s)
    if escape_lookup[t] then return escape_lookup[t] end
    if string.sub(s, 1, 2) == '\\x' then
       local a = '0'..string.sub(s, 2)
-      return string.char(tonumber(n))
+      return string.char(tonumber(a))
    end
    if string.sub(s, 1, 2) == '\\u' then
       local a = '0x'..string.sub(s, 3, 4)
