@@ -205,7 +205,7 @@ end
 
 ### <a name="comments"></a>Comments
 
-Comments come in 3 forms: Vanilla Lua-style `--` and `--[=*[...]=*]`
+Comments come in 3 forms:
 
 * Lua-style line comments starting with `--`
 * Lua-style block comments of the form `--[=*[ ... ]=*]`
