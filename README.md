@@ -293,10 +293,10 @@ nominal meta types:
 
 * `Class`
 * `Module`
-* `Grammar`
 
 pattern matching meta types:
 
+* `Pattern`
 * `ArrayPattern`
 * `TablePattern`
 * `ApplyPattern`
