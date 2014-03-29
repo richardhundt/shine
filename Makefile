@@ -6,6 +6,7 @@ TVMDIR = ${DEPDIR}/tvmjit/src
 
 export PREFIX = /usr/local
 
+export LUADIR=${TVMDIR}
 export PATH:=${TVMDIR}:${PATH}
 export BUILD= ${CURDIR}/build
 export DEPDIR
