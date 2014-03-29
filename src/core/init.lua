@@ -764,7 +764,7 @@ Pattern.__index.__unapply = function(self, subj)
    return ipairs{ self:match(subj) }
 end
 
-Grammar = setmetatable({ __name = 'Grammar' }, Meta)
+local Grammar = setmetatable({ __name = 'Grammar' }, Meta)
 
 function Grammar.__tostring(self)
    return string.format("Grammar<%s>", self.__name)
