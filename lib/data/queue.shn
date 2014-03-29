@@ -18,7 +18,7 @@ class Queue
       end, self, 0
    end
 
-   function self.__iter()
+   function self.__each()
       return ipairs(self)
    end
    function self.__len()
