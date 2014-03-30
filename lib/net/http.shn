@@ -175,7 +175,7 @@ function HTTPFilter(input, output = Channel())
          head, rest = nil
          while true do
             if buf.find("\r\n\r\n", 1, true) then
-               head, rest = buf.split("\r\n\r\n", 2, true)
+               head, rest = ...buf.split("\r\n\r\n", 2, true)
                buf = rest
                break
             else

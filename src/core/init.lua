@@ -470,7 +470,7 @@ local String = class("String", function(self, super)
          max = max - 1
       end
       out[#out + 1] = string.sub(self, pos)
-      return unpack(out)
+      return out
    end
    self.__members__.__tostring__ = tostring
 end)

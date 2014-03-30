@@ -57,7 +57,7 @@ module TNetStrings
 
    parse_payload(data)
       assert data, "Invalid data to parse, it's empty."
-      length, extra = data.split(':', 2)
+      length, extra = ...data.split(':', 2)
       length = tonumber(length)
 
       payload, extra = extra.sub(1, length), extra.sub(length + 1)
