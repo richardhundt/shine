@@ -1,17 +1,65 @@
-class enum
-   self(opts)
-      self.opts = opts
-      self.rmap = { }
-      for i=1, #opts do
-         self.rmap[opts[i]] = i
+function enum(opts)
+   rmap = { }
+   for i=1, #opts do
+      rmap[opts[i]] = i
+   end
+
+   meta = { }
+   repr = nil
+   function meta::__tostring()
+      if not repr then
+         buf = { }
+         for i=1, #opts do
+            buf[#buf + 1] = tostring(opts[i])
+         end
+         repr = "enum { %{table::concat(buf, ', ')} }"
       end
+      return repr
    end
-   __is(b)
-      return self.rmap[b] != nil
+   function meta.__is(b)
+      return rmap[b]
    end
-   __tostring__()
-      return 'enum { '~table::concat(self.opts, ', ')~' }'
+   return meta as meta
+end
+
+function like(spec)
+   meta = { }
+   repr = nil
+   function meta::__tostring()
+      buf = { }
+      if not repr then
+         for k, v in spec do
+            buf[#buf + 1] = "%{k} = %{v}"
+         end
+         repr = "like { %{table::concat(buf, ', ')} }"
+      end
+      return repr
    end
+
+   function meta.__is(b)
+      if type(b) != 'table' then
+         return false
+      end
+      for k, v in spec do
+         if not (b[k] is v) then
+            return false
+         end
+      end
+      return true
+   end
+
+   return meta as meta
+end
+
+function maybe(type)
+   meta = { }
+   function meta.__is(b)
+      return b == nil or b is type
+   end
+   function meta.__tostring()
+      return "maybe %{type}"
+   end
+   return meta as meta
 end
 
 opts = enum { "a", "b", "c" }
@@ -31,45 +79,27 @@ catch e then
    print "caught: %{e}"
 end
 
-class like
-   self(spec is Table)
-      self.spec = spec
-   end
-   __is(b)
-      if type(b) != 'table' then
-         return false
-      end
-      for k, v in self.spec do
-         if not b[k] is v then
-            return false
-         end
-      end
-      return true
-   end
-   __tostring__()
-      buf = { }
-      for k, v in self.spec do
-         buf[#buf + 1] = "%{k} = %{v}"
-      end
-      return 'like { ' ~ table::concat(buf, ', ') ~ ' }'
-   end
-end
-
-function g(o is like { x = Number, y = Number })
-   print "x: %{o.x}, y: %{o.y}"
-end
-
-g { x = 1, y = 2 }
-
 class Point
-   self(x is Number, y is Number)
-      print x, y
+   self(x = 0, y = 0)
+      self.x = x
+      self.y = y
    end
 end
 
-try
-   p = Point 'cheese', 2
-catch e then
-   print "caught %{e}"
+Pointy = like { x = Number, y = Number }
+function g(o is maybe Pointy)
+   if o != nil then
+      print "x: %{o.x}, y: %{o.y}"
+   end
 end
+
+p = Point()
+g(p)
+g(nil)
+try
+   g(42)
+catch e then
+   print "caught: %{e}"
+end
+
 

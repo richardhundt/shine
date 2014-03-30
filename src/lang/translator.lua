@@ -767,6 +767,7 @@ end
 local unop = {
    ['#']   = '!len',
    ['-']   = '!neg',
+   ['!']   = '!not',
    ['not'] = '!not',
 }
 function match:UnaryExpression(node)
