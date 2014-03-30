@@ -1,0 +1,139 @@
+function gt(n)
+   meta = { }
+   repr = nil
+   function meta::__tostring()
+      if !repr then
+         repr = "gt %{n}"
+      end
+      return repr
+   end
+   function meta.__is(b)
+      return b > n
+   end
+   return meta as meta
+end
+
+function ge(n)
+   meta = { }
+   repr = nil
+   function meta::__tostring()
+      if not repr then
+         repr = "ge %{n}"
+      end
+      return repr
+   end
+   function meta.__is(b)
+      return b >= n
+   end
+   return meta as meta
+end
+
+function lt(n)
+   meta = { }
+   repr = nil
+   function meta::__tostring()
+      if not repr then
+         repr = "lt %{n}"
+      end
+      return repr
+   end
+   function meta.__is(b)
+      return b < n
+   end
+   return meta as meta
+end
+
+function le(n)
+   meta = { }
+   repr = nil
+   function meta::__tostring()
+      if !repr then
+         repr = "le %{n}"
+      end
+      return repr
+   end
+   function meta.__is(b)
+      return b <= n
+   end
+   return meta as meta
+end
+
+function ne(n)
+   meta = { }
+   repr = nil
+   function meta::__tostring()
+      if !repr then
+         repr = "ne %{n}"
+      end
+      return repr
+   end
+   function meta.__is(b)
+      return b != n
+   end
+   return meta as meta
+end
+
+function enum(opts)
+   rmap = { }
+   for i=1, #opts do
+      rmap[opts[i]] = i
+   end
+
+   meta = { }
+   repr = nil
+   function meta::__tostring()
+      if !repr then
+         buf = { }
+         for i=1, #opts do
+            buf[#buf + 1] = tostring(opts[i])
+         end
+         repr = "enum { %{table::concat(buf, ', ')} }"
+      end
+      return repr
+   end
+   function meta.__is(b)
+      return rmap[b]
+   end
+   return meta as meta
+end
+
+function like(spec)
+   meta = { }
+   repr = nil
+   function meta::__tostring()
+      buf = { }
+      if !repr then
+         for k, v in spec do
+            buf[#buf + 1] = "%{k} = %{v}"
+         end
+         repr = "like { %{table::concat(buf, ', ')} }"
+      end
+      return repr
+   end
+
+   function meta.__is(b)
+      if type(b) != 'table' then
+         return false
+      end
+      for k, v in spec do
+         if !(b[k] is v) then
+            return false
+         end
+      end
+      return true
+   end
+
+   return meta as meta
+end
+
+function maybe(type)
+   meta = { }
+   function meta.__is(b)
+      return b == nil or b is type
+   end
+   function meta.__tostring()
+      return "maybe %{type}"
+   end
+   return meta as meta
+end
+
