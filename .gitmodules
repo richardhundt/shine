@@ -1,9 +1,6 @@
 [submodule "deps/upoll"]
 	path = deps/upoll
 	url = https://github.com/richardhundt/upoll.git
-[submodule "deps/tvmjit"]
-	path = deps/tvmjit
-	url = https://github.com/fperrad/tvmjit.git
 [submodule "deps/uthread"]
 	path = deps/uthread
 	url = https://github.com/richardhundt/uthread.git
