@@ -263,6 +263,9 @@ local function include(into, ...)
       if from.__included then
          from:__included(into)
       end
+      for k,v in pairs(from.__include__) do
+         into.__include__[k] = true
+      end
       into.__include__[from] = true
    end
 end
