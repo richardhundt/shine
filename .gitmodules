@@ -4,3 +4,6 @@
 [submodule "deps/uthread"]
 	path = deps/uthread
 	url = https://github.com/richardhundt/uthread.git
+[submodule "deps/tvmjit"]
+	path = deps/tvmjit
+	url = git@github.com:richardhundt/tvmjit.git
