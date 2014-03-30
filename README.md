@@ -581,6 +581,26 @@ precedence. Operators marked with a trailing `_` are unary operators.
 | `**`     | 13         | right         | exponentiation |
 | `#_`     | 14         | right         | length of |
 
+Many infix operators are also available in update, or assigment, form:
+
+| Operator  | Comment |
+|-----------|---------|
+| `+=`      | add assign |
+| `-=`      | subtract assign |
+| `~=`      | concatenate assign |
+| `*=`      | multiply assign |
+| `/=`      | divide assign |
+| `%=`      | modulo assign |
+| `**=`     | exponentiation assign |
+| `and=`    | logical and assign |
+| `or=`     | logical or assign |
+| `&=`      | bitwise and assign |
+| &#124;=   | bitwise or assign |
+| `^=`      | bitwise xor assign |
+| `<<=`     | bitwise left shift assign |
+| `>>=`     | bitwise right shift assign |
+| `>>>=`    | bitwise arithmetic right shift assign |
+
 The following operators are used in [patterns](#patterns):
 
 | Operator | Precedence | Associativity | Comment |
