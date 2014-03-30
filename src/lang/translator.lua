@@ -93,6 +93,7 @@ function Scope.new(outer)
       outer   = outer;
       entries = { };
       hoist   = { };
+      block   = { };
    }
    return setmetatable(self, Scope)
 end
@@ -146,6 +147,7 @@ function Context:enter(type)
    else
       self.scope.level = self.scope.outer.level or 1
    end
+   return self.scope.block
 end
 function Context:leave(block)
    block = block or self.scope.hoist
@@ -164,6 +166,16 @@ function Context:unhoist(block)
       table.insert(block, 1, self.scope.hoist[i])
    end
    self.scope.hoist = { }
+end
+function Context:push(stmt)
+   scope = self.scope.outer or self.scope
+   scope.block[#scope.block + 1] = stmt
+end
+function Context:shift(into)
+   for i=1, #self.scope.block do
+      into[#into + 1] = self.scope.block[i]
+   end
+   self.scope.block = { }
 end
 function Context:define(name, info)
    info = info or { line = self.line }
@@ -255,6 +267,7 @@ function match:Chunk(node, opts)
    for i=1, #node.body do
       local line = self.ctx:sync(node.body[i])
       local stmt = self:get(node.body[i])
+      self.ctx:shift(chunk)
       chunk[#chunk + 1] = OpList{Op{'!line', line}, stmt}
    end
 
@@ -361,7 +374,7 @@ function match:LocalDeclaration(node)
       }
    end
 end
-local function extract_bindings(node)
+local function extract_bindings(node, ident)
    local list = { }
    local queue = { node }
    while #queue > 0 do
@@ -381,7 +394,11 @@ local function extract_bindings(node)
       elseif n.type == 'Identifier' then
          list[#list + 1] = n
       elseif n.type == 'MemberExpression' then
-         list[#list + 1] = n
+         if ident then
+            queue[#queue + 1] = n.object
+         else
+            list[#list + 1] = n
+         end
       else
          assert(n.type == 'Literal')
       end
@@ -810,6 +827,12 @@ function match:FunctionDeclaration(node)
       end
       if node.guards[i] then
          local expr = self:get(node.guards[i])
+
+         -- hoist guards constructors to the outer scope
+         local temp = util.genid()
+         self.ctx:push(Op{'!let', temp, expr})
+         expr = temp
+
          local test = Op{'!call', '__is__', name, expr }
          local mesg
          if i == 1 and expr == '__self__' then
@@ -881,13 +904,20 @@ function match:FunctionDeclaration(node)
       return func
    end
 
+   local decl
    if node.islocal then
-      return OpChunk{
+      decl = OpChunk{
          Op{'!define', name},
          Op{'!assign', name, func}
       }
+   else
+      decl = Op{'!assign', name, func }
    end
-   return Op{'!assign', name, func }
+
+   local wrap = OpChunk{ }
+   self.ctx:shift(wrap)
+   wrap[#wrap + 1] = decl
+   return wrap
 end
 
 function match:IncludeStatement(node)
@@ -954,34 +984,50 @@ function match:ClassBodyStatement(node, body)
          -- self.__getters__[key] = desc.get
          prop.value.name = prop.key
          prop.value.level = 2
+
+         local decl = self:get(prop)
+         self.ctx:shift(body)
+
          body[#body + 1] = OpList{line, Op{'!assign',
             Op{'!index',
                Op{'!index', 'self', Op"__getters__" },
-            Op(prop.key.name) }, self:get(prop) }}
+            Op(prop.key.name) }, decl }}
+
       elseif prop.kind == "set" then
          -- self.__setters__[key] = desc.set
          prop.value.name = prop.key
          prop.value.level = 2
+
+         local decl = self:get(prop)
+         self.ctx:shift(body)
+
          body[#body + 1] = OpList{line, Op{'!assign',
             Op{'!index',
                Op{'!index', 'self', Op"__setters__" },
-            Op(prop.key.name) }, self:get(prop) }}
+            Op(prop.key.name) }, decl }}
       else
          -- hack to skip a frame for the constructor
          if prop.key.name == 'self' then
             prop.value.level = 2
          end
 
+         local decl = self:get(prop)
+         self.ctx:shift(body)
+
          -- self.__members__[key] = desc.value
          body[#body + 1] = OpList{line, Op{'!assign',
             Op{'!index',
                Op{'!index', 'self', Op"__members__" },
-            Op(prop.key.name) }, self:get(prop) }}
+            Op(prop.key.name) }, decl }}
       end
    elseif node.type == 'ClassDeclaration'
        or node.type == 'ModuleDeclaration'
    then
-      body[#body + 1] = self:get(node)
+
+      local stmt = self:get(node)
+      self.ctx:shift(body)
+      body[#body + 1] = stmt
+
       if node.scope ~= 'local' then
          local inner_name = self:get(node.id)
          body[#body + 1] = OpList{line,
@@ -989,7 +1035,9 @@ function match:ClassBodyStatement(node, body)
          }
       end
    else
-      body[#body + 1] = OpList{line, self:get(node)}
+      local stmt = self:get(node)
+      self.ctx:shift(body)
+      body[#body + 1] = OpList{line, stmt}
    end
 end
 
@@ -1023,6 +1071,7 @@ function match:BlockStatement(node)
    for i=1, #node.body do
       local line = self.ctx:sync(node.body[i])
       local stmt = self:get(node.body[i])
+      self.ctx:shift(body)
       body[#body + 1] = OpList{Op{'!line', line}, stmt}
    end
    return body
@@ -1226,6 +1275,7 @@ function match:GrammarDeclaration(node)
                Op(n.name)
             }
          end
+         self.ctx:shift(body)
          body[#body + 1] = Op{'!assign',
             Op{'!index', Op{'!index', 'self', Op"__members__"}, Op(n.name) }, 
             self:get(n.body)

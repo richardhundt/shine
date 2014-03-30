@@ -47,9 +47,10 @@ ${BUILD}/libs/util.so: ${BUILD}/trex.o
 	${SHC} -n "util.time" util/time.shn  ${BUILD}/util_time.o
 	${SHC} -n "util.regexp" util/regexp.shn  ${BUILD}/util_regexp.o
 	${SHC} -n "util.random" util/random.shn  ${BUILD}/util_random.o
+	${SHC} -n "util.guards" util/guards.shn  ${BUILD}/util_guards.o
 	${CC} ${SOFLAGS} -o ${BUILD}/libs/util.so ${LDFLAGS} \
 	${BUILD}/util_time.o ${BUILD}/util_regexp.o ${BUILD}/trex.o \
-	${BUILD}/util_random.o
+	${BUILD}/util_random.o ${BUILD}/util_guards.o
 
 ${BUILD}/libs/net.so:
 	${SHC} -n "net.socket" net/socket.shn  ${BUILD}/net_socket.o

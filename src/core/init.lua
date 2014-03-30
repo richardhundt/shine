@@ -309,7 +309,11 @@ local Array = class("Array", function(self)
    end
 
    function self.__members__:join(sep)
-      return table.concat({ Array.__spread(self) }, sep)
+      local t = { }
+      for i=0, #self - 1 do
+         t[#t + 1] = tostring(self[i])
+      end
+      return table.concat(t, sep)
    end
    function self.__members__:push(val)
       self[self.length] = val

@@ -1,80 +1,27 @@
-function enum(opts)
-   rmap = { }
-   for i=1, #opts do
-      rmap[opts[i]] = i
-   end
-
-   meta = { }
-   repr = nil
-   function meta::__tostring()
-      if not repr then
-         buf = { }
-         for i=1, #opts do
-            buf[#buf + 1] = tostring(opts[i])
-         end
-         repr = "enum { %{table::concat(buf, ', ')} }"
-      end
-      return repr
-   end
-   function meta.__is(b)
-      return rmap[b]
-   end
-   return meta as meta
-end
-
-function like(spec)
-   meta = { }
-   repr = nil
-   function meta::__tostring()
-      buf = { }
-      if not repr then
-         for k, v in spec do
-            buf[#buf + 1] = "%{k} = %{v}"
-         end
-         repr = "like { %{table::concat(buf, ', ')} }"
-      end
-      return repr
-   end
-
-   function meta.__is(b)
-      if type(b) != 'table' then
-         return false
-      end
-      for k, v in spec do
-         if not (b[k] is v) then
-            return false
-         end
-      end
-      return true
-   end
-
-   return meta as meta
-end
-
-function maybe(type)
-   meta = { }
-   function meta.__is(b)
-      return b == nil or b is type
-   end
-   function meta.__tostring()
-      return "maybe %{type}"
-   end
-   return meta as meta
-end
+import enum, like, ge from "util.guards"
+print "here"
 
 opts = enum { "a", "b", "c" }
 
-function f(a is Number, b is opts = 'a')
+function foo(a is Number, b is opts = 'a')
    print a
 end
 
-f 11, 'a'
-f 22, 'b'
-f 33, 'c'
-f 44
+function bar(o is like { x = Number, y = Number })
+   print "x: %{o.x}, y: %{o.y}"
+end
+
+function baz(n is ge 0)
+   print "positive or zero: %{n}"
+end
+
+foo 11, 'a'
+foo 22, 'b'
+foo 33, 'c'
+foo 44
 
 try
-   f 55, 'd'
+   foo 55, 'd'
 catch e then
    print "caught: %{e}"
 end
@@ -86,18 +33,18 @@ class Point
    end
 end
 
-Pointy = like { x = Number, y = Number }
-function g(o is maybe Pointy)
-   if o != nil then
-      print "x: %{o.x}, y: %{o.y}"
-   end
+p = Point()
+bar(p)
+try
+   bar(42)
+catch e then
+   print "caught: %{e}"
 end
 
-p = Point()
-g(p)
-g(nil)
+baz(0)
+baz(42)
 try
-   g(42)
+   baz(-1)
 catch e then
    print "caught: %{e}"
 end

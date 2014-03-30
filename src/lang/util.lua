@@ -57,8 +57,8 @@ export.dump = dump
 local ID = 0
 export.genid = function(prefix)
    ID = ID + 1
-   prefix = prefix or '_'
-   return '_'..prefix..ID
+   prefix = prefix or '$#'
+   return prefix..ID
 end
 
 function export.extend(base, with)
