@@ -999,6 +999,13 @@ local function typeof(a)
    return typemap[type(a)]
 end
 
+local function check(expr, type)
+   if not __is__(expr, type) then
+      error(string.format("%s expected got %s", tostring(type), tostring(typeof(expr))), 2)
+   end
+   return expr
+end
+
 __magic__ = setmetatable({
    -- builtin types
    Nil = Nil;
@@ -1040,6 +1047,7 @@ __magic__ = setmetatable({
    null = null;
 
    -- operators
+   __check__ = check;
    __rule__ = rule;
    __range__ = range;
    __spread__ = spread;
