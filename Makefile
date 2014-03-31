@@ -16,7 +16,7 @@ export TVM_PATH = ${TVMDIR}/?.lua;${CURDIR}/boot/src/?.raw;;
 export TVM_CPATH = ${CURDIR}/boot/lib/?.so;;
 
 export DEBUG=
-#export DEBUG=-g
+export DEBUG=-g
 
 TJ = ${TVMDIR}/tvmjit
 TJC = ${TJ} -b ${DEBUG}
@@ -78,6 +78,7 @@ XDEPS = ${DEPS} \
 
 CDEPS = ${BUILD}/deps/liblpeg.a \
 	${BUILD}/deps/libtvmjit.a \
+	${BUILD}/core.a \
 	${BUILD}/lang.a \
 	${BUILD}/shnc.o
 

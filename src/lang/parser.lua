@@ -33,7 +33,7 @@ local patt = [=[
    ws       <- <nl> / %s
    hs       <- (!%nl %s)*
    HS       <- (!%nl %s)+
-   word     <- (%alpha / "_" / "$") (%alnum / "_" / "$")*
+   word     <- (%alpha / "_" / "$" / '?' / '!') (%alnum / "_" / "$" / '?' / '!')*
 
    reserved <- (
       "local" / "function" / "nil" / "true" / "false" / "return" / "end"
@@ -44,7 +44,7 @@ local patt = [=[
    keyword  <- (
       <reserved> / "class" / "module" / "continue" / "throw" / "super"
       / "import" / "export" / "try" / "catch" / "finally" / "is" / "as"
-      / "include" / "grammar" / "given" / "case"
+      / "include" / "grammar" / "given" / "case" / "macro"
    ) <idsafe>
 
    sep <- <bcomment>? (<nl> / ";" / <lcomment>) / <ws> <sep>?
@@ -106,9 +106,13 @@ local patt = [=[
    ) -> exportStmt
 
    import_stmt <- (
-      "import" <idsafe> s {| <import_name> (s "," s <import_name>)* |} s
-      "from" <idsafe> s <expr>
+      "import" <idsafe> s <import_from>
    ) -> importStmt
+
+   import_from <- (
+      {| <import_name> (s "," s <import_name>)* |} s
+      "from" <idsafe> s <expr>
+   )
 
    import_name <- {|
       <ident> (hs "=" hs <ident>)?
@@ -178,6 +182,7 @@ local patt = [=[
         <local_coro>
       / <local_func>
       / <local_decl>
+      / <macro_decl>
       / <coro_decl>
       / <func_decl>
       / <class_decl>
@@ -199,6 +204,12 @@ local patt = [=[
       "local" <idsafe> s
       "function*" <idsafe> s <ident> s <func_head> s <func_body>
    ) -> localCoroDecl
+
+   macro_decl <- (
+      "macro" <idsafe> s <ident> s "(" s {| <expr_list> |} s ")" s
+      <stmt_list> s
+      (<end> / %1 => error)
+   ) -> macroDecl
 
    bind_left <- (
       <array_patt> / <table_patt> / <apply_patt> / <member_expr>
@@ -274,7 +285,7 @@ local patt = [=[
    )
 
    qname <- (
-      (<ident> (s {"."} s <qname> / s {"::"} s <ident>)) / <ident>
+      (<ident> (s {"."} s <qname> / s {"::"} s <qname>)) / <ident>
    )
 
    func_decl <- (

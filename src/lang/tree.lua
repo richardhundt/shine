@@ -296,6 +296,9 @@ function defs.localCoroDecl(name, head, body)
    decl.generator = true
    return decl
 end
+function defs.macroDecl(name, head, body)
+   return { type = 'MacroDeclaration', name = name, head = head, body = body }
+end
 function defs.funcExpr(head, body)
    local decl = defs.funcDecl(nil, head, body)
    decl.expression = true

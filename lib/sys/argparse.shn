@@ -30,7 +30,7 @@ class ArgumentParser
 
    add(name, spec)
       local patt
-      if name[1..1] == '-' then
+      if name[1] == '-' then
          patt = / <{name}> /
          if spec.arity and spec.arity > 0 then
             for i=1, spec.arity do
@@ -68,7 +68,7 @@ class ArgumentParser
          if #rule.name > cols then
             cols = #rule.name
          end
-         if rule.name[1..1] == '-' then
+         if rule.name[1] == '-' then
             opts[#opts + 1] = rule
          else
             args[#args + 1] = rule
@@ -111,7 +111,7 @@ class ArgumentParser
       nopt = 0
       for i=1, #self.rules do
          rule = self.rules[i]
-         if rule.name[1..1] == '-' then
+         if rule.name[1] == '-' then
             nopt += 1
             if nopt > 1 then
                opts *= / %s+ /

@@ -94,7 +94,11 @@ function Scope.new(outer)
       entries = { };
       hoist   = { };
       block   = { };
+      macro   = { };
    }
+   if outer then
+      setmetatable(self.macro, { __index = outer.macro })
+   end
    return setmetatable(self, Scope)
 end
 function Scope:define(name, info)
@@ -116,7 +120,7 @@ function Context.new(name, opts)
    local self = {
       scope = Scope.new();
       line  = 1;
-      name  = name;
+      name  = name or "(eval)";
       undef = { };
       opts  = opts or { };
    }
@@ -209,6 +213,15 @@ function Context:close()
       self:abort(string.format("%q used but not defined", u.name), u.line)
    end
 end
+function Context:op(...)
+   return Op(...)
+end
+function Context:opchunk(...)
+   return OpChunk(...)
+end
+function Context:oplist(...)
+   return OpList(...)
+end
 
 function Context:sync(node)
    if node.line then
@@ -223,7 +236,7 @@ local globals = {
    'Nil','Number','Boolean', 'String', 'Function', 'Coroutine', 'Range',
    'UserData', 'Table', 'Array', 'Error', 'Module', 'Class', 'Object',
    'Grammar', 'Pattern', 'ArrayPattern', 'TablePattern', 'ApplyPattern',
-   '__magic__', 'yield', 'take', 'typeof', 'null', 'warn',
+   '__magic__', 'yield', 'take', 'typeof', 'null', 'warn', 'eval',
    '__FILE__', '__LINE__', '_M', '_PACKAGE', '_NAME'
 }
 for k,v in pairs(_G) do
@@ -276,6 +289,7 @@ function match:Chunk(node, opts)
       self.ctx:hoist(Op{'!define', 'export', Op{ }})
    end
    self.ctx:leave(chunk)
+
    if seen_export then
       chunk[#chunk + 1] = Op{'!return', 'export'}
    end
@@ -289,9 +303,9 @@ function match:ImportStatement(node)
       local n = node.names[i]
       self.ctx:define(n[1].name)
       if n[2] then
-	 args[#args + 1] = Op(n[2].name)
+         args[#args + 1] = Op(n[2].name)
       else
-	 args[#args + 1] = Op(n[1].name)
+         args[#args + 1] = Op(n[1].name)
       end
       syms[#syms + 1] = n[1].name
    end
@@ -328,6 +342,26 @@ function match:Identifier(node)
    end
    return node.name
 end
+
+function match:MacroDeclaration(node)
+   local eval = self.ctx.opts.eval
+   self.ctx.opts.eval = true
+   local head = self:list(node.head)
+   local body = self:list(node.body)
+   self.ctx.opts.eval = eval
+
+   local name = node.name.name
+   local wrap = OpChunk{
+      Op{'!return', Op{'!lambda', Op{ OpList(head) }, OpChunk(body) } }
+   }
+   wrap = assert(tvm.load(tostring(wrap)))
+   setfenv(wrap, require("core").__magic__.environ({ }))
+   local func = wrap()
+
+   self.ctx.scope.macro[name] = func
+   return OpChunk{ }
+end
+
 function match:LocalDeclaration(node)
    local decl = { }
    local simple = true
@@ -1106,8 +1140,15 @@ function match:CallExpression(node)
          table.insert(args, 1, 'self')
          return Op{'!call', recv, unpack(args)}
       else
-         local args = self:list(node.arguments)
-         return Op{'!call', self:get(callee), unpack(args)}
+         local scope = self.ctx.scope
+         if callee.type == 'Identifier' and scope.macro[callee.name] then
+            local macro = scope.macro[callee.name]
+            local frag  = macro(self.ctx, unpack(node.arguments))
+            return frag
+         else
+            local args = self:list(node.arguments)
+            return Op{'!call', self:get(callee), unpack(args)}
+         end
       end
    end
 end
@@ -1436,6 +1477,14 @@ local function translate(tree, name, opts)
          list[#list + 1] = self:get(nodes[i], ...)
       end
       return list
+   end
+
+   -- TODO: this is messy
+   function self.ctx.get(_, ...)
+      return self:get(...)
+   end
+   function self.ctx.list(_, ...)
+      return self:list(...)
    end
 
    local tout = self:get(tree)

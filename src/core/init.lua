@@ -439,6 +439,9 @@ local String = class("String", function(self, super)
    for k, v in pairs(string) do
       self.__members__[k] = v
    end
+   self.__apply = function(_, v)
+      return tostring(v)
+   end
    self.__getindex = function(o, k)
       local t = type(k)
       if t == "table" and getmetatable(k) == Range then
@@ -999,7 +1002,15 @@ local function typeof(a)
    return typemap[type(a)]
 end
 
-__magic__ = setmetatable({
+local loadchunk = require("shine.lang.loader").loadchunk
+local function eval(chunk, env, ...)
+   eval = assert(loadchunk(chunk, "eval", { eval = true }))
+   env = env or getfenv(2)
+   setfenv(eval, env)
+   return eval(...)
+end
+
+__magic__ = {
    -- builtin types
    Nil = Nil;
    Number = Number;
@@ -1032,6 +1043,7 @@ __magic__ = setmetatable({
    grammar = grammar;
    include = include;
    typeof = typeof;
+   eval = eval;
 
    -- utility
    environ = environ;
@@ -1057,7 +1069,18 @@ __magic__ = setmetatable({
    __band__ = bit.band;
    __bor__ = bit.bor;
    __bxor__ = bit.bxor;
-}, { __index = _G })
+}
+
+setmetatable(__magic__, {
+   __index = function(t, n)
+      local v = rawget(_G, n)
+      if v == nil then
+         error("variable '"..n.."' is not declared", 2)
+      end
+      rawset(t, n, v)
+      return v
+   end
+})
 
 _G.__magic__ = __magic__
 export.__magic__ = __magic__
