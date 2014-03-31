@@ -335,6 +335,7 @@ end
 function match:LocalDeclaration(node)
    local decl = { }
    local simple = true
+   local body = { }
    for i=1, #node.names do
       -- recursively define new variables
       local queue = { node.names[i] }
@@ -356,10 +357,10 @@ function match:LocalDeclaration(node)
                queue[#queue + 1] = n.arguments[i]
             end
          elseif n.type == 'Identifier' then
-            self.ctx:define(n.name, nil, n.guard)
             if n.guard then
                simple = false
-               n.guard = nil
+            else
+               self.ctx:define(n.name)
             end
             decl[#decl + 1] = n.name
          end
@@ -368,15 +369,16 @@ function match:LocalDeclaration(node)
 
    if simple then
       if node.inits then
-         return Op{'!define', Op(decl), Op(self:list(node.inits)) }
+         body[#body + 1] = Op{'!define', Op(decl), Op(self:list(node.inits)) }
       else
-         return Op{'!define', Op(decl), Op{Op(nil)} }
+         body[#body + 1] = Op{'!define', Op(decl), Op{Op(nil)} }
       end
+      return OpChunk(body)
    else
       node.left  = node.names
       node.right = node.inits
 
-      return OpChunk {
+      return OpChunk{
          Op{'!define', Op(decl), Op{Op(nil)} },
          match.AssignmentExpression(self, node)
       }
@@ -448,7 +450,9 @@ function match:AssignmentExpression(node)
             local n = bind[i]
             if n.type == 'Identifier' then
                if n.guard or not self.ctx:lookup(n.name) then
-                  self.ctx:define(n.name, nil, n.guard)
+                  local temp = util.genid()
+                  body[#body + 1] = Op{'!let', temp, self:get(n.guard)}
+                  self.ctx:define(n.name, nil, temp)
                   if not self.ctx.opts.eval then
                      decl[#decl + 1] = n.name
                   end
@@ -465,7 +469,9 @@ function match:AssignmentExpression(node)
          -- simple case
          if n.type == 'Identifier' then
             if n.guard or not self.ctx:lookup(n.name) then
-               self.ctx:define(n.name, nil, n.guard)
+               local temp = util.genid()
+               body[#body + 1] = Op{'!let', temp, self:get(n.guard)}
+               self.ctx:define(n.name, nil, temp)
                if not self.ctx.opts.eval then
                   decl[#decl + 1] = n.name
                end
@@ -503,8 +509,7 @@ function match:AssignmentExpression(node)
    end
 
    for i=1, #chks do
-      local grd = self:get(chks[i].guard)
-      body[#body + 1] = Op{'!call', '__check__', chks[i].name, grd}
+      body[#body + 1] = Op{'!call', '__check__', chks[i].name, chks[i].guard}
    end
 
    return OpChunk(body)
