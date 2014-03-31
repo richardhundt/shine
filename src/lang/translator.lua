@@ -450,9 +450,12 @@ function match:AssignmentExpression(node)
             local n = bind[i]
             if n.type == 'Identifier' then
                if n.guard or not self.ctx:lookup(n.name) then
-                  local temp = util.genid()
-                  body[#body + 1] = Op{'!let', temp, self:get(n.guard)}
-                  self.ctx:define(n.name, nil, temp)
+                  local guard
+                  if n.guard then
+                     guard = util.genid()
+                     body[#body + 1] = Op{'!let', guard, self:get(n.guard)}
+                  end
+                  self.ctx:define(n.name, nil, guard)
                   if not self.ctx.opts.eval then
                      decl[#decl + 1] = n.name
                   end
@@ -469,9 +472,12 @@ function match:AssignmentExpression(node)
          -- simple case
          if n.type == 'Identifier' then
             if n.guard or not self.ctx:lookup(n.name) then
-               local temp = util.genid()
-               body[#body + 1] = Op{'!let', temp, self:get(n.guard)}
-               self.ctx:define(n.name, nil, temp)
+               local guard
+               if n.guard then
+                  guard = util.genid()
+                  body[#body + 1] = Op{'!let', guard, self:get(n.guard)}
+               end
+               self.ctx:define(n.name, nil, guard)
                if not self.ctx.opts.eval then
                   decl[#decl + 1] = n.name
                end
