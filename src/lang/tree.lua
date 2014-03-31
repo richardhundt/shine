@@ -154,6 +154,10 @@ end
 function defs.identifier(name)
    return { type = "Identifier", name = name }
 end
+function defs.guardedIdent(ident, expr)
+   ident.guard = expr
+   return ident
+end
 function defs.compExpr(body, blocks)
    return { type = "ArrayComprehension", blocks = blocks, body = body }
 end

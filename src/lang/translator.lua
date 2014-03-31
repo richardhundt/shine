@@ -102,6 +102,7 @@ function Scope.new(outer)
    return setmetatable(self, Scope)
 end
 function Scope:define(name, info)
+   info.name = name
    self.entries[name] = info
 end
 function Scope:lookup(name)
@@ -181,8 +182,11 @@ function Context:shift(into)
    end
    self.scope.block = { }
 end
-function Context:define(name, info)
+function Context:define(name, info, guard)
    info = info or { line = self.line }
+   if guard then
+      info.guard = guard
+   end
    self.scope:define(name, info)
    for i=#self.undef, 1, -1 do
       local u = self.undef[i]
@@ -298,6 +302,11 @@ function match:Chunk(node, opts)
 end
 function match:ImportStatement(node)
    local args = OpList{ self:get(node.from) }
+   if node.from[1].type ~= 'Expression' then
+      local path   = args[i]:sub(2, -2)
+      local loader = require('shine.lang.loader').loader
+      local chunk  = loader(path)
+   end
    local syms = OpList{ }
    for i=1, #node.names do
       local n = node.names[i]
@@ -386,7 +395,11 @@ function match:LocalDeclaration(node)
                queue[#queue + 1] = n.arguments[i]
             end
          elseif n.type == 'Identifier' then
-            self.ctx:define(n.name)
+            self.ctx:define(n.name, nil, n.guard)
+            if n.guard then
+               simple = false
+               n.guard = nil
+            end
             decl[#decl + 1] = n.name
          end
       end
@@ -444,6 +457,13 @@ function match:AssignmentExpression(node)
    local decl = { }
    local init = { }
    local dest = { }
+   local chks = { }
+   local exps
+   if node.right then
+      exps = self:list(node.right)
+   else
+      exps = Op{Op(nil)}
+   end
    for i=1, #node.left do
       local n = node.left[i]
       local t = n.type
@@ -466,11 +486,14 @@ function match:AssignmentExpression(node)
          for i=1, #bind do
             local n = bind[i]
             if n.type == 'Identifier' then
-               if not self.ctx:lookup(n.name) then
-                  self.ctx:define(n.name)
-                  if not self.ctx:in_module() then
+               if n.guard or not self.ctx:lookup(n.name) then
+                  self.ctx:define(n.name, nil, n.guard)
+                  if not self.ctx.opts.eval then
                      decl[#decl + 1] = n.name
                   end
+               end
+               if self.ctx:lookup(n.name).guard then
+                  chks[#chks + 1] = self.ctx:lookup(n.name)
                end
                left[#left + 1] = n.name
             elseif n.type == 'MemberExpression' then
@@ -479,10 +502,15 @@ function match:AssignmentExpression(node)
          end
       else
          -- simple case
-         if n.type == 'Identifier' and not self.ctx:lookup(n.name) then
-            self.ctx:define(n.name)
-            if not self.ctx.opts.eval then
-               decl[#decl + 1] = n.name
+         if n.type == 'Identifier' then
+            if n.guard or not self.ctx:lookup(n.name) then
+               self.ctx:define(n.name, nil, n.guard)
+               if not self.ctx.opts.eval then
+                  decl[#decl + 1] = n.name
+               end
+            end
+            if self.ctx:lookup(n.name).guard then
+               chks[#chks + 1] = self.ctx:lookup(n.name)
             end
          end
          init[#init + 1] = self:get(n)
@@ -504,13 +532,18 @@ function match:AssignmentExpression(node)
       dest[i].patt = patt
    end
 
-   body[#body + 1] = Op{'!massign', Op(init), Op(self:list(node.right)) }
+   body[#body + 1] = Op{'!massign', Op(init), Op(exps) }
 
    -- destructure
    for i=1, #dest do
       body[#body + 1] = Op{'!massign',
          Op(dest[i].left),
          Op{ Op{'!call', '__extract__', dest[i].patt, dest[i].temp } } }
+   end
+
+   for i=1, #chks do
+      local grd = self:get(chks[i].guard)
+      body[#body + 1] = Op{'!call', '__check__', chks[i].name, grd}
    end
 
    return OpChunk(body)
@@ -1489,7 +1522,7 @@ local function translate(tree, name, opts)
 
    local tout = self:get(tree)
    self.ctx:close()
-   return tout
+   return tout, self.ctx
 end
 
 return {

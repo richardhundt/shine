@@ -1010,6 +1010,13 @@ local function eval(chunk, env, ...)
    return eval(...)
 end
 
+local function check(expr, type)
+   if not __is__(expr, type) then
+      error(string.format("%s expected got %s", tostring(type), tostring(typeof(expr))), 2)
+   end
+   return expr
+end
+
 __magic__ = {
    -- builtin types
    Nil = Nil;
@@ -1052,6 +1059,7 @@ __magic__ = {
    null = null;
 
    -- operators
+   __check__ = check;
    __rule__ = rule;
    __range__ = range;
    __spread__ = spread;

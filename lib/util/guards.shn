@@ -12,6 +12,9 @@ function gt(n)
    end
    return meta as meta
 end
+function ?gt(n)
+   return maybe gt(n)
+end
 
 function ge(n)
    meta = { }
@@ -26,6 +29,10 @@ function ge(n)
       return b >= n
    end
    return meta as meta
+end
+
+function ?ge(n)
+   return maybe ge(n)
 end
 
 function lt(n)

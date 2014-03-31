@@ -33,7 +33,7 @@ local patt = [=[
    ws       <- <nl> / %s
    hs       <- (!%nl %s)*
    HS       <- (!%nl %s)+
-   word     <- (%alpha / "_" / "$" / '?' / '!') (%alnum / "_" / "$" / '?' / '!')*
+   word     <- (%alpha / "_" / "$" / "!" / "?") (%alnum / "_" / "$" / "!" / "?")*
 
    reserved <- (
       "local" / "function" / "nil" / "true" / "false" / "return" / "end"
@@ -190,6 +190,10 @@ local patt = [=[
       / <grammar_decl>
    )
 
+   guarded_ident <- (
+      <ident> hs "is" <idsafe> s <expr>
+   ) -> guardedIdent
+
    local_decl <- (
       "local" <idsafe> s {| <decl_left> (s "," s <decl_left>)* |}
       (s "=" s {| <expr_list> |})?
@@ -212,10 +216,18 @@ local patt = [=[
    ) -> macroDecl
 
    bind_left <- (
-      <array_patt> / <table_patt> / <apply_patt> / <member_expr>
+        <array_patt>
+      / <table_patt>
+      / <apply_patt>
+      / <guarded_ident>
+      / <member_expr>
    )
    decl_left <- (
-      <array_patt_decl> / <table_patt_decl> / <apply_patt_decl> / <ident>
+        <array_patt_decl>
+      / <table_patt_decl>
+      / <apply_patt_decl>
+      / <guarded_ident>
+      / <ident>
    )
 
    array_patt <- (

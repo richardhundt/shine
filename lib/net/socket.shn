@@ -38,7 +38,7 @@ class Socket
 
    getoption(key)
       len = ffi::sizeof('intptr_t')
-      val = ffi::cast('char *', ffi::new('intptr_t[1]', val))
+      val = ffi::cast('char *', ffi::new('intptr_t[1]', 0))
       C::getsockopt(self.fd, C.SOL_SOCKET, key, val, len)
       return tonumber(val[0])
    end
