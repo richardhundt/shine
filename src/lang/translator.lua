@@ -419,7 +419,12 @@ function match:AssignmentExpression(node)
    local init = { }
    local dest = { }
    local chks = { }
-   local exps = self:list(node.right)
+   local exps
+   if node.right then
+      exps = self:list(node.right)
+   else
+      exps = Op{Op(nil)}
+   end
    for i=1, #node.left do
       local n = node.left[i]
       local t = n.type

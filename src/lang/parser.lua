@@ -33,7 +33,7 @@ local patt = [=[
    ws       <- <nl> / %s
    hs       <- (!%nl %s)*
    HS       <- (!%nl %s)+
-   word     <- (%alpha / "_" / "$") (%alnum / "_" / "$")*
+   word     <- (%alpha / "_" / "$" / "!" / "?") (%alnum / "_" / "$" / "!" / "?|)*
 
    reserved <- (
       "local" / "function" / "nil" / "true" / "false" / "return" / "end"
