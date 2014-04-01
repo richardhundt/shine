@@ -263,8 +263,10 @@ local function include(into, ...)
       if from.__included then
          from:__included(into)
       end
-      for k,v in pairs(from.__include__) do
-         into.__include__[k] = true
+      if from.__include__ then
+         for k,v in pairs(from.__include__) do
+            into.__include__[k] = true
+         end
       end
       into.__include__[from] = true
    end
@@ -817,12 +819,14 @@ local function grammar(name, body)
    local members = { }
    local getters = { }
    local setters = { }
+   local include = { }
 
    local gram = setmetatable({
       __name      = name,
       __members__ = members,
       __getters__ = getters,
-      __setters__ = setters
+      __setters__ = setters,
+      __include__ = include
    }, Grammar)
 
    setfenv(body, setmetatable({ }, { __index = getfenv(2) }))
