@@ -61,6 +61,13 @@ export.genid = function(prefix)
    return prefix..ID
 end
 
+function export.unquote(str)
+   if string.sub(str, 1) == '"' and string.sub(str, -1) == '"' then
+      return string.sub(str, 2, -2)
+   end
+   return str
+end
+
 function export.extend(base, with)
    with.__super = base
    with.__index = with

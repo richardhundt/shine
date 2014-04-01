@@ -300,13 +300,11 @@ function match:Chunk(node, opts)
 
    return OpChunk(chunk)
 end
+
+local translate
+
 function match:ImportStatement(node)
    local args = OpList{ self:get(node.from) }
-   if node.from[1].type ~= 'Expression' then
-      local path   = args[i]:sub(2, -2)
-      local loader = require('shine.lang.loader').loader
-      local chunk  = loader(path)
-   end
    local syms = OpList{ }
    for i=1, #node.names do
       local n = node.names[i]
@@ -1502,7 +1500,7 @@ function match:PatternArgument(node)
    return Op{'!call1', Op{'!index', '__rule__', Op"Carg"}, Op(argn)}
 end
 
-local function translate(tree, name, opts)
+function translate(tree, name, opts)
    local self = { }
    self.ctx = Context.new(name, opts)
 
