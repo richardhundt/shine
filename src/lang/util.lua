@@ -62,7 +62,7 @@ export.genid = function(prefix)
 end
 
 function export.unquote(str)
-   if string.sub(str, 1) == '"' and string.sub(str, -1) == '"' then
+   if string.sub(str, 1, 1) == '"' and string.sub(str, -1) == '"' then
       return string.sub(str, 2, -2)
    end
    return str
