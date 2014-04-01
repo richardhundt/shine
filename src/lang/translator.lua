@@ -922,11 +922,12 @@ function match:FunctionDeclaration(node)
    end
 
    local body = self:get(node.body)
-   self.ctx:leave()
 
    for i=#prelude, 1, -1 do
       table.insert(body, 1, prelude[i])
    end
+
+   self.ctx:leave(body)
 
    local func
    if node.generator then
@@ -994,6 +995,7 @@ function match:ClassDeclaration(node)
       self.ctx:define(name)
    else
       self.ctx:define(name, { line = self.ctx.scope.topline })
+      print("hoist class:", name)
       self.ctx:hoist(Op{'!define', name})
    end
 
