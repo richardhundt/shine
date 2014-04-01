@@ -995,7 +995,6 @@ function match:ClassDeclaration(node)
       self.ctx:define(name)
    else
       self.ctx:define(name, { line = self.ctx.scope.topline })
-      print("hoist class:", name)
       self.ctx:hoist(Op{'!define', name})
    end
 
