@@ -913,8 +913,8 @@ exported.
 
 ### <a name="guards"></a>Guards
 
-Variables and function parameters can have guards associated with them,
-and the compiler will insert checks which are executed at runtime each
+Variables and function parameters can have guards associated with them.
+The Shine compiler inserts checks which are executed at runtime each
 time the variable is updated, or in the case of parameters, on
 function entry.
 
@@ -932,16 +932,16 @@ b is Number = 101
 ```
 
 The mechanics are simple: The right hand side of a guard expression
-can be any object which implements an `__is` hook. If the hook returns
-a non-true value, an error is raised.
+can be any object which implements an `__is` hook. If the hook
+returns a non-true value, an error is raised.
 
 The builtin types such as `Number`, as well as classes and modules
 already have the `__is` hook implemented, so these should "just work".
 
-Guards are lexically bound. That is, the value of the variable does
-not carry around additional meta-data with it, so passing it to a
-different scope (or returning it) does not guarantee that it's type
-remains constrained:
+Guards are lexically bound, static entities. That is, the value of
+the variable does not carry around additional run-time meta-data
+with it, so passing it to a different scope (or returning it) does
+not guarantee that its type remains constrained:
 
 ```
 function random()
@@ -953,7 +953,7 @@ x = random()
 x = "cheese"        -- no error here
 ```
 
-However, in practise, functions and methods can enforce a contract:
+However, in practice, functions and methods can enforce a contract:
 
 ```
 function addone(x is Number)
