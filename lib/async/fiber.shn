@@ -4,7 +4,7 @@ class Fiber
    import status, resume from coroutine
 
    local coro, main = coroutine::running()
-   self::main = { coro = coro, args = [ ] } as Fiber
+   self::main = { coro = coro, args = [ ] } as self
    self::idle = function() end
 
    self::current = self::main
