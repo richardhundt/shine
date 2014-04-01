@@ -1,4 +1,9 @@
-# Shine Guide
+# Shine Reference
+
+This document aims to be a fairly concise, but broad reference.
+
+To help get you started, though, have a look at the [wiki](https://github.com/richardhundt/shine/wiki)
+which has a growing collection of tutorials.
 
 * [Introduction](#introduction)
 * [Philosophy](#philosophy)
@@ -34,6 +39,7 @@
     * [Try Statement](#try-statement)
     * [Import Statement](#import-statement)
     * [Export Statement](#export-statement)
+  * [Guards](#guards)
   * [Functions](#functions)
   * [Generators](#generators)
   * [Modules](#modules)
@@ -91,6 +97,7 @@ Summary of safety features:
 * Static local variable name resolution.
 * Default declaration scope is localized.
 * Function and method parameter guards.
+* Scoped variable guards
 * Self-type assertions in methods.
 
 Summary of flexibility features:
@@ -116,7 +123,7 @@ Other notable extensions to Lua:
 * Destructuring assignment.
 * Pattern matching.
 * Default function parameters.
-* Function parameter guards.
+* Parameter and variable guards.
 * Richer type system.
 * Concurrency primitives
 * OS Threads
@@ -903,6 +910,57 @@ are exported and the compilation unit's namespace is essentially sealed.
 
 The `export` statement may not precede the declarations which are being
 exported.
+
+### <a name="guards"></a>Guards
+
+Variables and function parameters can have guards associated with them.
+The Shine compiler inserts checks which are executed at runtime each
+time the variable is updated, or in the case of parameters, on
+function entry.
+
+A variable guard is introduced by using the `is` keyword in a
+declaration:
+
+```
+local a is Number = 42
+
+-- or simply
+b is Number = 101
+
+-- works for destructuring too:
+{ x is Number = X, y is Number = Y } = point
+```
+
+The mechanics are simple: The right hand side of a guard expression
+can be any object which implements an `__is` hook. If the hook
+returns a non-true value, an error is raised.
+
+The builtin types such as `Number`, as well as classes and modules
+already have the `__is` hook implemented, so these should "just work".
+
+Guards are lexically bound, static entities. That is, the value of
+the variable does not carry around additional run-time meta-data
+with it, so passing it to a different scope (or returning it) does
+not guarantee that its type remains constrained:
+
+```
+function random()
+   local x is Number = math::random()
+   return x
+end
+
+x = random()
+x = "cheese"        -- no error here
+```
+
+However, in practice, functions and methods can enforce a contract:
+
+```
+function addone(x is Number)
+   return x + 1
+end
+addone "cheese"     -- Error: bad argument #1 to 'addone'...
+```
 
 ### <a name="functions"></a>Functions
 
