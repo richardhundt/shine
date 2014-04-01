@@ -2,7 +2,7 @@
 
 This document aims to be a fairly concise, but broad reference.
 
-To help get you started, though, have a look at the [wiki](wiki)
+To help get you started, though, have a look at the [wiki](https://github.com/richardhundt/shine/wiki)
 which has a growing collection of tutorials.
 
 * [Introduction](#introduction)
