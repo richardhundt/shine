@@ -628,6 +628,30 @@ Not listed above are the common `(` and `)` for grouping, and
 postcircumfix `()` and `[]` operators for function/method calls and
 subscripting respectively.
 
+In addition to the built-in operators, Shine exposes a full suite
+of user-definable operators, which share precedence with their
+built-in counterparts, but have no intrinsic meaning to the language.
+
+Shine will simply try to call the corresponding meta-method as with
+the built-in operators. The full listing is:
+
+| Operator | Precedence | Associativity | Meta-Method |
+|----------|------------|---------------|-------------|
+|`:!`      | 3          | left          | `__ubang`   |
+|`:?`      | 3          | left          | `__uques`   |
+|`:=`      | 5          | left          | `__ueq`     |
+|`:>`      | 5          | left          | `__ugt`     |
+|`:<`      | 5          | left          | `__ult`     |
+|:&#124;   | 6          | left          | `__upipe`   |
+|`:^`      | 7          | left          | `__ucar`    |
+|`:&`      | 8          | left          | `__uamp`    |
+|`:~`      | 10         | left          | `__utilde`  |
+|`:+`      | 10         | left          | `__uadd`    |
+|`:-`      | 10         | left          | `__usub`    |
+|`:*`      | 11         | left          | `__umul`    |
+|`:/`      | 11         | left          | `__udiv`    |
+|`:%`      | 11         | left          | `__umod`    |
+
 #### <a name="call-expressions"></a>Call Expressions
 
 When calling a function, method, or other callable, parenthesis

@@ -1,136 +1,76 @@
-function gt(n)
-   meta = { }
-   repr = nil
-   function meta::__tostring()
-      if !repr then
-         repr = "gt %{n}"
-      end
-      return repr
-   end
-   function meta.__is(b)
-      return b > n
-   end
-   return meta as meta
-end
-function ?gt(n)
-   return maybe gt(n)
-end
 
-function ge(n)
+local conjoin, disjoin
+
+function conjoin(a, b)
    meta = { }
    repr = nil
    function meta::__tostring()
       if not repr then
-         repr = "ge %{n}"
+         repr = "%{a} :& %{b}"
       end
       return repr
    end
-   function meta.__is(b)
-      return b >= n
+ 
+   function meta::__uamp(a, b)
+      return conjoin(a, b)
+   end
+   function meta::__upipe(a, b)
+      return disjoin(a, b)
+   end
+
+   function meta.__is(v)
+      return v is a and v is b
    end
    return meta as meta
 end
-
-function ?ge(n)
-   return maybe ge(n)
-end
-
-function lt(n)
+ 
+function disjoin(a, b)
    meta = { }
    repr = nil
    function meta::__tostring()
       if not repr then
-         repr = "lt %{n}"
+         repr = "%{a} :| %{b}"
       end
       return repr
    end
-   function meta.__is(b)
-      return b < n
+
+   function meta::__uamp(a, b)
+      return conjoin(a, b)
+   end
+   function meta::__upipe(a, b)
+      return disjoin(a, b)
+   end
+
+   function meta.__is(v)
+      return v is a or v is b
    end
    return meta as meta
 end
 
-function le(n)
-   meta = { }
-   repr = nil
-   function meta::__tostring()
-      if !repr then
-         repr = "le %{n}"
-      end
-      return repr
-   end
-   function meta.__is(b)
-      return b <= n
-   end
-   return meta as meta
-end
-
-function ne(n)
-   meta = { }
-   repr = nil
-   function meta::__tostring()
-      if !repr then
-         repr = "ne %{n}"
-      end
-      return repr
-   end
-   function meta.__is(b)
-      return b != n
-   end
-   return meta as meta
-end
-
-function enum(opts)
-   rmap = { }
-   for i=1, #opts do
-      rmap[opts[i]] = i
-   end
-
-   meta = { }
-   repr = nil
-   function meta::__tostring()
-      if !repr then
-         buf = { }
-         for i=1, #opts do
-            buf[#buf + 1] = tostring(opts[i])
+function guard(name, pred)
+   return function(n)
+      meta = { }
+      repr = nil
+      function meta::__tostring()
+         if not repr then
+            repr = "%{name}(%{n})"
          end
-         repr = "enum { %{table::concat(buf, ', ')} }"
+         return repr
       end
-      return repr
-   end
-   function meta.__is(b)
-      return rmap[b]
-   end
-   return meta as meta
-end
 
-function like(spec)
-   meta = { }
-   repr = nil
-   function meta::__tostring()
-      buf = { }
-      if !repr then
-         for k, v in spec do
-            buf[#buf + 1] = "%{k} = %{v}"
-         end
-         repr = "like { %{table::concat(buf, ', ')} }"
+      function meta::__uamp(a, b)
+         return conjoin(a, b)
       end
-      return repr
-   end
+      function meta::__upipe(a, b)
+         return disjoin(a, b)
+      end
 
-   function meta.__is(b)
-      if type(b) != 'table' then
-         return false
+      function meta.__is(v)
+         return pred(v, n)
       end
-      for k, v in spec do
-         if !(b[k] is v) then
-            return false
-         end
-      end
-      return true
-   end
 
-   return meta as meta
+      return meta as meta
+   end
 end
 
 function maybe(type)
@@ -143,4 +83,176 @@ function maybe(type)
    end
    return meta as meta
 end
+
+gt = guard 'gt', function(a, b)
+   return a > b
+end
+ge = guard 'ge', function(a, b)
+   return a >= b
+end
+lt = guard 'lt', function(a, b)
+   return a < b
+end
+le = guard 'l3', function(a, b)
+   return a <= b
+end
+ne = guard 'ne', function(a, b)
+   return a != b
+end
+
+export gt, ge, lt, le, ne
+
+?gt = maybe gt
+?ge = maybe ge
+?lt = maybe lt
+?le = maybe le
+?ne = maybe ne
+
+export ?gt, ?ge, ?lt, ?le, ?ne
+
+function enum(opts)
+   rmap = { }
+   for i=1, #opts do
+      rmap[opts[i]] = i
+   end
+
+   meta = { }
+   repr = nil
+   function meta::__tostring()
+      if not repr then
+         buf = { }
+         for i=1, #opts do
+            buf[#buf + 1] = tostring(opts[i])
+         end
+         repr = "enum { %{table::concat(buf, ', ')} }"
+      end
+      return repr
+   end
+
+   function meta::__uamp(a, b)
+      return conjoin(a, b)
+   end
+   function meta::__upipe(a, b)
+      return disjoin(a, b)
+   end
+
+   function meta.__is(b)
+      return rmap[b]
+   end
+   return meta as meta
+end
+
+function like(spec)
+   meta = { }
+   repr = nil
+   function meta::__tostring()
+      buf = { }
+      if not repr then
+         for k, v in spec do
+            buf[#buf + 1] = "%{k} = %{v}"
+         end
+         repr = "like { %{table::concat(buf, ', ')} }"
+      end
+      return repr
+   end
+
+   pred = [ ]
+   pred.push"""
+   return function($1, $2)
+   """
+   for _k, v in spec do
+      k = _k
+      if typeof(k) == String then
+         k = "%q".format(k)
+      end
+      pred.push"""
+      if not ($1[%{k}] is $2[%{k}]) then
+         return false
+      end
+      """
+   end
+   pred.push"""
+      return false
+   end
+   """
+
+   pred = eval(pred.join())
+
+   function meta.__is(b)
+      if type(b) != 'table' then
+         return false
+      end
+      return pred(b, spec)
+   end
+
+   return meta as meta
+end
+
+export enum, like, maybe
+
+function fields(schema is Table)
+   module fields
+      local slots = { }
+ 
+      for k, v in schema do
+         slot = { }
+         function slot.set(o, v)
+            if v is schema[k] then
+               rawset(o, self, v)
+            else
+               error("%{schema[k]} expected got %{typeof(v)}", 5)
+            end
+         end
+         function slot.get(o)
+            return rawget(o, self)
+         end
+         slots[k] = slot
+      end
+ 
+      __get__(k)
+         if slots[k] then
+            return slots[k].get(self)
+         else
+            error("attempt to get member: %{k} in %{self}", 4)
+         end
+      end
+ 
+      __set__(k, v)
+         if slots[k] then
+            slots[k].set(self, v)
+         else
+            error("attempt to set member: %{k} in %{self}", 4)
+         end
+      end
+ 
+      function self.__included(into)
+         into.$slots = slots
+         if into.__base and into.__base.$slots then
+            setmetatable(into.$slots, { __index = into.__base.$slots })
+         end
+      end
+ 
+   end
+ 
+   return fields
+end
+
+function struct(schema is Table)
+   class struct
+      include fields(schema)
+
+      function self.__apply(init = { })
+         o = { } as self
+         for k, v in init do
+            o[k] = v
+         end
+         return o
+      end
+ 
+   end
+ 
+   return struct
+end
+
+export fields, struct
 
