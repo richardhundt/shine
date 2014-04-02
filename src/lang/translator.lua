@@ -786,9 +786,13 @@ end
 function match:TryStatement(node)
    local oldret = self.retsig
    local oldval = self.retval
+   local oldbrk = self.brksig
+   local oldcnt = self.cntsig
 
    self.retsig = util.genid()
    self.retval = util.genid()
+   self.brksig = util.genid()
+   self.cntsig = util.genid()
 
    local try = Op{'!lambda', Op{ }, self:get(node.body)}
 
@@ -822,17 +826,25 @@ function match:TryStatement(node)
    local catch = Op{'!lambda', Op{'!vararg'}, OpChunk(clauses)}
 
    local expr = Op{'!call', 'try', try, catch, finally }
+
    local temp = self.retval
    local rets = self.retsig
+   local brks = self.brksig
+   local cnts = self.cntsig
 
    self.retsig = oldret
    self.retval = oldval
+   self.brksig = oldbrk
+   self.cntsig = oldcnt
 
    return Op{'!do', 
-      Op{'!define', rets, Op(false) },
+      Op{'!define', Op{ rets, brks, cnts }, Op{ '!false', '!false', '!false' } },
       Op{'!define', temp, Op(nil) },
       Op(expr),
-      Op{'!if', rets, Op{'!return', temp } } }
+      Op{'!if', rets, Op{'!return', temp } },
+      Op{'!if', cnts, Op{'!goto', self.loop} },
+      Op{'!if', brks, Op{'!break'} }
+   }
 end
 function match:LabelStatement(node)
    return Op{'!label', node.label.name }
@@ -841,9 +853,21 @@ function match:GotoStatement(node)
    return Op{'!goto', node.label.name }
 end
 function match:BreakStatement(node)
+   if self.brksig then
+      return OpChunk{
+         Op{'!assign', self.brksig, '!true'},
+         Op{'!return'}
+      }
+   end
    return Op{'!break'}
 end
 function match:ContinueStatement(node)
+   if self.cntsig then
+      return OpChunk{
+         Op{'!assign', self.cntsig, '!true'},
+         Op{'!return'}
+      }
+   end
    return Op{'!goto', self.loop}
 end
 
