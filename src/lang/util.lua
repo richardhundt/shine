@@ -22,6 +22,9 @@ local function dump(node, level)
    if type(node) == "function" then
       return tostring(node)
    end
+   if type(node) == 'cdata' then
+      return tostring(node)
+   end
 
    local buff = { }
    local dent = string.rep("    ", level)

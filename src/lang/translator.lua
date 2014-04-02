@@ -837,14 +837,17 @@ function match:TryStatement(node)
    self.brksig = oldbrk
    self.cntsig = oldcnt
 
-   return Op{'!do', 
+   local frag = Op{'!do', 
       Op{'!define', Op{ rets, brks, cnts }, Op{ '!false', '!false', '!false' } },
       Op{'!define', temp, Op(nil) },
       Op(expr),
-      Op{'!if', rets, Op{'!return', temp } },
-      Op{'!if', cnts, Op{'!goto', self.loop} },
-      Op{'!if', brks, Op{'!break'} }
+      Op{'!if', rets, Op{'!return', temp } }
    }
+   if self.loop then
+      frag[#frag + 1] = Op{'!if', cnts, Op{'!goto', self.loop} }
+      frag[#frag + 1] = Op{'!if', brks, Op{'!break'} }
+   end
+   return frag
 end
 function match:LabelStatement(node)
    return Op{'!label', node.label.name }
@@ -862,6 +865,9 @@ function match:BreakStatement(node)
    return Op{'!break'}
 end
 function match:ContinueStatement(node)
+   if not self.loop then
+      self.ctx:fail("no loop to continue")
+   end
    if self.cntsig then
       return OpChunk{
          Op{'!assign', self.cntsig, '!true'},

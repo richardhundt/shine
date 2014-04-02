@@ -26,7 +26,7 @@ local patt = [=[
 
    comment  <- <bcomment> / <ccomment> / <lcomment>
 
-   idsafe   <- !(%alnum / "_")
+   idsafe   <- !(%alnum / "_" / "!" / "?" / "$")
    nl       <- %nl -> incline
    s        <- (<comment> / <nl> / !%nl %s)*
    S        <- (<comment> / <nl> / !%nl %s)+
@@ -218,14 +218,12 @@ local patt = [=[
    bind_left <- (
         <array_patt>
       / <table_patt>
-      / <apply_patt>
       / <guarded_ident>
-      / <member_expr>
+      / <term>
    )
    decl_left <- (
         <array_patt_decl>
       / <table_patt_decl>
-      / <apply_patt_decl>
       / <guarded_ident>
       / <ident>
    )
@@ -265,27 +263,6 @@ local patt = [=[
       ( {:name: <name> :} / {:expr: "[" s <expr> s "]" :} ) s
       "=" s {:value: <decl_left> :}
       / {:value: <decl_left> :}
-   |}
-
-   apply_patt <- {|
-      <term> <apply_tail>* <apply_call>
-   |} -> applyPatt
-
-   apply_patt_decl <- {|
-      <term> <apply_tail>* <apply_call_decl>
-   |} -> applyPatt
-
-   apply_tail <- {|
-        s { "." } s <ident>
-      / s { "::" } s (<ident> / %1 => error)
-      / s { "[" } s <expr> s ("]" / %1 => error)
-   |}
-
-   apply_call <- {|
-      { "(" } s {| <bind_left> (s "," s <bind_left>)* |} s ")"
-   |}
-   apply_call_decl <- {|
-      { "(" } s {| <decl_left> (s "," s <decl_left>)* |} s ")"
    |}
 
    ident_list <- (
@@ -407,7 +384,6 @@ local patt = [=[
       s "case" <idsafe> s (
            <array_patt>
          / <table_patt>
-         / <apply_patt>
          / <expr>
       )
       {| (s "if" <idsafe> s <expr>)? |}
@@ -445,7 +421,7 @@ local patt = [=[
       !<reserved> { <word> }
    ) -> identifier
 
-   term <- (('' -> curline) (
+   primary <- (('' -> curline) (
         <coro_expr>
       / <func_expr>
       / <nil_expr>
@@ -458,12 +434,23 @@ local patt = [=[
       / <literal>
       / <qstring>
       / "(" s <expr> s ")"
-   )) -> term
+   ))
+
+   term <- (
+      <primary> {| (
+           s {'.' / '::'} <name>
+         / { "[" } s <expr> s ("]" / %1 => error)
+         / { "(" } s {| <expr_list>? |} s (")" / %1 => error)
+      )* (
+         {~ (hs &['"[{] / HS) -> "(" ~}
+         {| <spread_expr> / !<binop> <expr_list> |}
+      )? |}
+   ) -> term
 
    expr <- (('' -> curline) (<infix_expr> / <spread_expr>)) -> expr
 
    spread_expr <- (
-      "..." <postfix_expr>?
+      "..." <term>?
    ) -> spreadExpr
 
    nil_expr <- (
@@ -475,7 +462,7 @@ local patt = [=[
    ) -> superExpr
 
    expr_stmt <- (
-      (''->curline) (<assign_expr> / <update_expr> / <postfix_expr> / <ident>)
+      ('' -> curline) (<assign_expr> / <update_expr> / <term>)
    ) -> exprStmt
 
    binop <- {
@@ -490,34 +477,9 @@ local patt = [=[
    ) -> infixExpr / <prefix_expr>
 
    prefix_expr <- (
-      { "#" / "-" !'-' } s <postfix_expr>
+      { "#" / "-" !'-' } s <term>
       / { "~" / "!" / "not" <idsafe> } s <prefix_expr>
-   ) -> prefixExpr / <postfix_expr>
-
-   postfix_expr <- {|
-      <term> <postfix_tail>+
-   |} -> postfixExpr / <term>
-
-   postfix_tail <- {|
-        s { "." } s <name>
-      / s { "::" } s (<name> / %1 => error)
-      / hs { "[" } s <expr> s ("]" / %1 => error)
-      / { "(" } s {| <expr_list>? |} s (")" / %1 => error)
-      / {~ (hs &['"[{] / HS) -> "(" ~} {| <spread_expr> / !<binop> <expr_list> |}
-   |}
-
-   member_expr <- {|
-      <term> <member_next>?
-   |} -> postfixExpr / <term>
-
-   member_next <- (
-      <postfix_tail> <member_next> / <member_tail>
-   )
-   member_tail <- {|
-        s { "." } s <name>
-      / s { "::" } s <name>
-      / s { "[" } s <expr> s ("]" / %1 => error)
-   |}
+   ) -> prefixExpr / <term>
 
    assop <- {
       "+=" / "-=" / "~=" / "**=" / "*=" / "/=" / "%=" / "and="
@@ -546,8 +508,7 @@ local patt = [=[
       <table_entry> (<table_sep> s <table_entry>)* <table_sep>?
    )
    table_entry <- {|
-      ( {:name: <name> :} / {:expr: "[" s <expr> s "]" :} ) s
-      "=" s {:value: <expr> :}
+      ( {:name: <name> :} / {:expr: "[" s <expr> s "]" :} ) s "=" s {:value: <expr> :}
       / {:value: <expr> :}
    |} -> tableEntry
 
@@ -616,9 +577,9 @@ local patt = [=[
    )
 
    patt_prod <- (
-        {'~>'} s <postfix_expr>
-      / {'->'} s <postfix_expr>
-      / {'+>'} s <postfix_expr>
+        {'~>'} s <term>
+      / {'->'} s <term>
+      / {'+>'} s <term>
    ) -> pattProd
 
    patt_opt <- (

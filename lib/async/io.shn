@@ -142,6 +142,11 @@ class ByteStream
       self.wput = Queue()
       self.wget = Queue()
    end
+
+   __len__()
+      return self.have
+   end
+
    set eof(v)
       self.is_eof = v
       while self.wget.count() > 0 do

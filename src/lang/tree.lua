@@ -75,10 +75,26 @@ function defs.stmt(line, node)
    node.line = line
    return node
 end
-function defs.term(line, node)
+function defs.term(line, node, tail)
    node.line = line
    if node.type == 'Identifier' then
       node.check = true
+   end
+   for i=1, #tail, 2 do
+      local oper = tail[i]
+      local expr = tail[i + 1]
+      if oper == '.' then
+         node = defs.memberExpr(node, expr, false)
+      elseif oper == '::' then
+         node = defs.memberExpr(node, expr, false)
+         node.namespace = true
+      elseif oper == '[' then
+         node = defs.memberExpr(node, expr, true)
+      elseif oper == '(' then
+         node = defs.callExpr(node, expr)
+      else
+         error("PANIC: parser is broken")
+      end
    end
    return node
 end
@@ -174,20 +190,6 @@ end
 function defs.tablePatt(entries, coerce)
    return { type = "TablePattern", entries = entries, coerce = coerce }
 end
-function defs.applyPatt(expr)
-   local base = expr[1]
-   for i=2, #expr do
-      if expr[i][1] == "(" then
-         base = defs.callExpr(base, expr[i][2])
-      else
-         base = defs.memberExpr(base, expr[i][2], expr[i][1] == "[")
-         base.namespace = expr[i][1] == "::"
-      end
-   end
-   base.type = 'ApplyPattern'
-   return base
-end
-
 function defs.tableEntry(item)
    return item
 end
@@ -434,9 +436,6 @@ end
 function defs.callExpr(expr, args)
    return { type = "CallExpression", callee = expr, arguments = args }
 end
-function defs.newExpr(expr, args)
-   return { type = "NewExpression", callee = expr, arguments = args }
-end
 
 function defs.binaryExpr(op, lhs, rhs)
    return { type = "BinaryExpression", operator = op, left = lhs, right = rhs }
@@ -445,6 +444,11 @@ function defs.logicalExpr(op, lhs, rhs)
    return { type = "LogicalExpression", operator = op, left = lhs, right = rhs }
 end
 function defs.assignExpr(lhs, rhs)
+   for i=1, #lhs do
+      if lhs[i].type == 'CallExpression' then
+         lhs[i].type = 'ApplyPattern'
+      end
+   end
    return { type = "AssignmentExpression", left = lhs, right = rhs }
 end
 function defs.updateExpr(left, op, right)
@@ -498,6 +502,9 @@ local op_info = {
 
    ["**"]  = { 15, 'R' },
    ["#_"]  = { 16, 'R' },
+
+   ["."]   = { 17, 'L' },
+   ["::"]  = { 17, 'L' },
 
    -- user operators
    [":!"]  = { 3, 'L' },
