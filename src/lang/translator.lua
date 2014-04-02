@@ -678,20 +678,6 @@ function match:IfStatement(node)
    return Op{'!if', test, Op{'!do', cons}, Op{'!do', altn } }
 end
 
--- do
---   $#1 = a
---   if __match__(a, $#2) then
---     if not <guard> then
---       goto l2
---     end
---     goto last
---   end
---   ::l2::
---   if __match__(a, $#3) then
---
---   end
---   ::last::
--- end
 function match:GivenStatement(node)
    local body = { }
    local disc = util.genid()
