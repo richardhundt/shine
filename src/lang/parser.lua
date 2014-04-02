@@ -410,6 +410,7 @@ local patt = [=[
          / <apply_patt>
          / <expr>
       )
+      {| (s "if" <idsafe> s <expr>)? |}
       s "then" <idsafe> s <block_stmt>
    ) -> givenCase
 
@@ -480,7 +481,8 @@ local patt = [=[
    binop <- {
       "+" / "-" / "~" / "/" / "**" / "*" / "%" / "^" / "|" / "&"
       / ">>>" / ">>" / ">=" / ">" / "<<" / "<=" / "<" / ".."
-      / "!=" / "==" / ("or" / "and" / "is" / "as") <idsafe>
+      / "!=" / "==" / ":" [-~/*%^|&><!?=]
+      / ("or" / "and" / "is" / "as") <idsafe>
    }
 
    infix_expr  <- (

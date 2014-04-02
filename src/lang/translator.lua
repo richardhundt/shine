@@ -241,7 +241,7 @@ local globals = {
    'UserData', 'Table', 'Array', 'Error', 'Module', 'Class', 'Object',
    'Grammar', 'Pattern', 'ArrayPattern', 'TablePattern', 'ApplyPattern',
    '__magic__', 'yield', 'take', 'typeof', 'null', 'warn', 'eval',
-   '__FILE__', '__LINE__', '_M', '_PACKAGE', '_NAME'
+   '__FILE__', '__LINE__', '_M', '_PACKAGE', '_NAME', 'Meta'
 }
 for k,v in pairs(_G) do
    globals[#globals + 1] = k
@@ -678,67 +678,121 @@ function match:IfStatement(node)
    return Op{'!if', test, Op{'!do', cons}, Op{'!do', altn } }
 end
 
+-- do
+--   $#1 = a
+--   if __match__(a, $#2) then
+--     if not <guard> then
+--       goto l2
+--     end
+--     goto last
+--   end
+--   ::l2::
+--   if __match__(a, $#3) then
+--
+--   end
+--   ::last::
+-- end
 function match:GivenStatement(node)
    local body = { }
    local disc = util.genid()
 
    body[#body + 1] = Op{'!define', disc, self:get(node.discriminant) }
 
-   local cases = { }
+   local labels = { }
+
    for i=1, #node.cases do
-      local case = node.cases[i]
-      local test, cons
-      if case.test then
-         local t = case.test.type
+      labels[#labels + 1] = util.genid()
+   end
+
+   self.ctx:enter()
+
+   for i=1, #node.cases do
+      local n = node.cases[i]
+      if n.test then
+         local t = n.test.type
+         local case = { }
          if t == 'ArrayPattern' or t == 'TablePattern' or t == 'ApplyPattern' then
+            local cons = { }
+
             -- for storing the template
             local temp = util.genid()
             self.ctx:define(temp)
 
-            body[#body + 1] = Op{'!define', temp, self:get(case.test) }
-            test = Op{'!call', '__match__', temp, disc }
+            case[#case + 1] = Op{'!define', temp, self:get(n.test) }
+
+            cons[#cons + 1] = Op{'!if',
+               Op{'!not', Op{'!call', '__match__', temp, disc } },
+               Op{'!goto', labels[i] }
+            }
 
             self.ctx:enter() -- consequent
+
             local into = { }
-            local bind = extract_bindings(case.test)
+            local bind = extract_bindings(n.test)
             local vars = { }
+            local chks = { }
             for i=1, #bind do
                local n = bind[i]
                if n.type == 'Identifier' then
-                  self.ctx:define(n.name)
-                  vars[#vars + 1] = self:get(n)
+                  local guard
+                  if n.guard then
+                     guard = util.genid()
+                     case[#case + 1] = Op{'!let', guard, self:get(n.guard)}
+                  end
+                  self.ctx:define(n.name, nil, guard)
+                  if guard then
+                     chks[#chks + 1] = self.ctx:lookup(n.name)
+                  end
+                  vars[#vars + 1] = n.name
                end
                bind[i] = self:get(n)
             end
 
-            cons = self:get(case.consequent)
-
             if #vars > 0 then
-               self.ctx:hoist(Op{'!define', Op(vars), Op{ Op(nil) } })
+               case[#case + 1] = Op{'!define', Op(vars), Op{ Op(nil) } }
             end
 
-            self.ctx:hoist(
-               Op{'!massign',
-                  Op(bind), Op{Op{'!call', '__extract__', temp, disc}}}
-            )
-            self.ctx:leave(cons)
+            cons[#cons + 1] = Op{'!massign',
+               Op(bind), Op{ Op{'!call', '__extract__', temp, disc } }
+            }
+
+            for i=1, #chks do
+               cons[#cons + 1] = Op{'!call', '__check__', chks[i].name, chks[i].guard}
+            end
+
+            if n.guard then
+               cons[#cons + 1] = Op{'!if',
+                  Op{'!not', self:get(n.guard) }, Op{'!goto', labels[i] }
+               }
+            end
+
+            cons[#cons + 1] = self:get(n.consequent)
+            self.ctx:leave()
+
+            case[#case + 1] = Op{'!do', OpChunk(cons)}
+            case[#case + 1] = Op{'!goto', labels[#labels] }
          else
-            test = Op{'!call', '__match__', self:get(case.test), disc }
-            cons = self:get(case.consequent)
+            case[#case + 1] = Op{'!if',
+               Op{'!not', Op{'!call', '__match__', self:get(n.test), disc } },
+               Op{'!goto', labels[i] }
+            }
+            if n.guard then
+               case[#case + 1] = Op{'!if',
+                  Op{'!not', self:get(n.guard) }, Op{'!goto', labels[i] }
+               }
+            end
+            case[#case + 1] = self:get(n.consequent)
+            case[#case + 1] = Op{'!goto', labels[#labels] }
          end
+         body[#body + 1] = Op{'!do', OpChunk(case) }
       else
-         test = Op(true)
-         cons = self:get(case.consequent)
+         -- else clause
+         body[#body + 1] = Op{'!do', self:get(n.consequent) }
       end
-      cases[#cases + 1] = Op{'!if', test, Op{'!do', cons} }
+      body[#body + 1] = Op{'!label', labels[i]}
    end
 
-   util.fold_left(cases, function(a, b)
-      a[4] = b
-      return b
-   end)
-
-   body[#body + 1] = cases[1]
+   self.ctx:leave(body)
 
    return Op{'!do', OpChunk(body) }
 end
@@ -854,6 +908,9 @@ function match:BinaryExpression(node)
    end
    if o == '..' then
       return Op{'!call', '__range__', self:get(node.left), self:get(node.right)}
+   end
+   if string.sub(o, 1, 1) == ':' then
+      return Op{'!call', '__usrop__', Op(o), self:get(node.left), self:get(node.right) }
    end
    return Op{binop[o], self:get(node.left), self:get(node.right)}
 end

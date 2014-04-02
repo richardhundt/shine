@@ -328,12 +328,12 @@ function defs.blockStmt(body)
 end
 function defs.givenStmt(disc, cases, default)
    if default then
-      cases[#cases + 1] = defs.givenCase(nil, default)
+      cases[#cases + 1] = defs.givenCase(nil, { }, default)
    end
    return { type = "GivenStatement", discriminant = disc, cases = cases }
 end
-function defs.givenCase(test, cons)
-   return { type = "GivenCase", test = test, consequent = cons }
+function defs.givenCase(test, guard, cons)
+   return { type = "GivenCase", test = test, guard = guard[1], consequent = cons }
 end
 
 function defs.returnStmt(args)
@@ -498,6 +498,22 @@ local op_info = {
 
    ["**"]  = { 15, 'R' },
    ["#_"]  = { 16, 'R' },
+
+   -- user operators
+   [":!"]  = { 3, 'L' },
+   [":?"]  = { 3, 'L' },
+   [":="]  = { 5, 'L' },
+   [":>"]  = { 5, 'L' },
+   [":<"]  = { 5, 'L' },
+   [":|"]  = { 6, 'L' },
+   [":^"]  = { 7, 'L' },
+   [":&"]  = { 8, 'L' },
+   [":~"]  = { 12, 'L' },
+   [":+"]  = { 12, 'L' },
+   [":-"]  = { 12, 'L' },
+   [":*"]  = { 13, 'L' },
+   [":/"]  = { 13, 'L' },
+   [":%"]  = { 13, 'L' },
 }
 
 local patt_op_info = {

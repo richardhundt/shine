@@ -1021,8 +1021,44 @@ local function check(expr, type)
    return expr
 end
 
+local usrop_events = {
+   [':!'] = '__ubang',
+   [':?'] = '__uques',
+   [':='] = '__ueq',
+   [':>'] = '__ugt',
+   [':<'] = '__ult',
+   [':|'] = '__upipe',
+   [':^'] = '__ucar',
+   [':&'] = '__uamp',
+   [':~'] = '__utilde',
+   [':+'] = '__uadd',
+   [':-'] = '__usub',
+   [':*'] = '__umul',
+   [':/'] = '__udiv',
+   [':%'] = '__umod'
+}
+
+local function usrop(op, a, b)
+   local o, mt, h = usrop_events[op]
+   mt = getmetatable(a)
+   if mt and mt[o] then
+      h = mt[o]
+   end
+   if h == nil then
+      mt = getmetatable(b)
+      if mt and mt[o] then
+         h = mt[o]
+      end
+      if h == nil then
+         error(string.format("no handler for operator '%s'", op), 2)
+      end
+   end
+   return h(a, b)
+end
+
 __magic__ = {
    -- builtin types
+   Meta = Meta;
    Nil = Nil;
    Number = Number;
    Boolean = Boolean;
@@ -1061,6 +1097,8 @@ __magic__ = {
 
    -- constants
    null = null;
+
+   __usrop__ = usrop;
 
    -- operators
    __check__ = check;

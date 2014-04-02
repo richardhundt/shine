@@ -13,10 +13,10 @@ local p = Point(11, 22)
 local x = / { [a-z]+ } " " { [a-z]+ } /
 local s = "two words"
 
-given s
+given a
    case [ 42, X ] then
       print X
-   case { answer = X } then
+   case { answer = X is Number } if X > 10 then
       print "answer : %{X}"
    case x(w, z) then
       print "word: '%{w}', '%{z}'"
