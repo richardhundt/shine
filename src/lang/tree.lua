@@ -462,7 +462,19 @@ function defs.updateExpr(lhs, rhs)
       return lhs
    end
 end
-function defs.localDecl(lhs, rhs)
+function defs.localDecl(name, lhs, rhs)
+   for i=1, #lhs do
+      if lhs[i].type == 'CallExpression' then
+         lhs[i].type = 'ApplyPattern'
+      elseif lhs[i].type ~= 'Identifier' then
+         print(string.format(
+            "Error: %s:%s: invalid left hand side in local declaration",
+            tostring(name), tostring(line)
+         ))
+         os.exit(1)
+      end
+   end
+
    return { type = "LocalDeclaration", names = lhs, inits = rhs }
 end
 function defs.doStmt(block)

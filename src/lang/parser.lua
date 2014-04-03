@@ -195,7 +195,7 @@ local patt = [=[
    ) -> guardedIdent
 
    local_decl <- (
-      "local" <idsafe> s {| <decl_left> (s "," s <decl_left>)* |}
+      "local" <idsafe> %1 s {| <bind_left> (s "," s <bind_left>)* |}
       (s "=" s {| <expr_list> |})?
    ) -> localDecl
 
@@ -221,34 +221,18 @@ local patt = [=[
       / <guarded_ident>
       / <term>
    )
-   decl_left <- (
-        <array_patt_decl>
-      / <table_patt_decl>
-      / <guarded_ident>
-      / <ident>
-   )
 
    array_patt <- (
       "[" s {| <bind_left> (s "," s <bind_left>)* |} s ("]" / %1 => error)
    ) -> arrayPatt
 
-   array_patt_decl <- (
-      "[" s {| <decl_left> (s "," s <decl_left>)* |} s ("]" / %1 => error)
-   ) -> arrayPatt
-
    table_sep <- (
       hs (","/";"/<nl>)
    )
+
    table_patt <- (
       "{" s {|
          <table_patt_pair> (<table_sep> s <table_patt_pair>)*
-         <table_sep>?
-      |} s ("}" / %1 => error)
-   ) -> tablePatt
-
-   table_patt_decl <- (
-      "{" s {|
-         <table_patt_pair_decl> (<table_sep> s <table_patt_pair_decl>)*
          <table_sep>?
       |} s ("}" / %1 => error)
    ) -> tablePatt
@@ -257,12 +241,6 @@ local patt = [=[
       ( {:name: <name> :} / {:expr: "[" s <expr> s "]" :} ) s
       "=" s {:value: <bind_left> :}
       / {:value: <bind_left> :}
-   |}
-
-   table_patt_pair_decl <- {|
-      ( {:name: <name> :} / {:expr: "[" s <expr> s "]" :} ) s
-      "=" s {:value: <decl_left> :}
-      / {:value: <decl_left> :}
    |}
 
    ident_list <- (
@@ -436,7 +414,7 @@ local patt = [=[
 
    term <- (
       <primary> {| (
-           s {'.' / '::'} <name>
+         s {'.' / '::'} s <name>
          / { "[" } s <expr> s ("]" / %1 => error)
          / { "(" } s {| <expr_list>? |} s (")" / %1 => error)
       )* (
@@ -475,7 +453,7 @@ local patt = [=[
    ) -> infixExpr
 
    prefix_expr <- (
-      { "#" / "-" !'-' / "~" / "!" / "not" <idsafe> }? s <term>
+      ({ "#" / "-" !'-' / "~" / "!" / "not" <idsafe> } s)? <term>
    ) -> prefixExpr
 
    assop <- {
