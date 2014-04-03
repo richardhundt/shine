@@ -25,6 +25,7 @@ function defs.integer(n, c)
       b = 16
    elseif string.sub(n, 1, 2) == '0o' then
       b = 8
+      n = string.sub(n, 3)
    end
    if c == 'LL' then
       return int64_t(tonumber(n, b))
