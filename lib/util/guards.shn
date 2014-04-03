@@ -172,7 +172,7 @@ function like(spec)
       """
    end
    pred.push"""
-      return false
+      return true
    end
    """
 
