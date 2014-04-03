@@ -1,9 +1,31 @@
+class Point
+   self(x, y)
+      self.x = x
+      self.y = y
+   end
+   function self.__unapply(o)
+      return ipairs{ o.x, o.y }
+   end
+end
+
+local a = { answer = 42 }
+local p = Point(11, 22)
 local x = / { [a-z]+ } " " { [a-z]+ } /
 local s = "two words"
 
-given s
+given p
+   case [ 42, X ] then
+      print X
+   case { answer = X } then
+      print "answer : %{X}"
    case x(w, z) then
       print "word: '%{w}', '%{z}'"
+   case Point(x, y) then
+      print "Point(%{x}, %{y})"
+   case { x = x } then
+      print "{ x = %{x} } as Point"
+   case 42 then
+      print "forty-two"
    else
       print "NADA"
 end
