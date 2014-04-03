@@ -59,7 +59,7 @@
 		</dict>
 		<dict>
 			<key>match</key>
-			<string>(?&lt;![\d.])\s0x[a-fA-F\d]+|\b\d+(\.\d+)?([eE]-?\d+)?|\.\d+([eE]-?\d+)?</string>
+			<string>(?&lt;![\d.])\s0x[a-fA-F\d]+|\b0o[0-8]+|\b\d+(\.\d+)?([eE]-?\d+)?|\.\d+([eE]-?\d+)?</string>
 			<key>name</key>
 			<string>constant.numeric.shn</string>
 		</dict>

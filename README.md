@@ -1,3 +1,16 @@
+
+```Lua
+import like from "util.guards"
+
+Shiny = like { luminosity = Number }
+
+function bling(what is Shiny)
+   print "\u2606\u20AC %{what.luminosity} \u20AC\u2606"
+end
+
+bling { luminosity = 42 }
+```
+
 # Shine Reference
 
 This document aims to be a fairly concise, but broad reference.

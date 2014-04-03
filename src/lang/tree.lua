@@ -5,6 +5,7 @@ See Copyright Notice in shine
 
 local ffi  = require('ffi')
 local tvm  = require('tvm')
+local utf8 = require('utf8')
 local util = require('shine.lang.util')
 
 local defs = { }
@@ -62,9 +63,8 @@ function defs.escape(s)
       return string.char(tonumber(a))
    end
    if string.sub(s, 1, 2) == '\\u' then
-      local a = '0x'..string.sub(s, 3, 4)
-      local b = '0x'..string.sub(s, 5, 6)
-      return tvm.wchar(tonumber(a), tonumber(b))
+      local c = '0x'..string.sub(s, 3)
+      return utf8.char(tonumber(c))
    end
    error(string.format("invalid escape sequence: %q on line %s", s, line))
 end
