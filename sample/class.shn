@@ -57,5 +57,5 @@ for i, v in a do
    print(i, "val:", v)
 end
 
-print((x) => x * 2)
+print((x) => return x * 2 end)
 

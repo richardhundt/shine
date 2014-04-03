@@ -416,19 +416,10 @@ function defs.superExpr()
    return { type = "SuperExpression" }
 end
 function defs.prefixExpr(o, a)
-   return { type = "UnaryExpression", operator = o, argument = a }
-end
-function defs.postfixExpr(expr)
-   local base = expr[1]
-   for i=2, #expr do
-      if expr[i][1] == "(" then
-         base = defs.callExpr(base, expr[i][2])
-      else
-         base = defs.memberExpr(base, expr[i][2], expr[i][1] == "[")
-         base.namespace = expr[i][1] == "::"
-      end
+   if o and a then
+      return { type = "UnaryExpression", operator = o, argument = a }
    end
-   return base
+   return o
 end
 function defs.memberExpr(b, e, c)
    return { type = "MemberExpression", object = b, property = e, computed = c }
@@ -451,8 +442,21 @@ function defs.assignExpr(lhs, rhs)
    end
    return { type = "AssignmentExpression", left = lhs, right = rhs }
 end
-function defs.updateExpr(left, op, right)
-   return { type = "UpdateExpression", left = left, operator = op, right = right }
+
+function defs.updateExpr(lhs, rhs)
+   if rhs then
+      if rhs.oper then
+         return {
+            type     = "UpdateExpression",
+            left     = lhs,
+            operator = rhs.oper,
+            right    = rhs.expr
+         }
+      end
+      return defs.assignExpr({ lhs, unpack(rhs) }, rhs.list)
+   else
+      return lhs
+   end
 end
 function defs.localDecl(lhs, rhs)
    return { type = "LocalDeclaration", names = lhs, inits = rhs }
@@ -569,8 +573,11 @@ local function fold_expr(exp, min)
    return lhs
 end
 
-function defs.infixExpr(exp)
-   return fold_expr(exp, 0)
+function defs.infixExpr(expr)
+   if expr[2] then
+      return fold_expr(expr, 0)
+   end
+   return expr[1]
 end
 
 function defs.regexExpr(expr)

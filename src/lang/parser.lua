@@ -287,9 +287,7 @@ local patt = [=[
 
    func_expr <- (
       "function" <idsafe> s <func_head> s <func_body>
-      / (<func_head> / {| |}) s "=>" (
-         hs <expr> / s <block_stmt> s (<end> / %1 => error) / %1 => error
-      )
+      / (<func_head> / {| |}) s "=>" s <func_body>
    ) -> funcExpr
 
    func_body <- <block_stmt> s (<end> / %1 => error)
@@ -462,7 +460,7 @@ local patt = [=[
    ) -> superExpr
 
    expr_stmt <- (
-      ('' -> curline) (<assign_expr> / <update_expr> / <term>)
+      ('' -> curline) <update_expr>
    ) -> exprStmt
 
    binop <- {
@@ -473,25 +471,23 @@ local patt = [=[
    }
 
    infix_expr  <- (
-      {| <prefix_expr> (s <binop> s <prefix_expr>)+ |}
-   ) -> infixExpr / <prefix_expr>
+      {| <prefix_expr> (s <binop> s <prefix_expr>)* |}
+   ) -> infixExpr
 
    prefix_expr <- (
-      { "#" / "-" !'-' } s <term>
-      / { "~" / "!" / "not" <idsafe> } s <prefix_expr>
-   ) -> prefixExpr / <term>
+      { "#" / "-" !'-' / "~" / "!" / "not" <idsafe> }? s <term>
+   ) -> prefixExpr
 
    assop <- {
       "+=" / "-=" / "~=" / "**=" / "*=" / "/=" / "%=" / "and="
       / "|=" / "or=" / "&=" / "^=" / "<<=" / ">>>=" / ">>="
    }
 
-   assign_expr <- (
-      {| <bind_left> (s "," s <bind_left>)* |} s "=" s {| <expr_list> |}
-   ) -> assignExpr
-
    update_expr <- (
-      <bind_left> s <assop> s <expr>
+      <bind_left> {|
+         (s {:oper: <assop> :} s {:expr: <expr> :})
+         / ((s "," s <bind_left>)* s '=' !'>' s {:list: {| <expr_list> |} :})
+      |}?
    ) -> updateExpr
 
    array_expr <- (
@@ -508,7 +504,8 @@ local patt = [=[
       <table_entry> (<table_sep> s <table_entry>)* <table_sep>?
    )
    table_entry <- {|
-      ( {:name: <name> :} / {:expr: "[" s <expr> s "]" :} ) s "=" s {:value: <expr> :}
+      ( {:name: <name> :} / {:expr: "[" s <expr> s "]" :} ) s
+      "=" !'>' s {:value: <expr> :}
       / {:value: <expr> :}
    |} -> tableEntry
 

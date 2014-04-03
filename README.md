@@ -97,16 +97,17 @@ Summary of safety features:
 * Static local variable name resolution.
 * Default declaration scope is localized.
 * Function and method parameter guards.
-* Scoped variable guards
+* Scoped variable guards.
 * Self-type assertions in methods.
 
 Summary of flexibility features:
 
 * Operator meta-methods as in Lua with Shine specific extensions.
-* Deep introspection into nominal types
-* Lambda expressions / short function syntax
-* Optional parentheses 
-* Property getters and setters with fallback
+* Deep introspection into nominal types.
+* Lambda expressions (short function syntax).
+* Optional parentheses.
+* Property getters and setters with fallback.
+* User-only operators.
 
 Additionally, all constructs can be nested. Classes can be declared
 inside other classes and even inside functions, which allows for
@@ -768,11 +769,11 @@ a2 = [ i * j for i in 1..5 for j in 1..5 ]
 
 #### <a name="lambda-expressions"></a>Lambda Expressions
 
-Shine has two syntactically similar short-hand forms for creating
-functions. The body of the first form must have a line-break after
-the `=>` and may contain statements like an ordinary function, must
-explicitly return any results, and must be terminated by a closing
-`end` token:
+Shine has a syntactic short-hand form for creating functions:
+
+`(<param_list>)? => <func_body> <end>`
+
+The parameter list is optional.
 
 ```
 -- these two are identical
@@ -782,14 +783,6 @@ end
 function f1(x)
     return x * 2
 end
-```
-
-The second form must be all on one line and may contain a single
-expression. An implicit `return` is added by the compiler, and no
-terminating `end` token is allowed:
-
-```
-f2 = (x) => x * 2
 ```
 
 ### <a name="statements"></a>Statements
