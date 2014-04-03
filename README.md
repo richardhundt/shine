@@ -347,7 +347,7 @@ The following are represented as Lua `number` type:
 * `123.45`
 * `1.2e3`
 * `0x42` - heximal
-* `0644` - octal
+* `0o644` - octal
 
 These are LuaJIT extensions enabled by default in Shine:
 
