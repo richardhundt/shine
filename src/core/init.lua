@@ -1014,9 +1014,13 @@ local function eval(chunk, env, ...)
    return eval(...)
 end
 
-local function check(expr, type)
+local function check(name, expr, type)
    if not __is__(expr, type) then
-      error(string.format("%s expected got %s", tostring(type), tostring(typeof(expr))), 2)
+      error(string.format("bad assignment to '%s' (%s expected got %s)",
+         name,
+         tostring(type),
+         tostring(typeof(expr))
+      ), 2)
    end
    return expr
 end

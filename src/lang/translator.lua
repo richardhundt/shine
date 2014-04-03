@@ -552,7 +552,8 @@ function match:AssignmentExpression(node)
    end
 
    for i=1, #chks do
-      body[#body + 1] = Op{'!call', '__check__', chks[i].name, chks[i].guard}
+      body[#body + 1] = Op{'!call', '__check__',
+         Op(chks[i].name), chks[i].name, chks[i].guard }
    end
 
    return OpChunk(body)
@@ -743,7 +744,8 @@ function match:GivenStatement(node)
             }
 
             for i=1, #chks do
-               cons[#cons + 1] = Op{'!call', '__check__', chks[i].name, chks[i].guard}
+               cons[#cons + 1] = Op{'!call', '__check__',
+                  Op(chks[i].name), chks[i].name, chks[i].guard }
             end
 
             if n.guard then
