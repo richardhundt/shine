@@ -66,7 +66,10 @@ int main(int argc, char *argv[]) {
   }
 
   lua_getfield(L, -1, "start");
-  lua_call(L, 0, 0);
+  status = lua_pcall(L, 0, 0, -3);
+  if (status) {
+    fprintf(stderr, "Error: %s\n", lua_tostring(L, -1));
+  }
 
   lua_close(L);
   return 0;
