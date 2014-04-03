@@ -8,7 +8,7 @@ a.map = function(self, f)
    return _a
 end
 
-a.map (_) => print(_)
+a.map (_) => print(_) end
 
 print #a == a.length
 
