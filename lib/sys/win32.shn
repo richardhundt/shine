@@ -1,6 +1,6 @@
 import ffi, C from "sys.ffi"
 
-function opendir(name is 'string')
+function opendir(name is String)
    dir = ffi::new('DIR')
    if name and #name > 0 then
       ffi::copy(dir.dd_name, name, 256)

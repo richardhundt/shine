@@ -6,25 +6,25 @@ function getcwd()
    return ffi::string(buf)
 end
 
-function chdir(path is 'string')
+function chdir(path is String)
    return C::chdir(path)
 end
 
-function mkdir(path is 'string', mode is 'number' = 0755)
+function mkdir(path is String, mode is Number)
    return C::mkdir(path, mode)
 end
 
-function rmdir(path is 'string')
+function rmdir(path is String)
    return C::rmdir(path)
 end
 
-function unlink(path is 'string')
+function unlink(path is String)
    return C::unlink(path)
 end
 
 DIR = ffi::typeof('DIR')
 
-function opendir(path is 'string')
+function opendir(path is String)
    return C::opendir(path)
 end
 
@@ -50,7 +50,7 @@ function closedir(dir is DIR)
    return C::closedir(dir)
 end
 
-function seekdir(dir is DIR, loc is 'number')
+function seekdir(dir is DIR, loc is Number)
    return C::seekdir(dir, loc)
 end
 
@@ -127,4 +127,3 @@ else
       return stat2table(stat)
    end
 end
-
