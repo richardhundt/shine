@@ -3,7 +3,7 @@ function* gen()
       for i=1, 10 do
          yield i
       end
-   catch (e)
+   catch e then
       print "arse"
    end
 end
