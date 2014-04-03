@@ -335,6 +335,9 @@ function defs.givenStmt(disc, cases, default)
    return { type = "GivenStatement", discriminant = disc, cases = cases }
 end
 function defs.givenCase(test, guard, cons)
+   if test and test.type == 'CallExpression' then
+      test.type = 'ApplyPattern'
+   end
    return { type = "GivenCase", test = test, guard = guard[1], consequent = cons }
 end
 
