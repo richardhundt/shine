@@ -29,7 +29,7 @@ syn keyword shineKeyword in is as
 syn keyword shineKeyword return self
 syn keyword shineKeyword try catch finally local super throw
 
-syn keyword shineDefine class function grammar module
+syn keyword shineDefine class function grammar module macro
 
 syn keyword shineFunction assert print yield getmetatable setmetatable tonumber
 syn keyword shineFunction rawget rawset rawlen newproxy type typeof tostring
@@ -64,8 +64,8 @@ syn case ignore
 
 syn match shineDec      display "\<\d[0-9]*\(U\=L\=L\=\)\>"
 syn match shineHex      display "\<0x[0-9a-f_]\+\(U\=L\=L\=\)\>"
-syn match shineOctal    display "\<0[0-7]\+\(U\=L\=L\=\)\>"
-syn match shineBadOctal display "\<0[0-7]*[89][0-9]*"
+syn match shineOctal    display "\<0o[0-7]\+\(U\=L\=L\=\)\>"
+syn match shineBadOctal display "\<0o[0-7]*[89][0-9]*"
 syn match shineFloat    display "\<\d[0-9]*\.[0-9]*\(e[-+]\=[0-9]\+\)\="
 syn match shineHexFloat display "\<0x[0-9a-f]\+\.[0-9a-f]*\(p[-+]\=[0-9]\+\)\="
 
