@@ -23,7 +23,7 @@ function defs.integer(n, c)
    local b = 10
    if string.sub(n, 1, 2) == '0x' then
       b = 16
-   elseif string.sub(n, 1, 1) == '0' then
+   elseif string.sub(n, 1, 2) == '0o' then
       b = 8
    end
    if c == 'LL' then

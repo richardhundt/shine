@@ -75,7 +75,7 @@ local patt = [=[
 
    string <- <astring>
 
-   octal <- { "0" [0-7]+ }
+   octal <- { "0o" [0-7]+ }
 
    heximal <- { "0x" %xdigit+ }
 
