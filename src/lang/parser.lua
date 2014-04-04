@@ -128,6 +128,7 @@ local patt = [=[
       / <for_in_stmt>
       / <do_stmt>
       / <decl_stmt>
+      / <macro_decl>
       / <return_stmt>
       / <try_stmt>
       / <throw_stmt>
@@ -183,7 +184,6 @@ local patt = [=[
            <local_coro>
          / <local_func>
          / <local_decl>
-         / <macro_decl>
          / <coro_decl>
          / <func_decl>
          / <class_decl>
@@ -216,9 +216,12 @@ local patt = [=[
    ) -> localCoroDecl
 
    macro_decl <- (
-      "macro" <idsafe> s <ident> s "(" s {| <expr_list> |} s ")" s
-      <stmt_list> s
-      (<end> / %1 => error)
+      "macro" <idsafe> s <ident> s (
+         {"="} s <ident> /
+         "(" s {| <expr_list> |} s ")" s
+         <stmt_list> s
+         (<end> / %1 => error)
+      )
    ) -> macroDecl
 
    bind_left <- (

@@ -308,7 +308,7 @@ function match:ImportStatement(node)
    local syms = OpList{ }
    for i=1, #node.names do
       local n = node.names[i]
-      self.ctx:define(n[1].name)
+      self.ctx:define(n[1].name, { type = "import", node = node })
       if n[2] then
          args[#args + 1] = Op(n[2].name)
       else
@@ -353,19 +353,42 @@ end
 function match:MacroDeclaration(node)
    local eval = self.ctx.opts.eval
    self.ctx.opts.eval = true
-   local head = self:list(node.head)
-   local body = self:list(node.body)
-   self.ctx.opts.eval = eval
 
    local name = node.name.name
-   local wrap = OpChunk{
-      Op{'!return', Op{'!lambda', Op{ OpList(head) }, OpChunk(body) } }
-   }
-   wrap = assert(tvm.load(tostring(wrap)))
-   setfenv(wrap, require("core").__magic__.environ({ }))
-   local func = wrap()
+   local core = require("core")
 
+   if node.head == '=' then
+      local nref = node.body.name
+      local info = self.ctx:lookup(nref)
+      if info.type == 'import' then
+         local from = self:get(info.node.from)
+         assert(type(from) == 'string')
+         from = util.unquote(from)
+         local pckg = require(from)
+         func = pckg[nref]
+         assert(func ~= nil)
+      elseif info.type == 'function' then
+         local defn = self:get(info.node)
+         local wrap = OpChunk{ defn, Op{'!return', nref} }
+         wrap = assert(tvm.load(tostring(wrap)))
+         setfenv(wrap, core.__magic__.environ({ }))
+         func = wrap()
+      end
+   else
+      local head = self:list(node.head)
+      local body = self:list(node.body)
+
+      local wrap = OpChunk{
+         Op{'!return', Op{'!lambda', Op{ OpList(head) }, OpChunk(body) } }
+      }
+      wrap = assert(tvm.load(tostring(wrap)))
+      setfenv(wrap, core.__magic__.environ({ }))
+      func = wrap()
+   end
+
+   self.ctx.opts.eval = eval
    self.ctx.scope.macro[name] = func
+
    return OpChunk{ }
 end
 
@@ -974,10 +997,14 @@ function match:FunctionDeclaration(node)
       name = self:get(node.name)
       if node.name.type == 'Identifier' then
          if node.islocal or self.ctx:in_module() then
-            self.ctx:define(name)
+            self.ctx:define(name, { type = "function", node = node })
          else
             -- in function scope, hoist it
-            self.ctx:define(name, { line = self.ctx.scope.topline })
+            self.ctx:define(name, {
+               type = "function",
+               line = self.ctx.scope.topline,
+               node = node
+            })
             self.ctx:hoist(Op{'!define', name })
          end
       end

@@ -24,6 +24,12 @@ THE SOFTWARE.
 [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
 ]=]
 
+package.path  = './lib/?.raw;./lib/?.lua;'..package.path
+package.path  = './?.shn;./lib/?.shn;/usr/local/share/shine/?.shn;'..package.path
+package.path  = './?/init.shn;./lib/?/init.shn;/usr/local/share/shine/?/init.shn;'..package.path..';'
+package.cpath = './lib/?.so;'..package.cpath
+package.cpath = '/usr/local/lib/shine/?.so;'..package.cpath..';'
+
 local tvm    = require('tvm')
 local bcsave = require("jit.bcsave")
 
