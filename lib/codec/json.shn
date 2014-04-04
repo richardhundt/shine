@@ -98,7 +98,7 @@ module JSON
    end
 
    decode(jstr)
-      return JSONGrammar.match(jstr)
+      return JSONGrammar(jstr)
    end
 
    encode_helper = function(buf, item, seen)
