@@ -404,7 +404,7 @@ function match:LocalDeclaration(node)
       end
    end
 
-   if simple then
+   if simple and #node.decorators == 0 then
       if node.inits then
          body[#body + 1] = Op{'!define', Op(decl), Op(self:list(node.inits)) }
       else
@@ -415,10 +415,20 @@ function match:LocalDeclaration(node)
       node.left  = node.names
       node.right = node.inits
 
-      return OpChunk{
-         Op{'!define', Op(decl), Op{Op(nil)} },
+      local frag = OpChunk{
+         Op{'!define', Op{decl}, Op{Op(nil)} },
          match.AssignmentExpression(self, node)
       }
+
+      for i=#node.decorators, 1, -1 do
+         local deco = node.decorators[i]
+         local args = self:list(deco.arguments)
+         frag[#frag + 1] = Op{'!massign', Op{decl},
+            Op{Op{'!call', self:get(deco.name), OpList(decl), OpList(args) }}
+         }
+      end
+
+      return frag
    end
 end
 local function extract_bindings(node, ident)

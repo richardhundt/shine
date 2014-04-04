@@ -102,7 +102,7 @@ local function runopt(...)
 
    if opts['-p'] then
       io.stdout:write("--Shine parse tree:\n")
-      io.stdout:write(util.dump(srctree))
+      io.stdout:write(util.dump(srctree).."\n")
       os.exit(0)
    end
 
@@ -110,7 +110,7 @@ local function runopt(...)
 
    if opts['-o'] then
       io.stdout:write(";TvmJIT opcode tree:\n")
-      io.stdout:write(tostring(dsttree))
+      io.stdout:write(tostring(dsttree).."\n")
       os.exit(0)
    end
 
