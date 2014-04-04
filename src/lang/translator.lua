@@ -441,10 +441,7 @@ function match:LocalDeclaration(node)
       node.left  = node.names
       node.right = node.inits
 
-      local frag = OpChunk{
-         Op{'!define', Op{decl}, Op{Op(nil)} },
-         match.AssignmentExpression(self, node)
-      }
+      local frag = OpChunk{ match.AssignmentExpression(self, node) }
 
       for i=#node.decorators, 1, -1 do
          local deco = node.decorators[i]
