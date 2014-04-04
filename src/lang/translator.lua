@@ -946,6 +946,18 @@ function match:UnaryExpression(node)
    end
    return Op{unop[o], a }
 end
+
+local function apply_decorators(self, node, decl)
+   if #node.decorators > 0 then
+      for i=#node.decorators, 1, -1 do
+         local deco = node.decorators[i]
+         local args = self:list(deco.arguments)
+         decl = Op{'!call1', self:get(deco.name), decl, OpList(args) }
+      end
+   end
+   return decl
+end
+
 function match:FunctionDeclaration(node)
    local name
    if not node.expression then
@@ -1056,6 +1068,8 @@ function match:FunctionDeclaration(node)
       return func
    end
 
+   func = apply_decorators(self, node, func)
+
    local decl
    if node.islocal then
       decl = OpChunk{
@@ -1097,7 +1111,10 @@ function match:ModuleDeclaration(node)
    self.ctx:leave()
 
    local init = Op{'!call', 'module', Op(node.id.name),
-      Op{'!lambda', Op{ 'self', '!vararg' }, body } }
+      Op{'!lambda', Op{ node.id.name, 'self', '!vararg' }, body } }
+
+   init = apply_decorators(self, node, init)
+
    return Op{'!assign', name, init}
 end
 
@@ -1123,7 +1140,10 @@ function match:ClassDeclaration(node)
    self.ctx:leave()
 
    local init = Op{'!call', 'class', Op(node.id.name),
-      Op{'!lambda', Op{ 'self', 'super' }, body }, base }
+      Op{'!lambda', Op{ node.id.name, 'self', 'super' }, body }, base }
+
+   init = apply_decorators(self, node, init)
+
    return Op{'!assign', name, init}
 end
 
@@ -1139,6 +1159,7 @@ function match:ClassBodyStatement(node, body)
 
          local decl = self:get(prop)
          self.ctx:shift(body)
+         decl = apply_decorators(self, prop, decl)
 
          body[#body + 1] = OpList{line, Op{'!assign',
             Op{'!index',
@@ -1152,6 +1173,7 @@ function match:ClassBodyStatement(node, body)
 
          local decl = self:get(prop)
          self.ctx:shift(body)
+         decl = apply_decorators(self, prop, decl)
 
          body[#body + 1] = OpList{line, Op{'!assign',
             Op{'!index',
@@ -1165,6 +1187,7 @@ function match:ClassBodyStatement(node, body)
 
          local decl = self:get(prop)
          self.ctx:shift(body)
+         decl = apply_decorators(self, prop, decl)
 
          -- self.__members__[key] = desc.value
          body[#body + 1] = OpList{line, Op{'!assign',
@@ -1174,6 +1197,7 @@ function match:ClassBodyStatement(node, body)
       end
    elseif node.type == 'ClassDeclaration'
        or node.type == 'ModuleDeclaration'
+       or node.type == 'GrammarDeclaraion'
    then
 
       local stmt = self:get(node)
@@ -1450,10 +1474,12 @@ function match:GrammarDeclaration(node)
    self.ctx:unhoist(body)
    self.ctx:leave()
 
-   body = Op{'!lambda', Op{ 'self' }, body }
-   return Op{'!assign',
-      name, Op{'!call1', 'grammar', Op(name), body }
-   }
+   body = Op{'!lambda', Op{ name, 'self' }, body }
+
+   local init = Op{'!call1', 'grammar', Op(name), body}
+   init = apply_decorators(self, node, init)
+
+   return Op{'!assign', name, init }
 end
 function match:PatternGrammar(node)
    local tab = { [1] = Op(node.rules[1].name) }

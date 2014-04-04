@@ -103,6 +103,14 @@ function defs.expr(line, node)
    node.line = line
    return node
 end
+function defs.declStmt(deco, node)
+   node.decorators = deco
+   return node
+end
+function defs.decorator(name, args)
+   name.check = true
+   return { type = "Decorator", name = name, arguments = args }
+end
 
 function defs.includeStmt(list)
    return { type = "IncludeStatement", list = list }
@@ -396,9 +404,10 @@ end
 function defs.classBody(body)
    return { type = "ClassBody", body = body }
 end
-function defs.classMember(m)
-   table.insert(m.value.params, 1, defs.identifier("self"))
-   return m
+function defs.classMember(deco, prop)
+   table.insert(prop.value.params, 1, defs.identifier("self"))
+   prop.decorators = deco
+   return prop
 end
 function defs.propDefn(k, n, h, b)
    local func = defs.funcExpr(h, b)

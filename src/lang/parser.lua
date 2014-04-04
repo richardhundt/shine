@@ -179,16 +179,22 @@ local patt = [=[
    ) -> catchClause
 
    decl_stmt <- (
-        <local_coro>
-      / <local_func>
-      / <local_decl>
-      / <macro_decl>
-      / <coro_decl>
-      / <func_decl>
-      / <class_decl>
-      / <module_decl>
-      / <grammar_decl>
-   )
+      {| (<decorator> (s <decorator>)* s)? |} (
+           <local_coro>
+         / <local_func>
+         / <local_decl>
+         / <macro_decl>
+         / <coro_decl>
+         / <func_decl>
+         / <class_decl>
+         / <module_decl>
+         / <grammar_decl>
+      )
+   ) -> declStmt
+
+   decorator <- (
+      "@" <ident> hs {| ("(" s <expr_list>? s ")")? |}
+   ) -> decorator
 
    guarded_ident <- (
       <ident> hs "is" <idsafe> s <expr>
@@ -311,7 +317,9 @@ local patt = [=[
    )) -> stmt
 
    class_member <- (
-      <coro_prop> / <prop_defn>
+      {| (<decorator> (s <decorator>)* s)? |} (
+         <coro_prop> / <prop_defn>
+      )
    ) -> classMember
 
    class_heritage <- (

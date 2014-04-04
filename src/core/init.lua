@@ -99,7 +99,7 @@ function Module.__call(self, ...)
    end
 
    setfenv(body, setmetatable({ __self__ = module }, { __index = getfenv(2) }))
-   body(setmetatable(module, Module), ...)
+   body(setmetatable(module, Module), module, ...)
    return module
 end
 
@@ -120,7 +120,9 @@ local function module(name, body)
    end
 
    setfenv(body, setmetatable({ __self__ = module }, { __index = getfenv(2) }))
-   body(setmetatable(module, Module))
+
+   body(setmetatable(module, Module), module)
+
    return module
 end
 
@@ -225,7 +227,8 @@ local function class(name, body, ...)
    end
 
    setfenv(body, setmetatable({ __self__ = class }, { __index = getfenv(2) }))
-   body(setmetatable(class, Class), base.__members__)
+
+   body(setmetatable(class, Class), class, base.__members__)
 
    for name, delg in pairs(special) do
       if __members__[name] then
@@ -830,7 +833,7 @@ local function grammar(name, body)
    }, Grammar)
 
    setfenv(body, setmetatable({ }, { __index = getfenv(2) }))
-   body(gram)
+   body(gram, gram)
 
    local patt = { }
    for k, v in pairs(members) do
