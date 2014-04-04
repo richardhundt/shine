@@ -362,11 +362,14 @@ function match:MacroDeclaration(node)
       local info = self.ctx:lookup(nref)
       if info.type == 'import' then
          local from = self:get(info.node.from)
-         assert(type(from) == 'string')
+         local errs = string.format(
+            "imported macro body for '%s' cannot be resolved",
+            name)
+         assert(type(from) == 'string', errs)
          from = util.unquote(from)
          local pckg = require(from)
          func = pckg[nref]
-         assert(func ~= nil)
+         assert(func ~= nil, errs)
       elseif info.type == 'function' then
          local defn = self:get(info.node)
          local wrap = OpChunk{ defn, Op{'!return', nref} }
