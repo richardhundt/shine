@@ -1,0 +1,13 @@
+
+function hello($, expr)
+   util = require("shine.lang.util")
+   print util::dump(expr)
+   mesg = util::unquote($.get(expr))
+   return $.op{'!call', 'print', $.op"Hello %{mesg}"}
+end
+
+macro hello! = hello
+
+hello! "World!"
+
+
