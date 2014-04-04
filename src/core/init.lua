@@ -92,6 +92,7 @@ function Module.__call(self, ...)
    module.__is = function(self, that)
       if that == self then return true end
       local m = getmetatable(that)
+      if m == Module then m = that end
       if m and m.__include__ and m.__include__[self] then
          return true
       end
@@ -113,6 +114,7 @@ local function module(name, body)
    module.__is = function(self, that)
       if that == self then return true end
       local m = getmetatable(that)
+      if m == Module then m = that end
       if m and m.__include__ and m.__include__[self] then
          return true
       end
@@ -434,7 +436,13 @@ local Array = class("Array", function(self)
 end)
 
 local function try(try, catch, finally)
-   local ok, rv = xpcall(try, catch)
+   local ok, rv = pcall(try)
+   if not ok then
+      ok, rv = pcall(catch, rv)
+      if not ok then
+         error("error in error handling", 2)
+      end
+   end
    if finally then finally() end
    return rv
 end
