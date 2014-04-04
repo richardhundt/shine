@@ -28,3 +28,11 @@ class Point
    end
 end
 
+function vars(...)
+   print "vars:", ...
+   return ...
+end
+
+@vars
+local a, b, c = 1, 2, 3
+
