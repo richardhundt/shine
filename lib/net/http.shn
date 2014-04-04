@@ -193,7 +193,7 @@ function HTTPFilter(input, output = Channel())
 
          local mesg, pcol, meth
          if stat.match "^[\r\n]*HTTP/" then
-            pcol, code, desc = stat.match "^[\r\n]*(HTTP/%d.%d) (%S+) (%S+)$"
+            pcol, code, desc = stat.match "^[\r\n]*(HTTP/%d.%d) (%S+) (.-)$"
             code = tonumber(code)
             mesg = HTTPResponse(code, hdrs, nil, pcol)
          elseif stat.match "^[\r\n]*%u+%s" then
