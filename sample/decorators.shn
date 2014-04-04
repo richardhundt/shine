@@ -1,0 +1,30 @@
+function foo(f,a)
+   print 'foo', f, a
+   return f
+end
+function bar(f,a)
+   print 'bar', f, a
+   return f
+end
+function prop(f, c)
+   print 'prop:', f, c
+   return f
+end
+
+@foo(42)
+@bar(69)
+function greet()
+   print "Hi"
+end
+
+@foo({ answer = 42 })
+@bar('a','b')
+class Point
+   self(x, y)
+   end
+
+   @prop(self)
+   distance(that is Point)
+   end
+end
+
