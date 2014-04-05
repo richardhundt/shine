@@ -45,6 +45,8 @@ typedef struct timezone {
 time_t time(time_t *tloc);
 int gettimeofday(timeval_t *tp, timezone_t *tzp);
 size_t strftime(char *, size_t, const char *, tm_t *);
+char * strptime(const char *, const char *, tm_t *);
+
 
 char *asctime(tm_t *);
 clock_t clock(void);
@@ -53,6 +55,7 @@ double difftime(time_t, time_t);
 tm_t *getdate(const char *);
 tm_t *gmtime(time_t *);
 tm_t *localtime(time_t *);
+tm_t *localtime_r(const time_t *, tm_t *);
 time_t mktime(tm_t *);
 
 int pipe(int *);

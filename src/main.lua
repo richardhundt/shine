@@ -96,7 +96,9 @@ local function interactive(env)
 end
 
 local function print_version()
-   io.stdout:write("Shine 0.0.2 -- Copyright (C) 2013-2014 Richard Hundt.\n")
+   local core = require("core")
+   local info = "Shine %s -- Copyright (C) 2013-2014 Richard Hundt.\n"
+   io.stdout:write(string.format(info, core._VERSION))
 end
 
 local function print_usage()
