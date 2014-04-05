@@ -275,7 +275,9 @@ local patt = [=[
    func_expr <- (
       "function" <idsafe> s <func_head> s <func_body>
       / (<func_head> / {| |}) s "=>" (
-         hs <expr> / s <block_stmt> s (<end> / %1 => error) / %1 => error
+           hs {| <expr_list> |}
+         / s <block_stmt> s (<end> / %1 => error)
+         / %1 => error
       )
    ) -> funcExpr
 

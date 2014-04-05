@@ -244,7 +244,7 @@ function defs.spreadExpr(arg)
 end
 function defs.funcDecl(path, head, body)
    if body.type ~= "BlockStatement" then
-      body = defs.blockStmt{ defs.returnStmt{ body } }
+      body = defs.blockStmt{ defs.returnStmt(body) }
    end
 
    local name, oper

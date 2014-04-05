@@ -85,7 +85,6 @@ function OpChunk.__tostring(o)
    return table.concat(t, "")
 end
 
-
 local Scope = { }
 Scope.__index = Scope
 function Scope.new(outer)
@@ -98,6 +97,8 @@ function Scope.new(outer)
    }
    if outer then
       setmetatable(self.macro, { __index = outer.macro })
+   else
+      self.macro['reify!'] = util.reify
    end
    return setmetatable(self, Scope)
 end
