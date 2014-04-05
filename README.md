@@ -63,6 +63,8 @@ which has a growing collection of tutorials.
     * [Inheritance](#inheritance)
     * [Module Mixins](#module-mixins)
   * [Grammars](#grammars)
+  * [Decorators](#decorators)
+  * [Macros](#macros)
 * [Standard Libraries](#standard-libraries)
   * [Concurrency](#concurrency)
     * [Fibers](#fibers)
@@ -121,6 +123,8 @@ Summary of flexibility features:
 * Optional parentheses.
 * Property getters and setters with fallback.
 * User-only operators.
+* Procedural Macros
+* Decorators
 
 Additionally, all constructs can be nested. Classes can be declared
 inside other classes and even inside functions, which allows for
@@ -1460,6 +1464,174 @@ end
 local s = "add(mul(a,b),apply(f,x))"
 print(Macro(s))
 ```
+
+### <a name="decorators"></a>Decorators
+
+Decorators are annotations associated with class, module, grammar,
+function or local declarations.
+
+```
+@classdeco(whatever)
+class Foo
+
+   @methdeco({ doc = "does something" }, 42)
+   munge(...)
+      ---
+   end
+
+end
+
+@funcdeco
+function bar()
+   --
+end
+
+@localdeco
+local a, b = 40, 2
+```
+
+The semantics are simple. A decorator is a function or other callable
+which is passed the decorated object as a first argument, followed
+by any remaining arguments declared in the annotation. The exception
+being local variable declarations, in which case the decorator
+function is passed the right-hand side of the assignment as a list.
+
+A decorator is expected to return a value to be used as the value
+of the declaration. The transormation inserted by the compiler has
+the following pattern:
+
+```
+@deco1(42)
+@deco2({ answer = 0 })
+function greet()
+   print "Hello World!"
+end
+
+@deco3("cheese")
+local a, b = 1, 2
+```
+
+becomes:
+
+```
+function greet()
+   print "Hello World!"
+end
+greet = deco1(deco2(greet, { answer = 0 }), 42)
+
+local a, b = deco3(1, 2, "cheese")
+```
+
+That's it. Simple.
+
+### <a name="macros"></a>Macros
+
+Shine currently has experimental support for procedural macros.
+Macros are functions run at compile time, which receive the compiler
+context and abstract syntax tree (AST) nodes as arguments.
+
+A macro is expected to transform the AST nodes into opcode tree
+fragments exactly as is done by the Shine
+[translator](./src/lang/translator.lua). This is a powerful
+feature, but also allows one to produce invalid code, so
+not for the faint of heart.
+
+The following macro does a compile-time string concatenation and
+inserts `print "Hello World!"`.
+
+```
+-- file: hello.shn
+macro hello!(ctx, expr)
+   util = require("shine.lang.util")
+   mesg = util::unquote(ctx.get(expr))
+   return ctx.op{'!call', 'print', ctx.op"Hello %{mesg}"}
+end
+
+hello!("World!")
+```
+
+Running the above with `shinec -o` to print the opcode tree, yields:
+
+```
+$ shinec -o hello.shn 
+;TvmJIT opcode tree:
+
+(!line "@hello.shn" 1)(!define __magic__ (!index (!call1 require "core") "__magic__"))(!call (!index _G "module") !vararg (!index __magic__ "environ"))
+(!line 2) 
+(!line 8) (!call print "Hello World!")
+```
+
+The first line is the standard Shine prelude which loads the runtime
+environment. The interesting part comes next. We see the constant
+string passed to `print` is pre-computed as we expected.
+
+Note that the macro itself is a compile-time entity and is not
+present in the output.
+
+Of course, defining macros only within a given compilation unit limits
+their usefulness, so macro definitions have an alternative syntax:
+
+```
+macro <name> '=' <ident>
+```
+
+Where `<ident>` is either a locally declared function, or an imported
+symbol. The following illustrates:
+
+```
+-- file: macros.shn
+
+function hello(ctx, expr)
+   util = require("shine.lang.util")
+   mesg = util::unquote(ctx.get(expr))
+   return ctx.op{'!call', 'print', ctx.op"Hello %{mesg}"}
+end
+
+export hello
+```
+
+```
+-- file: hello.shn
+import hello from "macros"
+
+macro hello! = hello
+
+hello!("World!")
+```
+
+Running `hello.shn` with `shinec -o` now shows:
+
+```
+$ shinec -o hello.shn 
+;TvmJIT opcode tree:
+
+(!line "@hello.shn" 1)(!define __magic__ (!index (!call1 require "core") "__magic__"))(!call (!index _G "module") !vararg (!index __magic__ "environ"))
+(!line 1) (!define (hello) ((!call import "macros" "hello")))
+(!line 3) 
+(!line 5) (!call print "Hello World!")
+```
+
+This comes with a couple of caveats. First, the compiler needs to
+load and evaluate the module at compile time, so if the module's
+code has side effects (such as sending an email), then this will
+happen when the code is *compiled*. This is the only case where the
+compiler does any sort of early linking or binding.
+
+Secondly, if the function to be used as the macro implementation is
+declared in the same compilation unit, then it must be declared in
+its canonical form: i.e. `function <name> <params> <body> end`. It
+cannot be a property or expression or any other computed form.
+
+Lastly, macro functions are run early, so generally need to import
+what they need locally.
+
+Some tips:
+
+* To implement macros, one needs to know the structure of the
+  AST, so `shinec -p` will print it out.
+* The "shine.lang.util" module has a `dump` function which pretty
+  prints AST nodes.
+* The best reference is the Shine [translator](./src/lang/translator.lua) itself.
 
 ## <a name="standard-libaries"></a>Standard Libraries
 
