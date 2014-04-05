@@ -802,6 +802,25 @@ function f1(x)
 end
 ```
 
+Additionally, if the function body contains a single expression
+and appears on one line, then an implicit `return` is inserted
+and the `end` token is omitted:
+
+```
+b = a.map((x) => x * 2)
+
+-- shorter still
+b = a.map (x) => x * 2
+```
+
+Means:
+
+```
+b = a.map((x) =>
+   return x * 2
+end)
+```
+
 ### <a name="statements"></a>Statements
 
 #### <a name="do-statement"></a>Do Statement
