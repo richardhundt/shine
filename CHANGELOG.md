@@ -3,13 +3,15 @@
 Bugfixes:
 
   - Parser performance improvements
+  - Module method self assertions
+  - Allow coroutine::yield in catch clauses
 
 Features:
 
-  - User definable operators
-  - Guards in given case clauses
   - Procedural Macros
   - Decorators
+  - User definable infix operators
+  - Guards in given case clauses
 
 ## 0.0.2
 
