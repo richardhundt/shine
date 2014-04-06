@@ -1,5 +1,7 @@
 
 grammar JSONGrammar
+   utf8 = require('utf8')
+
    JSON <- (
         <null>
       | <boolean>
@@ -16,9 +18,9 @@ grammar JSONGrammar
       | "\\f"  -> "\f"
       | "\\b"  -> "\b"
       | "\\t"  -> "\t"
-      | "\\u"  { [0-9A-F]^4 } -> (code) =>
-         return string::char(tonumber(code, 16))
-      end
+      | {~ ("\\u" { %xdigit^4 }) -> (code) =>
+         return utf8::char(tonumber('0x'~code))
+      end ~}
    )
 
    boolean <- "true"  {`true`} | "false" {`false`}
@@ -75,13 +77,13 @@ end
 module JSON
 
    encode_escapes = {
-      ['\b'] = "\\b",
-      ['\t'] = "\\t",  
-      ['\n'] = "\\n", 
-      ['\f'] = "\\f",
-      ['\r'] = "\\r", 
-      ['"']  = "\\\"", 
-      ['\\'] = "\\\\", 
+      ["\b"] = "\\b",
+      ["\t"] = "\\t",
+      ["\n"] = "\\n",
+      ["\f"] = "\\f",
+      ["\r"] = "\\r"
+      ['"']  = "\\\"",
+      ['\\'] = "\\\\",
       ['/']  = "\\/"
    }
 
@@ -139,13 +141,21 @@ module JSON
          buf.write(tostring(item))
       elseif t == "string" then
          buf.write('"')
-         str = item.gsub "[%z%c\\\"/]", (n) =>
-            c = encode_escapes[n]
-            if c then
-               return c
+         str = item
+         str = str.gsub "([%z\1-\127\194-\244][\128-\191]*)", (c) =>
+            if #c == 1 then
+               print "%q".format(c)
+               if encode_escapes[c] then
+                  return encode_escapes[c]
+               elseif c.match "[%z%c\\\"]" then
+                  return "\\u00%02x".format(c.byte())
+               else
+                  return c
+               end
             end
-            return "\\u%.4X".format(string::byte(n))
+            return "\\u%.4X".format(utf8::codepoint(c))
          end
+
          buf.write(str)
          buf.write('"')
       elseif t == "boolean" then
@@ -165,5 +175,4 @@ end
 function json_decode(jstr)
    return JSON.decode(jstr)
 end
-
 

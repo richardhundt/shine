@@ -50,7 +50,8 @@ local patt = [=[
    sep <- <bcomment>? (<nl> / ";" / <lcomment>) / <ws> <sep>?
 
    escape <- {~ ('\' (
-      'x' %xdigit %xdigit / 'u' %xdigit %xdigit %xdigit %xdigit / .
+      'x' %xdigit %xdigit / 'u' %xdigit %xdigit %xdigit %xdigit
+      / %digit (%digit %digit?)? / .
    )) -> escape ~}
 
    astring <- (

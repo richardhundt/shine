@@ -33,6 +33,7 @@ function defs.integer(n, c)
    local b = 10
    if string.sub(n, 1, 2) == '0x' then
       b = 16
+      n = string.sub(n, 3)
    elseif string.sub(n, 1, 2) == '0o' then
       b = 8
       n = string.sub(n, 3)
@@ -67,11 +68,14 @@ local escape_lookup = {
 function defs.escape(s)
    local t = string.sub(s, 2)
    if escape_lookup[t] then return escape_lookup[t] end
-   if string.sub(s, 1, 2) == '\\x' then
-      local a = '0'..string.sub(s, 2)
-      return string.char(tonumber(a))
+   if string.match(s, '\\%d%d?%d?') then
+      return string.char(tonumber(string.sub(s, 2)))
    end
-   if string.sub(s, 1, 2) == '\\u' then
+   if string.match(s, '\\x%x%x') then
+      local c = '0'..string.sub(s, 2)
+      return string.char(tonumber(c))
+   end
+   if string.sub(s, 1, 2) == '\\u%x%x%x%x' then
       local c = '0x'..string.sub(s, 3)
       return utf8.char(tonumber(c))
    end
