@@ -1,31 +1,3 @@
---[[
-import ZMQThread from "net.zmq"
-
-local up1 = { answer = 42 }
-
-local thr = ZMQThread.fork (ctx, pipe) =>
-   print "Hello from a thread! ctx => %{ctx}, pipe => %{pipe.fd}, up1.answer => %{up1.answer}"
-   while true do
-      mesg = pipe.recv()
-      if mesg == 'ping' then
-         print "parent said: %{mesg}"
-         pipe.send("pong")
-      else
-         pipe.send("quit")
-         break
-      end
-   end
-end
-
-for i=1, 5 do
-   thr.pipe.send("ping")
-   print "child said: %{thr.pipe.recv()}"
-end
-thr.pipe.send("quit")
-print thr.pipe.recv()
-
---]]
-
 import Thread, Pipe from "sys.thread"
 
 local ch1 = Pipe(64)
