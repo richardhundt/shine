@@ -5,6 +5,8 @@ Bugfixes:
   - Parser performance improvements
   - Module method self assertions
   - Allow coroutine::yield in catch clauses
+  - Switch to 0o123 Octal notation
+  - Fix unicode escape sequences in strings
 
 Features:
 
