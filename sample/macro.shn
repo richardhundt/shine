@@ -10,4 +10,33 @@ macro hello! = hello
 
 hello! "World!"
 
+function let(ctx, ...)
+   util = require("shine.lang.util")
+   vars = { }
+   vals = { }
+   exps = { ... }
+   curr = vars
+   for i=1, #exps do
+      e = exps[i]
+      if e.type == 'BinaryExpression' and e.operator == ':=' then
+         ctx.define(e.left.name)
+         vars[#vars + 1] = ctx.get(e.left)
+         vals[#vals + 1] = ctx.get(e.right)
+         curr = vals
+      else
+         if curr == vars then
+            ctx.define(e.name)
+         end
+         curr[#curr + 1] = ctx.get(e)
+      end
+   end
+   return ctx.op({'!let', ctx.op(vars), ctx.op(vals) })
+end
+
+macro let = let
+
+let a, b, c := 1, 2, 3
+
+print(a, b, c)
+
 

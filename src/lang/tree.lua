@@ -17,6 +17,15 @@ end
 function defs.curline()
    return line
 end
+function defs.setline(ln)
+   local prev = line
+   line = tonumber(ln) or 1
+   return prev
+end
+function defs.topline(src, ofs, cap)
+   defs.setline(tonumber(cap))
+   return true
+end
 
 local int64_t  = ffi.typeof('int64_t')
 local uint64_t = ffi.typeof('uint64_t')
@@ -69,7 +78,6 @@ function defs.escape(s)
    error(string.format("invalid escape sequence: %q on line %s", s, line))
 end
 function defs.chunk(body)
-   line = 1
    return { type = "Chunk", body = body }
 end
 function defs.stmt(line, node)

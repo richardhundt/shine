@@ -104,7 +104,7 @@ local function runopt(...)
       file:close()
    end
 
-   local srctree = parser.parse(code, name, opts)
+   local srctree = parser.parse(code, name, 1, opts)
 
    if opts['-p'] then
       io.stdout:write("--Shine parse tree:\n")

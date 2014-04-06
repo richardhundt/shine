@@ -93,12 +93,5 @@ function export.fold_right(list, func)
    return accu
 end
 
-function export.reify(ctx, expr)
-   if expr.type == 'FunctionDeclaration' and expr.expression then
-      return ctx:oplist{ctx:op(tostring(ctx:get(expr.body)))}
-   end
-   return ctx:oplist{ctx:op(tostring(ctx:get(expr)))}
-end
-
 
 return export

@@ -98,7 +98,14 @@ function Scope.new(outer)
    if outer then
       setmetatable(self.macro, { __index = outer.macro })
    else
-      self.macro['reify!'] = util.reify
+      local function reify(ctx, expr)
+         if expr.type == 'FunctionDeclaration' and expr.expression then
+            return ctx:oplist{ctx:op(tostring(ctx:get(expr.body)))}
+         end
+         return ctx:oplist{ctx:op(tostring(ctx:get(expr)))}
+      end
+
+      self.macro['reify!'] = reify
    end
    return setmetatable(self, Scope)
 end
@@ -226,6 +233,12 @@ function Context:opchunk(...)
 end
 function Context:oplist(...)
    return OpList(...)
+end
+function Context:reify(code)
+   local parser     = require('shine.lang.parser')
+   local translator = require('shine.lang.translator')
+   local srctree    = parser.parse(code, self.name, self.line)
+   return translator.translate(srctree, self.name, { eval = true })
 end
 
 function Context:sync(node)

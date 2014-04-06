@@ -10,7 +10,7 @@ local re   = require('shine.lang.re')
 lpeg.setmaxstack(1024)
 
 local patt = [=[
-   chunk  <- {|
+   chunk  <- (%2 => topline) {|
       <shebang>? s (<stmt> (<sep> s <stmt>)* <sep>?)? s (!. / %1 => error)
    |} -> chunk
 
@@ -660,8 +660,8 @@ local patt = [=[
 ]=]
 
 local grammar = re.compile(patt, defs)
-local function parse(src, ...)
-   return grammar:match(src, nil, ...)
+local function parse(src, name, line, ...)
+   return grammar:match(src, nil, name, line or 1, ...)
 end
 
 return {
