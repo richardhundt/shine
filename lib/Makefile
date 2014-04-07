@@ -71,7 +71,7 @@ ${BUILD}/libs/codec.so:
 	${BUILD}/codec_serialize.o
 
 ${BUILD}/upoll.o:
-	${CC} -c -O2 -fPIC ${DEPDIR}/upoll/src/upoll.c -o ${BUILD}/upoll.o \
+	${CC} -c -O3 -fPIC ${DEPDIR}/upoll/src/upoll.c -o ${BUILD}/upoll.o \
 		-I${DEPDIR}/upoll/src/include -I${DEPDIR}/upoll/src
 
 ${BUILD}/uthread.o:
