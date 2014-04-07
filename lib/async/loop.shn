@@ -196,6 +196,13 @@ module IOLoop
    mod_poller(poller)
       if poller.index then
          lib::upoll_ctl(upoll, lib.UPOLL_CTL_MOD, poller.fd, poller.event)
+         if poller.event.events == 0 and not poller.paused then
+            poller.paused = true
+            poll_cnt -= 1
+         elseif poller.paused and poller.event.events != 0 then
+            poll_cnt += 1
+            poller.paused = nil
+         end
       end
    end
 
@@ -294,7 +301,7 @@ module IOLoop
       end
 
       -- poll
-      --print "upoll_wait:", poll_dur
+      --print "upoll_wait:", poll_dur, poll_cnt 
       rv = lib::upoll_wait(upoll, poll_evt, poll_max, poll_dur)
 
       -- run expired timers

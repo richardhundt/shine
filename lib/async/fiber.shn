@@ -45,16 +45,21 @@ class Fiber
          for i=1, #alive do
             fiber = alive[i]
             if fiber.active and fiber.status() != "dead" then
-               Fiber::current = fiber
-               ok, rv = resume(fiber.coro, unpack(fiber.args))
-               Fiber::current = Fiber::main
-               if not ok then
-                  error(rv, 2)
-               end
-               if fiber.status() == "dead" then
-                  fiber.finish(rv)
+               if fiber == Fiber::main then
+                  fiber.queued = false
+                  return
                else
-                  ready[#ready + 1] = fiber
+                  Fiber::current = fiber
+                  ok, rv = resume(fiber.coro, unpack(fiber.args))
+                  Fiber::current = Fiber::main
+                  if not ok then
+                     error(rv, 2)
+                  end
+                  if fiber.status() == "dead" then
+                     fiber.finish(rv)
+                  else
+                     ready[#ready + 1] = fiber
+                  end
                end
             else
                fiber.queued = false

@@ -63,23 +63,22 @@ export LDPOST
 
 LPEG := ${DEPDIR}/lpeg/lpeg.so
 
-DEPS := ${BUILD}/deps/liblpeg.a \
-	${BUILD}/deps/libtvmjit.a
-
 EXEC := ${BUILD}/shine
 
 NGAC := ${BUILD}/shinec
 
-XDEPS = ${DEPS} \
+NDEPS = ${BUILD}/deps/liblpeg.a \
+	${BUILD}/deps/libtvmjit.a
+
+XDEPS = ${NDEPS} \
 	${BUILD}/lang.a \
 	${BUILD}/core.a \
 	${BUILD}/main.o \
 	${BUILD}/shnc.o
 
-CDEPS = ${BUILD}/deps/liblpeg.a \
-	${BUILD}/deps/libtvmjit.a \
-	${BUILD}/core.a \
+CDEPS = ${NDEPS} \
 	${BUILD}/lang.a \
+	${BUILD}/core.a \
 	${BUILD}/shnc.o
 
 all: dirs ${TJ} ${LPEG} ${LIBS} ${EXEC} ${NGAC} libs
@@ -93,6 +92,7 @@ dirs:
 libs:
 	git submodule update --init ${DEPDIR}/upoll
 	git submodule update --init ${DEPDIR}/uthread
+	git submodule update --init ${DEPDIR}/nanomsg
 	make -C ./lib
 
 ${BUILD}/shine: ${TJ} ${XDEPS}
@@ -169,6 +169,7 @@ realclean: clean
 	make -C ./lib clean
 	make -C ${DEPDIR}/tvmjit clean
 	make -C ${DEPDIR}/lpeg clean
+	stat -q ${DEPDIR}/nanomsg/Makefile && make -C ${DEPDIR}/nanomsg clean
 	rm -rf ${BUILD}
 
 bootstrap: ${TJ} ${LPEG}

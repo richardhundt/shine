@@ -1,30 +1,50 @@
-import Thread, Pipe from "sys.thread"
+import Thread from "sys.thread"
+import Socket from "sys.nanomsg"
 
-local ch1 = Pipe(64)
+local ch1 = "inproc://1"
 
 local th1 = Thread::create =>
+
+   import async from "async"
+
+   nns = Socket(Socket::NN_PAIR)
+   print("bind:", nns.bind(ch1))
+
    print "Hello from a th1"
-   print "ch1:", ch1
-   for i=1, 100000 do
-      --print "[1] tick %{i}"
-      ch1.put("[1] %{i}")
+   f1 = async =>
+      for i=1, 100000 do
+         --print "[1] tick %{i}"
+         nns.send("[1] %{i}")
+      end
    end
+   print "1 join..."
+   f1.join()
+   print "1 done"
 end
 
 local th2 = Thread::create =>
    print "Hello from th2"
-   local got
-   for i=1, 100000 do
-      got = ch1.get()
-      assert(got != null)
-      --print "[2] got: %{got}"
+
+   import async from "async"
+
+   nns = Socket(Socket::NN_PAIR)
+   nns.connect(ch1)
+
+   f1 = async =>
+      local got
+      for i=1, 100000 do
+         got = nns.recv()
+         --print "[2] got: %{got}"
+         assert(got != null)
+      end
+      print "got: %{got}"
    end
-   print "got: %{got}"
+   print "2 join..."
+   f1.join()
+   print "2 done."
 end
 
 th2.join()
 th1.join()
-print "HERE:", ch1.$c
-ch1 = nil
 --collectgarbage "collect"
 

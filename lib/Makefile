@@ -9,7 +9,7 @@ LIBS := ${BUILD}/libs/sys.so \
 
 all: ${LIBS}
 
-${BUILD}/libs/sys.so: ${BUILD}/uthread.o
+${BUILD}/libs/sys.so: ${BUILD}/libnanomsg.a ${BUILD}/uthread.o
 	${SHC} -n "sys"           sys/init.shn      ${BUILD}/sys.o
 	${SHC} -n "sys.unix"      sys/unix.shn      ${BUILD}/sys_unix.o
 	${SHC} -n "sys.win32"     sys/win32.shn     ${BUILD}/sys_win32.o
@@ -20,11 +20,13 @@ ${BUILD}/libs/sys.so: ${BUILD}/uthread.o
 	${SHC} -n "sys.ffi.linux" sys/ffi/linux.shn ${BUILD}/sys_ffi_linux.o
 	${SHC} -n "sys.argparse"  sys/argparse.shn  ${BUILD}/sys_argparse.o
 	${SHC} -n "sys.thread"    sys/thread.shn    ${BUILD}/sys_thread.o
+	${SHC} -n "sys.nanomsg"   sys/nanomsg.shn   ${BUILD}/sys_nanomsg.o
 	${CC} ${SOFLAGS} -o ${BUILD}/libs/sys.so ${LDFLAGS} \
 	${BUILD}/sys.o ${BUILD}/sys_unix.o ${BUILD}/sys_win32.o \
 	${BUILD}/sys_ffi.o ${BUILD}/sys_ffi_posix.o ${BUILD}/sys_ffi_osx.o \
 	${BUILD}/sys_ffi_bsd.o ${BUILD}/sys_ffi_linux.o ${BUILD}/sys_argparse.o \
-	${BUILD}/sys_thread.o ${BUILD}/uthread.o ${LPTHREAD}
+	${BUILD}/sys_nanomsg.o ${BUILD}/sys_thread.o \
+	${LDPRE} ${BUILD}/libnanomsg.a ${LDPOST} ${BUILD}/uthread.o ${LPTHREAD}
 
 ${BUILD}/libs/async.so: ${BUILD}/upoll.o
 	${SHC} -n "async"       async/init.shn  ${BUILD}/async.o
@@ -80,11 +82,18 @@ ${BUILD}/trex.o:
 	${CC} -c -O2 -fPIC -Wno-unused-value ${DEPDIR}/trex/trex.c \
 	-o ${BUILD}/trex.o -I${DEPDIR}/trex
 
+${DEPDIR}/nanomsg/Makefile:
+	cd ${DEPDIR}/nanomsg && ./autogen.sh && ./configure --prefix=${BUILD}
+
+${BUILD}/libnanomsg.a: ${DEPDIR}/nanomsg/Makefile
+	cd ${DEPDIR}/nanomsg && make && make install
+	cp ${DEPDIR}/nanomsg/.libs/libnanomsg.a ${BUILD}/libnanomsg.a
 
 clean:
 	rm -f ${BUILD}/upoll.o
 	rm -f ${BUILD}/trex.o
 	rm -f ${BUILD}/libs/*.so
+	rm -f ${BUILD}/libnanomsg.a
 
 install:
 	install -m 0644 ${BUILD}/libs/sys.so ${PREFIX}/lib/shine/sys.so
