@@ -1,0 +1,255 @@
+import ffi, C from 'sys.ffi'
+
+local lib_path = assert(package::searchpath("sys", package.cpath))
+local lib = ffi::load(lib_path, true)
+
+-- Some of this code is stolen from luajit-nanomsg:
+-- Copyright (c) 2013 Evan Wies <evan at neomantra dot net>
+-- Bugs, as usual, are my own.
+
+ffi::cdef'''
+   int nn_errno (void);
+   const char *nn_strerror (int errnum);
+   void nn_term (void);
+   void nn_sleep(int);
+
+   void *nn_allocmsg (size_t size, int type);
+   int nn_freemsg (void *msg);
+
+   int nn_socket (int domain, int protocol);
+   int nn_close (int s);
+   int nn_setsockopt (int s, int level, int option, const void *optval, size_t optvallen);
+   int nn_getsockopt (int s, int level, int option, void *optval, size_t *optvallen);
+   int nn_bind (int s, const char *addr);
+   int nn_connect (int s, const char *addr);
+   int nn_shutdown (int s, int how);
+   int nn_send (int s, const void *buf, size_t len, int flags);
+   int nn_recv (int s, void *buf, size_t len, int flags);
+
+   int nn_device (int s1, int s2);
+
+   const char* nn_symbol(int i, int *value);
+'''
+
+class Socket
+
+   import Poller    from "async.loop"
+   import Semaphore from "async.util"
+
+   do
+      sym = ffi::new 'struct { int value[1]; const char* name; }' 
+      i = 0
+      while true do
+         sym.name = lib::nn_symbol(i, sym.value)
+         if sym.name == null then
+            break
+         end
+         key = ffi::string(sym.name)
+         val = sym.value[0]
+         self[key] = val
+         i += 1
+      end
+   end
+
+   self(proto is Number, domain = Socket::AF_SP)
+      if not proto then
+         return nil, self.EINVAL
+      end
+      fd = lib::nn_socket(domain, proto)
+      if fd < 0 then
+         return lib::nn_errno()
+      end
+      self.fd = fd
+   end
+
+   bind(addr)
+      local rc = lib::nn_bind(self.fd, addr)
+      if rc >= 0 then
+         self.id = rc
+         return rc
+      else
+         return nil, lib::nn_errno()
+      end
+   end
+   connect(addr)
+      local rc = lib::nn_connect(self.fd, addr)
+      if rc >= 0 then
+         return rc
+      else
+         return nil, lib::nn_errno()
+      end
+   end
+
+   get rd_poller()
+      if not self._rd_poller then
+         self._rd_fd = self.getsockopt(Socket::NN_SOL_SOCKET, Socket::NN_RCVFD)
+	 self._rdsem = Semaphore(0)
+	 self._rd_poller = Poller self._rd_fd, 0, (poll, evts) =>
+	    self._rdsem.up()
+	 end
+      end
+      return self._rd_poller
+   end
+
+   get wr_poller()
+      if not self._wr_poller then
+         self._wr_fd = self.getsockopt(Socket::NN_SOL_SOCKET, Socket::NN_SNDFD)
+	 self._wrsem = Semaphore(0)
+	 self._wr_poller = Poller self._wr_fd, 0, (poll, evts) =>
+	    self._wrsem.up()
+	 end
+      end
+      return self._wr_poller
+   end
+
+   get readable()
+      poller = self.rd_poller
+      poller.start()
+      poller.modify '+r'
+      self._rdsem.down()
+      poller.modify '-r'
+      return 1
+   end
+
+   get writable()
+      poller = self.wr_poller
+      poller.start()
+      poller.modify "+w"
+      self._wrsem.down()
+      poller.modify "-w"
+      return 1
+   end
+
+   local EAGAIN      = Socket::EAGAIN
+   local NN_DONTWAIT = Socket::NN_DONTWAIT
+
+   send(mesg)
+      rc = lib::nn_send(self.fd, mesg, #mesg, NN_DONTWAIT)
+      if rc < 0 and lib::nn_errno() == EAGAIN then
+         if self.writable > 0 then
+            rc = lib::nn_send(self.fd, mesg, #mesg, 0)
+         else
+            return nil, lib::nn_errno()
+         end
+      end
+      return rc
+   end
+
+   recv()
+      if not self._ptr then
+         self._ptr = ffi::new('void*[1]')
+      end
+      ptr = self._ptr
+      rcv = lib::nn_recv(self.fd, ptr, -1, NN_DONTWAIT)
+      if rcv < 0 and lib::nn_errno() == EAGAIN then
+         if self.readable > 0 then
+            rcv = lib::nn_recv(self.fd, ptr, -1, 0)
+         else
+            return nil, lib::nn_errno()
+         end
+      end
+      if rcv >= 0 then
+         out = ffi::string(ptr[0], rcv)
+         lib::nn_freemsg(ptr[0])
+         return out
+      end
+      return nil, lib::nn_errno()
+   end
+
+   stop()
+      if self._rd_poller then
+         self._rd_poller.stop()
+         self._rd_poller = nil
+      end
+      if self._wr_poller then
+         self._wr_poller.stop()
+         self._wr_poller = nil
+      end
+   end
+
+   shutdown(how)
+      self.stop()
+      if self.id and self.id >= 0 then
+         rc = lib::nn_shutdown(self.fd, self.id)
+         if rc == 0 then
+            return rc
+         else
+            return nil, lib::nn_errno()
+         end
+      end
+      return nil, Socket::EINVAL
+   end
+
+   close()
+      self.stop()
+      local rc
+      if self.fd and self.fd >= 0 then
+         rc = lib::nn_close(self.fd)
+         if rc < 0 then
+            return nil, lib::nn_errno()
+         end
+      end
+      self.fd = -1
+      return rc
+   end
+
+   local int_sz      = ffi::sizeof('int')
+   local int_1_t     = ffi::typeof('int[1]')
+   local size_1_t    = ffi::typeof("size_t[1]")
+   local charptr_1_t = ffi::typeof('char *[1]')
+
+   setsockopt(lvl, opt, val, len)
+      if not len and val is Boolean then
+         val = int_1_t(val and 1 or 0)
+         len = int_sz
+      end
+      if not len and val is Number then
+         val = int_1_t(val)
+         len = int_sz
+      end
+      if not len and val is String then
+         len = #val
+      end
+      rc = lib::nn_setsockopt(self.fd, lvl, opt, val, len)
+      if rc == 0 then
+         return rc
+      else
+         return nil, lib::nn_errno()
+      end
+   end
+
+   getsockopt(lvl, opt)
+      val, len = int_1_t(), size_1_t(int_sz)
+      rc = lib::nn_getsockopt(self.fd, lvl, opt, val, len)
+      if rc == 0 then
+         return val[0]
+      else
+         return nil, lib::nn_errno()
+      end
+   end
+
+   function self::sleep(msec)
+      lib::nn_sleep(msec)
+   end
+
+   function self::term()
+      lib::nn_term()
+   end
+
+   function self.__codec__()
+      return (name) =>
+         import Socket from name
+         return Socket
+      end, _NAME
+   end
+
+   __codec__()
+      return (v) =>
+         import Socket from "nanomsg"
+         return { fd = v[1] } as Socket
+      end, { tonumber(self.fd) }
+   end
+
+end
+
+
