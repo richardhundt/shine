@@ -83,6 +83,9 @@ function Module.__tostring(self)
    end
 end
 function Module.__call(self, ...)
+   if self.__apply then
+      return self:__apply(...)
+   end
    local body = Function.clone(self.__body)
    local name = self.__name .. '@' .. string.format('%p', module)
    local module = { __body = body, __name = name }
