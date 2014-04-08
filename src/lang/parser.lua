@@ -36,7 +36,7 @@ local patt = [=[
    word     <- (%alpha / "_" / "$" / "!" / "?") (%alnum / "_" / "$" / "!" / "?")*
 
    reserved <- (
-      "local" / "function" / "nil" / "true" / "false" / "return" / "end"
+      "var" / "function" / "nil" / "true" / "false" / "return" / "end"
       / "break" / "goto" / "not" / "do" / "for" / "in" / "and" / "or"
       / "while" / "repeat" / "until" / "if" / "elseif" / "else" / "then"
    ) <idsafe>
@@ -98,9 +98,9 @@ local patt = [=[
 
    literal <- ( <number> / <string> / <boolean> ) -> literal
 
-   in  <- "in"  <idsafe>
-   end <- "end" <idsafe>
-   do  <- "do"  <idsafe>
+   in  <- "in" <idsafe>
+   end <- "}"  <idsafe>
+   do  <- "do" <idsafe>
 
    export_stmt <- (
       "export" <idsafe> s {| <ident_list> |}
@@ -198,21 +198,21 @@ local patt = [=[
    ) -> decorator
 
    guarded_ident <- (
-      <ident> hs "is" <idsafe> s <expr>
+      <ident> hs ":" <idsafe> s <expr>
    ) -> guardedIdent
 
    local_decl <- (
-      "local" <idsafe> %1 s {| <bind_left> (s "," s <bind_left>)* |}
+      "var" <idsafe> %1 s {| <bind_left> (s "," s <bind_left>)* |}
       (s "=" s {| <expr_list> |})?
    ) -> localDecl
 
    local_func <- (
-      "local" <idsafe> s
+      "var" <idsafe> s
       "function" <idsafe> s <ident> s <func_head> s <func_body>
    ) -> localFuncDecl
 
    local_coro <- (
-      "local" <idsafe> s
+      "var" <idsafe> s
       "function*" <idsafe> s <ident> s <func_head> s <func_body>
    ) -> localCoroDecl
 
@@ -282,7 +282,7 @@ local patt = [=[
       )
    ) -> funcExpr
 
-   func_body <- <block_stmt> s (<end> / %1 => error)
+   func_body <- <block_stmt>
 
    coro_expr <- (
       "function*" s <func_head> s <func_body>
@@ -303,21 +303,19 @@ local patt = [=[
    ) -> includeStmt
 
    module_decl <- (
-      ({"local"} <idsafe> s / '' -> "package")
+      ({"var"} <idsafe> s / '' -> "package")
       "module" <idsafe> s <ident> s
-      <class_body> s
-      (<end> / %1 => error)
+      <class_body>
    ) -> moduleDecl
 
    class_decl <- (
-      ({"local"} <idsafe> s / '' -> "package")
+      ({"var"} <idsafe> s / '' -> "package")
       "class" <idsafe> s <ident> (s <class_heritage>)? s
-      <class_body> s
-      (<end> / %1 => error)
+      <class_body>
    ) -> classDecl
 
    class_body <- {|
-      (<class_body_stmt> (<sep> s <class_body_stmt>)* <sep>?)?
+      "{" s (<class_body_stmt> (<sep> s <class_body_stmt>)* <sep>?)? s ("}" / %1 => error)
    |} -> classBody
 
    class_body_stmt <- (('' -> curline) (
@@ -341,7 +339,7 @@ local patt = [=[
 
    param <- {|
       {:name: <ident> :}
-      (s "is" <idsafe> s {:guard: <expr> :})?
+      (s ":" s {:guard: <expr> :})?
       (s "=" s {:default: <expr> :})?
    |}
    param_list <- (
@@ -353,56 +351,56 @@ local patt = [=[
 
    param_rest <- {| "..." {:name: <ident>? :} {:rest: '' -> 'true' :} |}
 
-   block_stmt <- (
+   block_stmt <- ("{" s
       {| (<stmt> (<sep> s <stmt>)* <sep>?)? |}
+   s ("}" / %1 => error)
    ) -> blockStmt
 
    if_stmt <- (
-      "if" <idsafe> s <expr> s ("then" <idsafe> / %1 => error) s <block_stmt> s (
-           "else" <if_stmt>
-         / "else" <idsafe> s <block_stmt> s (<end> / %1 => error)
-         / (<end> / %1 => error)
+      "if" <idsafe> s "(" s <expr> s (")" / %1 => error) s <block_stmt> s (
+         "else" <idsafe> s (<if_stmt> / <block_stmt>)
       )
    ) -> ifStmt
 
    given_stmt <- (
-      "given" <idsafe> s <expr>
+      "given" <idsafe> s "(" s <expr> s ")" s "{" s
          ({| <given_case>+ |} / %1 => error)
          (s "else" <idsafe> s <block_stmt>)? s
-      (<end> / %1 => error)
+      ("}" / %1 => error)
    ) -> givenStmt
 
    given_case <- (
-      s "case" <idsafe> s (
+      s "case" <idsafe> s "(" s (
            <array_patt>
          / <table_patt>
          / <expr>
       )
       {| (s "if" <idsafe> s <expr>)? |}
-      s "then" <idsafe> s <block_stmt>
+      s ")"
+      s <block_stmt>
    ) -> givenCase
 
    for_stmt <- (
-      "for" <idsafe> s <ident> s "=" s <expr> s "," s <expr>
-      (s "," s <expr> / ('' -> '1') -> literalNumber) s
+      "for" <idsafe> s "(" s <ident> s "=" s <expr> s "," s <expr>
+      (s "," s <expr> / ('' -> '1') -> literalNumber) s ")" s
       <loop_body>
    ) -> forStmt
 
    for_in_stmt <- (
-      "for" <idsafe> s {| <ident_list> |} s <in> s <expr> s
+      "for" <idsafe> s "(" {| <ident_list> |} s <in> s <expr> s ")" s
       <loop_body>
    ) -> forInStmt
 
-   loop_body <- <do> s <block_stmt> s (<end> / %1 => error)
+   loop_body <- "{" s <block_stmt> s ("}" / %1 => error)
 
-   do_stmt <- <loop_body> -> doStmt
+   do_stmt <- "do" <idsafe> s <loop_body> -> doStmt
 
    while_stmt <- (
-      "while" <idsafe> s <expr> s <loop_body>
+      "while" <idsafe> s "(" s <expr> s ")" s <loop_body>
    ) -> whileStmt
 
    repeat_stmt <- (
-      "repeat" <idsafe> s <block_stmt> s ("until" <idsafe> s <expr> / %1 => error)
+      "repeat" <idsafe> s "{" s <block_stmt> s "}" s ("until" <idsafe> s <expr> / %1 => error)
    ) -> repeatStmt
 
    ident <- (
@@ -517,9 +515,9 @@ local patt = [=[
    ) -> regexExpr
 
    grammar_decl <- (
-      ({"local"} <idsafe> s / '' -> "package")
-      "grammar" <idsafe> HS <ident> (s <grammar_body>)? s
-      (<end> / %1 => error)
+      ({"var"} <idsafe> s / '' -> "package")
+      "grammar" <idsafe> HS <ident> s "{" (s <grammar_body>)? s
+      ("}" / %1 => error)
    ) -> grammarDecl
 
    grammar_body <- {|
