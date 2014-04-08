@@ -9,7 +9,7 @@ LIBS := ${BUILD}/libs/sys.so \
 
 all: ${LIBS}
 
-${BUILD}/libs/sys.so: ${BUILD}/libnanomsg.a ${BUILD}/uthread.o
+${BUILD}/libs/sys.so: ${BUILD}/uthread.o
 	${SHC} -n "sys"           sys/init.shn      ${BUILD}/sys.o
 	${SHC} -n "sys.unix"      sys/unix.shn      ${BUILD}/sys_unix.o
 	${SHC} -n "sys.win32"     sys/win32.shn     ${BUILD}/sys_win32.o
@@ -20,13 +20,11 @@ ${BUILD}/libs/sys.so: ${BUILD}/libnanomsg.a ${BUILD}/uthread.o
 	${SHC} -n "sys.ffi.linux" sys/ffi/linux.shn ${BUILD}/sys_ffi_linux.o
 	${SHC} -n "sys.argparse"  sys/argparse.shn  ${BUILD}/sys_argparse.o
 	${SHC} -n "sys.thread"    sys/thread.shn    ${BUILD}/sys_thread.o
-	${SHC} -n "sys.nanomsg"   sys/nanomsg.shn   ${BUILD}/sys_nanomsg.o
 	${CC} ${SOFLAGS} -o ${BUILD}/libs/sys.so ${LDFLAGS} \
 	${BUILD}/sys.o ${BUILD}/sys_unix.o ${BUILD}/sys_win32.o \
 	${BUILD}/sys_ffi.o ${BUILD}/sys_ffi_posix.o ${BUILD}/sys_ffi_osx.o \
 	${BUILD}/sys_ffi_bsd.o ${BUILD}/sys_ffi_linux.o ${BUILD}/sys_argparse.o \
-	${BUILD}/sys_nanomsg.o ${BUILD}/sys_thread.o \
-	${LDPRE} ${BUILD}/libnanomsg.a ${LDPOST} ${BUILD}/uthread.o ${LPTHREAD}
+	${BUILD}/sys_thread.o ${BUILD}/uthread.o ${LPTHREAD}
 
 ${BUILD}/libs/async.so: ${BUILD}/upoll.o
 	${SHC} -n "async"       async/init.shn  ${BUILD}/async.o
@@ -54,12 +52,14 @@ ${BUILD}/libs/util.so: ${BUILD}/trex.o
 	${BUILD}/util_time.o ${BUILD}/util_regexp.o ${BUILD}/trex.o \
 	${BUILD}/util_random.o ${BUILD}/util_guards.o
 
-${BUILD}/libs/net.so:
+${BUILD}/libs/net.so: ${BUILD}/libnanomsg.a
 	${SHC} -n "net.socket" net/socket.shn  ${BUILD}/net_socket.o
 	${SHC} -n "net.http" net/http.shn  ${BUILD}/net_http.o
 	${SHC} -n "net.uri" net/uri.shn  ${BUILD}/net_uri.o
+	${SHC} -n "net.nanomsg" net/nanomsg.shn ${BUILD}/net_nanomsg.o
 	${CC} ${SOFLAGS} -o ${BUILD}/libs/net.so ${LDFLAGS} \
-	${BUILD}/net_socket.o ${BUILD}/net_http.o ${BUILD}/net_uri.o
+	${BUILD}/net_socket.o ${BUILD}/net_http.o ${BUILD}/net_uri.o \
+	${BUILD}/net_nanomsg.o ${LDPRE} ${BUILD}/libnanomsg.a ${LDPOST}
 
 ${BUILD}/libs/codec.so:
 	${SHC} -n "codec.base64" codec/base64.shn  ${BUILD}/codec_base64.o

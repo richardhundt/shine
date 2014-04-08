@@ -1,6 +1,6 @@
 import ffi, C from 'sys.ffi'
 
-local lib_path = assert(package::searchpath("sys", package.cpath))
+local lib_path = assert(package::searchpath("net", package.cpath))
 local lib = ffi::load(lib_path, true)
 
 -- Some of this code is stolen from luajit-nanomsg:
@@ -245,7 +245,7 @@ class Socket
 
    __codec__()
       return (v) =>
-         import Socket from "nanomsg"
+         import Socket from "net.nanomsg"
          return { fd = v[1] } as Socket
       end, { tonumber(self.fd) }
    end

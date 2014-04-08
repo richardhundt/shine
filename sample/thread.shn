@@ -1,5 +1,5 @@
 import Thread from "sys.thread"
-import Socket from "sys.nanomsg"
+import Socket from "net.nanomsg"
 
 local ch1 = "inproc://1"
 
