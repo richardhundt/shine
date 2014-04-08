@@ -144,7 +144,6 @@ module JSON
          str = item
          str = str.gsub "([%z\1-\127\194-\244][\128-\191]*)", (c) =>
             if #c == 1 then
-               print "%q".format(c)
                if encode_escapes[c] then
                   return encode_escapes[c]
                elseif c.match "[%z%c\\\"]" then
