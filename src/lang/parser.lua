@@ -100,7 +100,6 @@ local patt = [=[
 
    in  <- "in" <idsafe>
    end <- "}"  <idsafe>
-   do  <- "do" <idsafe>
 
    export_stmt <- (
       "export" <idsafe> s {| <ident_list> |}
@@ -218,9 +217,9 @@ local patt = [=[
    macro_decl <- (
       "macro" <idsafe> s <ident> s (
          {"="} s <ident> /
-         "(" s {| <expr_list> |} s ")" s
+         "(" s {| <expr_list> |} s ")" s "{" s
          <stmt_list> s
-         (<end> / %1 => error)
+         ("}" / %1 => error)
       )
    ) -> macroDecl
 
