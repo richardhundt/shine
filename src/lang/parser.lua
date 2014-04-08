@@ -36,9 +36,9 @@ local patt = [=[
    word     <- (%alpha / "_" / "$" / "!" / "?") (%alnum / "_" / "$" / "!" / "?")*
 
    reserved <- (
-      "var" / "function" / "nil" / "true" / "false" / "return" / "end"
-      / "break" / "goto" / "not" / "do" / "for" / "in" / "and" / "or"
-      / "while" / "repeat" / "until" / "if" / "elseif" / "else" / "then"
+      "var" / "function" / "nil" / "true" / "false" / "return"
+      / "break" / "goto" / "not" / "do" / "for" / "in" / "and"
+      / "or" / "while" / "repeat" / "until" / "if" / "else"
    ) <idsafe>
 
    keyword  <- (
