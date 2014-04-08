@@ -103,6 +103,21 @@ class HTTPEntity
       self.headers = headers
       self.stream  = stream
    end
+   readall()
+      buf = [ ]
+      while true do
+         if self.stream.readable > 0 then
+            got = self.stream.read(1024)
+            if got == nil then
+               break
+            end
+            buf.push(got)
+         else
+            break
+         end
+      end
+      return buf.join()
+   end
 end
 
 class HTTPRequest
