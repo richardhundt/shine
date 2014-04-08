@@ -194,6 +194,9 @@ class ByteStream
             wait = self.wput.dequeue()
             wait.ready()
          end
+         if self.head == self.have then
+            self.eof = true
+         end
       end
       return out
    end
@@ -201,6 +204,7 @@ class ByteStream
    write(str)
       len = #str
       if self.writable > 0 then
+         self.is_eof = nil
          want = self.have + len
          if want > self.size then
             while self.size < want do
@@ -240,6 +244,9 @@ class ByteStream
             error("bad argument #1 to 'seek' (invalid option '%{whence}')", 2)
       end
       self.head = base + offset
+      if self.head == self.have then
+         self.eof = true
+      end
       return self.head
    end
 
@@ -255,6 +262,7 @@ class ByteStream
             wait = self.wget.dequeue()
             wait.ready()
          end
+         self.eof = true
       end
    end
 end
