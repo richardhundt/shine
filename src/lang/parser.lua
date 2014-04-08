@@ -172,12 +172,11 @@ local patt = [=[
    try_stmt <- (
       "try" <idsafe> s <block_stmt>
       {| <catch_clause>* |} (s "finally" <idsafe> s <block_stmt>)?
-      s (<end> / %1 => error)
    ) -> tryStmt
 
    catch_clause <- (
       s "catch" <idsafe> hs
-      <ident> (hs "if" <idsafe> s <expr>)? hs "then" <idsafe> s <block_stmt> s
+      <ident> (hs "if" <idsafe> s <expr>)? s <block_stmt> s
    ) -> catchClause
 
    decl_stmt <- (
@@ -275,10 +274,9 @@ local patt = [=[
 
    func_expr <- (
       "function" <idsafe> s <func_head> s <func_body>
-      / (<func_head> / {| |}) s "=>" (
-           hs {| <expr_list> |}
-         / s <block_stmt> s (<end> / %1 => error)
-         / %1 => error
+      / (<func_head> / {| |}) s "=>" (s
+         "{" s "=" s {| <expr_list> |} s ("}" / %1 => error)
+         / <block_stmt>
       )
    ) -> funcExpr
 
@@ -286,7 +284,7 @@ local patt = [=[
 
    coro_expr <- (
       "function*" s <func_head> s <func_body>
-      / "*" <func_head> s "=>" s (hs <expr> / <block_stmt> s <end> / %1 => error)
+      / "*" <func_head> s "=>" s (hs <expr> / <block_stmt> / %1 => error)
    ) -> coroExpr
 
    coro_decl <- (
