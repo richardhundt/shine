@@ -452,7 +452,7 @@ local function try(try, catch, finally)
    return rv
 end
 
-local String = class("String", function(self, super)
+local String = class("String", function(self)
    local string = _G.string
    for k, v in pairs(string) do
       self.__members__[k] = v
@@ -501,7 +501,7 @@ local String = class("String", function(self, super)
 end)
 debug.setmetatable("", String)
 
-local Error = class("Error", function(self, super)
+local Error = class("Error", function(self)
    self.__members__.self = function(self, mesg)
       self.message = mesg
       self.trace = debug.traceback(mesg, 2)
