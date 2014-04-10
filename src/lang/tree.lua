@@ -506,6 +506,9 @@ function defs.localDecl(name, lhs, oper, rhs)
          os.exit(1)
       end
    end
+   if oper == 'in' then
+      rhs = { defs.inExpr(lhs, rhs) }
+   end
 
    return { type = "LocalDeclaration", oper = oper, names = lhs, inits = rhs }
 end
