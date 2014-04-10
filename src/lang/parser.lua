@@ -203,7 +203,7 @@ local patt = [=[
 
    local_decl <- (
       "local" <idsafe> %1 s {| <bind_left> (s "," s <bind_left>)* |}
-      (s "=" s {| <expr_list> |})?
+      (s ({"="} s {| <expr_list> |} / {"in"} <idsafe> s <expr>))?
    ) -> localDecl
 
    local_func <- (
@@ -439,11 +439,15 @@ local patt = [=[
       )? |}
    ) -> term
 
-   expr <- (('' -> curline) (<infix_expr> / <spread_expr>)) -> expr
+   expr <- (('' -> curline) (<in_expr> / <infix_expr> / <spread_expr>)) -> expr
 
    spread_expr <- (
       "..." <term>?
    ) -> spreadExpr
+
+   in_expr <- (
+      {| <ident_list> |} s "in" <idsafe> s <expr>
+   ) -> inExpr
 
    nil_expr <- (
       "nil" <idsafe>
@@ -480,7 +484,8 @@ local patt = [=[
    update_expr <- (
       <bind_left> {|
          (s {:oper: <assop> :} s {:expr: <expr> :})
-         / ((s "," s <bind_left>)* s '=' !'>' s {:list: {| <expr_list> |} :})
+         / ((s "," s <bind_left>)* s {:oper: {'=' !'>' / 'in' <idsafe>} :}
+             s {:list: {| <expr_list> |} :})
       |}?
    ) -> updateExpr
 

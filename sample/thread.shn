@@ -1,7 +1,7 @@
 import Thread from "sys.thread"
 import Socket from "net.nanomsg"
 
-local ch1 = "inproc://1"
+local ch1 = "ipc:///tmp/foo.ipc"
 
 local th1 = Thread::create =>
 

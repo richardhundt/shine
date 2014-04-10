@@ -663,6 +663,13 @@ function match:ApplyPattern(node)
    end
    return Op{'!call', 'ApplyPattern', unpack(args)}
 end
+function match:InExpression(node)
+   local names = { }
+   for i=1, #node.names do
+      names[#names + 1] = Op(node.names[i].name)
+   end
+   return Op{ '!call', '__in__', Op(names), self:get(node.expression) }
+end
 function match:UpdateExpression(node)
    local oper = string.sub(node.operator, 1, -2)
    local expr

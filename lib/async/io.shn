@@ -282,7 +282,7 @@ class FileStream
          if got < 0 then
             self.poller.stop()
             return nil, ffi::string(C::strerror(ffi::errno()))
-         elseif got == 0 then
+         elseif got == 0 or got < len then
             self.is_eof = true
             self.poller.stop()
          end
@@ -302,6 +302,13 @@ class FileStream
    end
 
    seek(whence, offset)
+      cur = self.stream.seek('cur')
+      ofs = self.stream.seek('end')
+      if ofs == cur then
+         self.is_eof = true
+      else
+         self.is_eof = nil
+      end
       return self.stream.seek(whence, offset)
    end
 

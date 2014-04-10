@@ -459,18 +459,22 @@ end
 function defs.logicalExpr(op, lhs, rhs)
    return { type = "LogicalExpression", operator = op, left = lhs, right = rhs }
 end
-function defs.assignExpr(lhs, rhs)
+function defs.assignExpr(lhs, oper, rhs)
    for i=1, #lhs do
       if lhs[i].type == 'CallExpression' then
          lhs[i].type = 'ApplyPattern'
       end
    end
-   return { type = "AssignmentExpression", left = lhs, right = rhs }
+   return { type = "AssignmentExpression", oper = oper, left = lhs, right = rhs }
 end
 
 function defs.updateExpr(lhs, rhs)
    if rhs then
-      if rhs.oper then
+      if rhs.oper == '=' then
+         return defs.assignExpr({ lhs, unpack(rhs) }, '=', rhs.list)
+      elseif rhs.oper == 'in' then
+         return defs.inExpr({ lhs, unpack(rhs) }, 'in', rhs.list)
+      else
          return {
             type     = "UpdateExpression",
             left     = lhs,
@@ -478,16 +482,23 @@ function defs.updateExpr(lhs, rhs)
             right    = rhs.expr
          }
       end
-      return defs.assignExpr({ lhs, unpack(rhs) }, rhs.list)
    else
       return lhs
    end
 end
-function defs.localDecl(name, lhs, rhs)
+
+local valid_lhs = {
+   ['Identifier']   = true,
+   ['TablePattern'] = true,
+   ['ArrayPattern'] = true,
+   ['ApplyPattern'] = true
+}
+
+function defs.localDecl(name, lhs, oper, rhs)
    for i=1, #lhs do
       if lhs[i].type == 'CallExpression' then
          lhs[i].type = 'ApplyPattern'
-      elseif lhs[i].type ~= 'Identifier' then
+      elseif not valid_lhs[lhs[i].type] then
          print(string.format(
             "Error: %s:%s: invalid left hand side in local declaration",
             tostring(name), tostring(line)
@@ -496,7 +507,10 @@ function defs.localDecl(name, lhs, rhs)
       end
    end
 
-   return { type = "LocalDeclaration", names = lhs, inits = rhs }
+   return { type = "LocalDeclaration", oper = oper, names = lhs, inits = rhs }
+end
+function defs.inExpr(names, expr)
+   return { type = "InExpression", names = names, expression = expr }
 end
 function defs.doStmt(block)
    return { type = "DoStatement", body = block }

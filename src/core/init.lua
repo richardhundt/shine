@@ -434,7 +434,7 @@ local Array = class("Array", function(self)
    function self.__members__:map(f)
       local b = Array()
       for i=0, self.length - 1 do
-         b[i] = f(i, self[i])
+         b[i] = f(self[i])
       end
       return b
    end
@@ -805,6 +805,21 @@ end
 Pattern.__index.__unapply = function(self, subj)
    return ipairs{ self:match(subj) }
 end
+Pattern.__index.find = function(self, subj, i)
+  local patt = self / 0
+  patt = lpeg.P{ lpeg.Cp() * patt * lpeg.Cp() + 1 * lpeg.V(1) }
+  local i, e = patt:match(subj, i or 1)
+  if i then
+     return i, e - 1
+  else
+     return i
+  end
+end
+Pattern.__index.gsub = function(self, subj, rep)
+  local patt = lpeg.Cs((self / rep + 1)^0)
+  return patt:match(subj)
+end
+
 
 local Grammar = setmetatable({ __name = 'Grammar' }, Meta)
 
@@ -965,6 +980,13 @@ local CData     = setmetatable({ __name = 'CData'     }, Meta)
 for k, v in pairs(table) do
    Table[k] = v
 end
+function Table.keys(t)
+   ks = { }
+   for k, v in pairs(t) do
+      ks[#ks + 1] = k
+   end
+   return ks
+end
 for k, v in pairs(coroutine) do
    Coroutine[k] = v
 end
@@ -1074,6 +1096,14 @@ local function usrop(op, a, b)
       end
    end
    return h(a, b)
+end
+
+local function __in__(names, expr)
+   local t = { }
+   for i=1, #names do
+      t[i] = expr[names[i]]
+   end
+   return unpack(t, 1, #names)
 end
 
 __magic__ = {

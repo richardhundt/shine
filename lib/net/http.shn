@@ -128,7 +128,7 @@ class HTTPRequest
       self.entity   = entity
       self.protocol = protocol
    end
-   want_close()
+   should_close()
       if self.protocol == 'HTTP/1.0' then
          if self.headers['Connection'] then
             return self.headers['Connection'].lower() != 'keep-alive'

@@ -14,6 +14,15 @@ class Date
       return ffi::string(buf)
    end
 
+   local ts_clk = ffi::new('time_t[1]')
+   local ts_buf = ffi::new('char[256]')
+   function self::timestamp(fmt = iso8601)
+      ts_clk[0] = C::time(null)
+      tm = C::localtime(ts_clk)
+      C::strftime(ts_buf, 256, fmt, tm)
+      return ffi::string(ts_buf)
+   end
+
    parse(str is String, fmt = iso8601)
       tm = ffi::new('tm_t')
       C::strptime(str, fmt, tm)
