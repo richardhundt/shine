@@ -356,7 +356,7 @@ local Array = class("Array", function(self)
    end
    function self.__members__:slice(offset, count)
       local a = Array()
-      for i=offset, offset + count do
+      for i=offset, offset + count - 1 do
          a[a.length] = self[i]
       end
       return a
