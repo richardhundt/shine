@@ -48,8 +48,8 @@ Function.__tostring = function(self)
    return string.format('function(%s): %p', table.concat(params,', '), self)
 end
 Function.clone = function(self)
-   copy = loadstring(string.dump(self))
-   info = debug.getinfo(self, 'u')
+   local copy = loadstring(string.dump(self))
+   local info = debug.getinfo(self, 'u')
    for i=1, info.nups do
       debug.upvaluejoin(copy, i, self, i)
    end
@@ -356,14 +356,14 @@ local Array = class("Array", function(self)
    end
    function self.__members__:slice(offset, count)
       local a = Array()
-      for i=offset, offset + count do
+      for i=offset, offset + count - 1 do
          a[a.length] = self[i]
       end
       return a
    end
    function self.__members__:reverse()
       local a = Array()
-      for i = self.length - 1, 0 do
+      for i = self.length - 1, 0, -1 do
          a[a.length] = self[i]
       end
       return a
@@ -713,7 +713,7 @@ ArrayPattern = class("ArrayPattern", function(self)
       if getmetatable(that) ~= Array then
          return false
       end
-      for k, v in ipairs(self) do
+      for i, v in ipairs(self) do
          if v ~= __var__ then
             if not __match__(v, that[i]) then
                return false
@@ -947,8 +947,8 @@ local function environ(mod)
    return setmetatable(mod, { __index = __magic__ })
 end
 local function warn(msg, lvl)
-   info = debug.getinfo((lvl or 1) + 1, "Sl")
-   tmpl = "%s:%s: %s\n"
+   local info = debug.getinfo((lvl or 1) + 1, "Sl")
+   local tmpl = "%s:%s: %s\n"
    io.stderr:write(tmpl:format(info.short_src, info.currentline, msg))
 end
 
@@ -1013,7 +1013,7 @@ end
 local function typeof(a)
    local t = type(a)
    if t == 'table' or t == 'userdata' then
-      m = getmetatable(a)
+      local m = getmetatable(a)
       if m then return m end
    end
    if t == 'cdata' then
