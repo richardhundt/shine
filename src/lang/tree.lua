@@ -483,11 +483,17 @@ function defs.updateExpr(lhs, rhs)
       return lhs
    end
 end
+local valid_lhs = {
+   Identifier   = true,
+   ArrayPattern = true,
+   ApplyPattern = true,
+   TablePattern = true
+}
 function defs.localDecl(name, lhs, rhs)
    for i=1, #lhs do
       if lhs[i].type == 'CallExpression' then
          lhs[i].type = 'ApplyPattern'
-      elseif lhs[i].type ~= 'Identifier' then
+      elseif not valid_lhs[lhs[i].type] then
          print(string.format(
             "Error: %s:%s: invalid left hand side in local declaration",
             tostring(name), tostring(line)
