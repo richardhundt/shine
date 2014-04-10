@@ -363,7 +363,7 @@ local Array = class("Array", function(self)
    end
    function self.__members__:reverse()
       local a = Array()
-      for i = self.length - 1, 0 do
+      for i = self.length - 1, 0, -1 do
          a[a.length] = self[i]
       end
       return a
