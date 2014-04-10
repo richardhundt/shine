@@ -136,7 +136,6 @@ function Context.new(name, opts)
    return setmetatable(self, Context)
 end
 function Context:abort(mesg, line)
-   local name = self.name
    mesg = string.format("shine: %s:%s: %s\n", self.name, line or self.line, mesg)
    if DEBUG then
       error(mesg)
@@ -181,7 +180,7 @@ function Context:unhoist(block)
    self.scope.hoist = { }
 end
 function Context:push(stmt)
-   scope = self.scope.outer or self.scope
+   local scope = self.scope.outer or self.scope
    scope.block[#scope.block + 1] = stmt
 end
 function Context:shift(into)
@@ -370,6 +369,7 @@ function match:MacroDeclaration(node)
 
    local name = node.name.name
    local core = require("core")
+   local func
 
    if node.head == '=' then
       local nref = node.body.name
