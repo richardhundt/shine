@@ -409,65 +409,6 @@ function match:MacroDeclaration(node)
    return OpChunk{ }
 end
 
-function match:LocalDeclaration(node)
-   local decl = { }
-   local simple = true
-   local body = { }
-   for i=1, #node.names do
-      -- recursively define new variables
-      local queue = { node.names[i] }
-      while #queue > 0 do
-         local n = table.remove(queue, 1)
-         if n.type == 'ArrayPattern' then
-            simple = false
-            for i=1, #n.elements do
-               queue[#queue + 1] = n.elements[i]
-            end
-         elseif n.type == 'TablePattern' then
-            simple = false
-            for i=1, #n.entries do
-               queue[#queue + 1] = n.entries[i].value
-            end
-         elseif n.type == 'ApplyPattern' then
-            simple = false
-            for i=1, #n.arguments do
-               queue[#queue + 1] = n.arguments[i]
-            end
-         elseif n.type == 'Identifier' then
-            if n.guard then
-               simple = false
-            else
-               self.ctx:define(n.name)
-            end
-            decl[#decl + 1] = n.name
-         end
-      end
-   end
-
-   if simple and #node.decorators == 0 then
-      if node.inits then
-         body[#body + 1] = Op{'!define', Op(decl), Op(self:list(node.inits)) }
-      else
-         body[#body + 1] = Op{'!define', Op(decl), Op{Op(nil)} }
-      end
-      return OpChunk(body)
-   else
-      node.left  = node.names
-      node.right = node.inits
-
-      local frag = OpChunk{ match.AssignmentExpression(self, node) }
-
-      for i=#node.decorators, 1, -1 do
-         local deco = node.decorators[i]
-         local args = self:list(deco.arguments)
-         frag[#frag + 1] = Op{'!massign', Op{decl},
-            Op{Op{'!call', self:get(deco.name), OpList(decl), OpList(args) }}
-         }
-      end
-
-      return frag
-   end
-end
 local function extract_bindings(node, ident)
    local list = { }
    local queue = { node }
@@ -499,27 +440,56 @@ local function extract_bindings(node, ident)
    end
    return list
 end
+
+function match:LocalDeclaration(node)
+   node.is_local = true
+
+   local decl = { }
+   for i=1, #node.names do
+      local list = extract_bindings(node.names[i])
+      for i=1, #list do
+         if list[i].type == 'Identifier' then
+            decl[#decl + 1] = list[i].name
+         end
+      end
+   end
+
+   node.left  = node.names
+   node.right = node.inits
+   local frag = OpChunk{ match.AssignmentExpression(self, node) }
+
+   for i=#node.decorators, 1, -1 do
+      local deco = node.decorators[i]
+      local args = self:list(deco.arguments)
+      frag[#frag + 1] = Op{'!massign', Op{decl},
+         Op{Op{'!call', self:get(deco.name), OpList(decl), OpList(args) }}
+      }
+   end
+
+   return frag
+end
 function match:AssignmentExpression(node)
    local body = { }
    local decl = { }
    local init = { }
    local dest = { }
    local chks = { }
+
    local exps
    if node.right then
       exps = self:list(node.right)
    else
       exps = Op{Op(nil)}
    end
+
    for i=1, #node.left do
       local n = node.left[i]
       local t = n.type
       if t == 'TablePattern' or t == 'ArrayPattern' or t == 'ApplyPattern' then
          -- destructuring
-         local tvar = util.genid()
-         self.ctx:define(tvar)
+         local temp = util.genid()
+         self.ctx:define(temp)
 
-         local temp = tvar
          local left = { }
          n.temp = temp
          n.left = left
@@ -533,7 +503,7 @@ function match:AssignmentExpression(node)
          for i=1, #bind do
             local n = bind[i]
             if n.type == 'Identifier' then
-               if n.guard or not self.ctx:lookup(n.name) then
+               if node.is_local or n.guard or not self.ctx:lookup(n.name) then
                   local guard
                   if n.guard then
                      guard = util.genid()
@@ -555,7 +525,7 @@ function match:AssignmentExpression(node)
       else
          -- simple case
          if n.type == 'Identifier' then
-            if n.guard or not self.ctx:lookup(n.name) then
+            if node.is_local or n.guard or not self.ctx:lookup(n.name) then
                local guard
                if n.guard then
                   guard = util.genid()

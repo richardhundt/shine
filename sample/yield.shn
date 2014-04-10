@@ -10,3 +10,5 @@ end
 
 co1 = gen()
 print co1()
+print co1()
+print co1()
