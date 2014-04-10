@@ -473,7 +473,9 @@ function defs.updateExpr(lhs, rhs)
       if rhs.oper == '=' then
          return defs.assignExpr({ lhs, unpack(rhs) }, '=', rhs.list)
       elseif rhs.oper == 'in' then
-         return defs.inExpr({ lhs, unpack(rhs) }, 'in', rhs.list)
+         lhs = { lhs, unpack(rhs) }
+         rhs = rhs.list[1]
+         return defs.assignExpr(lhs, 'in', { defs.inExpr(lhs, rhs) })
       else
          return {
             type     = "UpdateExpression",
