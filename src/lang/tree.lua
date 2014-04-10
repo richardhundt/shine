@@ -488,10 +488,10 @@ function defs.updateExpr(lhs, rhs)
 end
 
 local valid_lhs = {
-   ['Identifier']   = true,
-   ['TablePattern'] = true,
-   ['ArrayPattern'] = true,
-   ['ApplyPattern'] = true
+   Identifier   = true,
+   ArrayPattern = true,
+   ApplyPattern = true,
+   TablePattern = true
 }
 
 function defs.localDecl(name, lhs, oper, rhs)
