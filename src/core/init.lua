@@ -981,7 +981,7 @@ for k, v in pairs(table) do
    Table[k] = v
 end
 function Table.keys(t)
-   ks = { }
+   local ks = { }
    for k, v in pairs(t) do
       ks[#ks + 1] = k
    end
