@@ -16,11 +16,11 @@ export TVM_PATH = ${TVMDIR}/?.lua;${CURDIR}/boot/src/?.raw;;
 export TVM_CPATH = ${CURDIR}/boot/lib/?.so;;
 
 export DEBUG=
-export DEBUG=-g
+#export DEBUG=-g
 
 TJ = ${TVMDIR}/tvmjit
 TJC = ${TJ} -b ${DEBUG}
-SHC = boot/bin/shnc ${DEBUG}
+SHC = boot/bin/shinec ${DEBUG}
 
 VERSION=0.1
 
@@ -73,13 +73,13 @@ NDEPS = ${BUILD}/deps/liblpeg.a \
 XDEPS = ${NDEPS} \
 	${BUILD}/lang.a \
 	${BUILD}/core.a \
-	${BUILD}/main.o \
-	${BUILD}/shnc.o
+	${BUILD}/shine.o \
+	${BUILD}/shinec.o
 
 CDEPS = ${NDEPS} \
 	${BUILD}/lang.a \
 	${BUILD}/core.a \
-	${BUILD}/shnc.o
+	${BUILD}/shinec.o
 
 all: dirs ${TJ} ${LPEG} ${LIBS} ${EXEC} ${NGAC} libs
 
@@ -115,11 +115,11 @@ ${BUILD}/lang.a: ${TJ}
 	${TJC} -n "lunokhod" ${TVMDIR}/lua/lunokhod.lua ${BUILD}/lang/lunokhod.o
 	ar rcus ${BUILD}/lang.a ${BUILD}/lang/*.o
 
-${BUILD}/main.o: ${BUILD}/shnc.o
-	${TJC} -n "shine" src/main.lua ${BUILD}/main.o
+${BUILD}/shine.o: ${BUILD}/shinec.o
+	${TJC} -n "shine" src/shine.lua ${BUILD}/shine.o
 
-${BUILD}/shnc.o:
-	${TJC} -n "shinec" src/shnc.lua ${BUILD}/shnc.o
+${BUILD}/shinec.o:
+	${TJC} -n "shinec" src/shinec.lua ${BUILD}/shinec.o
 
 ${BUILD}/core.a: ${BUILD}/core/init.o
 	ar rcus ${BUILD}/core.a ${BUILD}/core/*.o
@@ -176,7 +176,7 @@ bootstrap: ${TJ} ${LPEG}
 	mkdir -p boot/bin
 	mkdir -p boot/lib
 	mkdir -p boot/src/shine/lang
-	${TJC} src/shnc.lua             boot/src/shnc.raw
+	${TJC} src/shinec.lua           boot/src/shinec.raw
 	${TJC} src/lang/re.lua          boot/src/shine/lang/re.raw
 	${TJC} src/lang/parser.lua      boot/src/shine/lang/parser.raw
 	${TJC} src/lang/tree.lua        boot/src/shine/lang/tree.raw

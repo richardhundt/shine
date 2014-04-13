@@ -1,14 +1,20 @@
-function foo(f,a)
-   print 'foo', f, a
-   return f
+function foo(a)
+   return function(f)
+      print 'foo', f, a
+      return f
+   end
 end
-function bar(f,a)
-   print 'bar', f, a
-   return f
+function bar(a)
+   return function(f)
+      print 'bar', f, a
+      return f
+   end
 end
-function prop(f, c)
-   print 'prop:', f, c
-   return f
+function prop(c)
+   return function(f)
+      print 'prop:', f, c
+      return f
+   end
 end
 
 @foo(42)

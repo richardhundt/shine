@@ -107,13 +107,21 @@ local patt = [=[
    ) -> exportStmt
 
    import_stmt <- (
-      "import" <idsafe> s <import_from>
-   ) -> importStmt
+      "import" <idsafe> s (<import_from> / <import_path>)
+   )
+
+   import_path <- {| <import_path_expr> |} -> importPath
+
+   import_path_expr <- (
+      <ident> "." <import_path_expr>
+      / {:names: {| "{" s <import_name> (s "," s <import_name>)* s "}" |} :}
+      / {:names: {| {| <ident> |} |} :}
+   )
 
    import_from <- (
       {| <import_name> (s "," s <import_name>)* |} s
       "from" <idsafe> s <expr>
-   )
+   ) -> importFrom
 
    import_name <- {|
       <ident> (hs "=" hs <ident>)?
@@ -194,7 +202,7 @@ local patt = [=[
    ) -> declStmt
 
    decorator <- (
-      "@" <ident> hs {| ("(" s <expr_list>? s ")")? |}
+      "@" <term>
    ) -> decorator
 
    guarded_ident <- (

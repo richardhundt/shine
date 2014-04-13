@@ -1,4 +1,4 @@
-SHC = ../boot/bin/shnc ${DEBUG}
+SHC = ../boot/bin/shinec ${DEBUG}
 
 LIBS := ${BUILD}/libs/sys.so \
 	${BUILD}/libs/async.so \

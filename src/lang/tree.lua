@@ -119,9 +119,8 @@ function defs.declStmt(deco, node)
    node.decorators = deco
    return node
 end
-function defs.decorator(name, args)
-   name.check = true
-   return { type = "Decorator", name = name, arguments = args }
+function defs.decorator(term)
+   return { type = "Decorator", term = term }
 end
 
 function defs.includeStmt(list)
@@ -137,7 +136,16 @@ end
 function defs.rawExpr(expr)
    return { type = "RawExpression", expression = expr }
 end
-function defs.importStmt(names, from)
+function defs.importFrom(names, from)
+   return { type = "ImportStatement", names = names, from = from }
+end
+function defs.importPath(path)
+   local from  = { }
+   for i=1, #path do
+      from[#from + 1] = path[i].name
+   end
+   from = defs.literal(table.concat(from, '.'))
+   local names = path.names
    return { type = "ImportStatement", names = names, from = from }
 end
 function defs.exportStmt(names)

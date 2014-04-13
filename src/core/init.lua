@@ -20,7 +20,7 @@ export._VERSION = "0.1.0"
 
 local type, tonumber, tostring = _G.type, _G.tonumber, _G.tostring
 local getmetatable, setmetatable = _G.getmetatable, _G.setmetatable
-local xpcall = _G.xpcall
+local pcall, unpack, select = _G.pcall, _G.unpack, _G.select
 
 local __is__, __match__
 

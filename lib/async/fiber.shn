@@ -1,7 +1,7 @@
 
 class Fiber
-   import unpack from _G
-   import status, resume from coroutine
+   local unpack in _G
+   local status, resume in coroutine
 
    local coro, main = coroutine::running()
    self::main = { coro = coro, args = [ ] } as self

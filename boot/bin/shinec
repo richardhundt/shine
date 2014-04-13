@@ -1,0 +1,3 @@
+#!/usr/bin/env tvmjit
+(!call (!index (!call require "shinec") "start") (!call unpack arg))
+

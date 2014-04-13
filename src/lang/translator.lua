@@ -460,9 +460,8 @@ function match:LocalDeclaration(node)
 
    for i=#node.decorators, 1, -1 do
       local deco = node.decorators[i]
-      local args = self:list(deco.arguments)
       frag[#frag + 1] = Op{'!massign', Op{decl},
-         Op{Op{'!call', self:get(deco.name), OpList(decl), OpList(args) }}
+         Op{Op{'!call', self:get(deco.term), OpList(decl) }}
       }
    end
 
@@ -975,8 +974,7 @@ local function apply_decorators(self, node, decl)
    if #node.decorators > 0 then
       for i=#node.decorators, 1, -1 do
          local deco = node.decorators[i]
-         local args = self:list(deco.arguments)
-         decl = Op{'!call1', self:get(deco.name), decl, OpList(args) }
+         decl = Op{'!call1', self:get(deco.term), decl }
       end
    end
    return decl
