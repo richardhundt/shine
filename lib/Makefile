@@ -27,14 +27,16 @@ ${BUILD}/libs/sys.so: ${BUILD}/uthread.o
 	${BUILD}/sys_thread.o ${BUILD}/uthread.o ${LPTHREAD}
 
 ${BUILD}/libs/async.so: ${BUILD}/upoll.o
-	${SHC} -n "async"       async/init.shn  ${BUILD}/async.o
-	${SHC} -n "async.fiber" async/fiber.shn ${BUILD}/async_fiber.o
-	${SHC} -n "async.loop"  async/loop.shn  ${BUILD}/async_loop.o
-	${SHC} -n "async.util"  async/util.shn  ${BUILD}/async_util.o
-	${SHC} -n "async.io"    async/io.shn    ${BUILD}/async_io.o
+	${SHC} -n "async"          async/init.shn  ${BUILD}/async.o
+	${SHC} -n "async.fiber"    async/fiber.shn ${BUILD}/async_fiber.o
+	${SHC} -n "async.loop"     async/loop.shn  ${BUILD}/async_loop.o
+	${SHC} -n "async.loop.ffi" async/loop/ffi.shn  ${BUILD}/async_loop_ffi.o
+	${SHC} -n "async.util"     async/util.shn  ${BUILD}/async_util.o
+	${SHC} -n "async.io"       async/io.shn    ${BUILD}/async_io.o
 	${CC} ${SOFLAGS} -o ${BUILD}/libs/async.so ${LDFLAGS} \
 	${BUILD}/upoll.o ${BUILD}/async.o ${BUILD}/async_fiber.o \
-	${BUILD}/async_loop.o ${BUILD}/async_util.o ${BUILD}/async_io.o
+	${BUILD}/async_loop.o ${BUILD}/async_loop_ffi.o \
+	${BUILD}/async_util.o ${BUILD}/async_io.o
 
 ${BUILD}/libs/data.so:
 	${SHC} -n "data.queue" data/queue.shn ${BUILD}/data_queue.o
