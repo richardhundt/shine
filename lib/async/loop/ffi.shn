@@ -1,0 +1,44 @@
+import ffi from "sys.ffi"
+local lib_path = assert(package::searchpath("async", package.cpath))
+local lib = ffi::load(lib_path, true)
+
+ffi::cdef"""
+   static const int UPOLL_CTL_ADD = 1;
+   static const int UPOLL_CTL_DEL = 2;
+   static const int UPOLL_CTL_MOD = 3;
+
+   static const int UPOLLIN  = 0x01;
+   static const int UPOLLOUT = 0x02;
+   static const int UPOLLERR = 0x04;
+
+   typedef struct upoll_ upoll_t;
+
+   typedef union upoll_data {
+     void      *ptr;
+     intptr_t  fd;
+     uint32_t  u32;
+     uint64_t  u64;
+   } upoll_data_t;
+
+   typedef struct upoll_event {
+     uint32_t      events;
+     upoll_data_t  data;
+   } upoll_event_t;
+
+   upoll_t* upoll_create(uint32_t size);
+   int upoll_ctl(upoll_t* upq, int op, intptr_t fd, upoll_event_t *event);
+   int upoll_wait(upoll_t* upq, upoll_event_t *events, int maxevents, int timeout);
+   void upoll_destroy(upoll_t* upq);
+
+   intptr_t usocket(int domain, int type, int proto);
+   intptr_t uaccept(intptr_t sock);
+
+   int ubind(intptr_t sock, const char* name, const char* serv);
+   int ulisten(intptr_t sock, int backlog);
+   int uconnect(intptr_t sock, const char* name, const char* serv);
+   int uclose(intptr_t sock);
+   int uread(intptr_t fd, char* buf, size_t len);
+   int uwrite(intptr_t fd, const char* buf, size_t len);
+"""
+
+export lib

@@ -3,12 +3,16 @@ import async, yield from "async"
 import TCPServer, StreamReader from "async.io"
 import HTTPFilter, HTTPHeaders, HTTPResponse from "net.http"
 
+io::stdout.setvbuf('no')
+io::stderr.setvbuf('no')
+
 class HTTPServer
    import ffi, C from "sys.ffi"
 
    self(config = { })
       self.config = config
    end
+
    start(host, port)
       C::signal(C.SIGPIPE, ffi::cast('sig_t', C.SIG_IGN))
 
@@ -39,7 +43,7 @@ class HTTPServer
 
                   rsp = HTTPResponse(200, hdrs)
                   wrt = client.write(tostring(rsp)~mesg)
-                  if wrt == 0LL or req.want_close() then
+                  if wrt == 0LL or req.should_close() then
                      client.close()
                      break
                   end

@@ -105,18 +105,18 @@ class Socket
    get readable()
       poller = self.rd_poller
       poller.start()
-      poller.modify '+r'
+      poller.modify(Poller::POLLIN)
       self._rdsem.down()
-      poller.modify '-r'
+      poller.modify(-Poller::POLLIN)
       return 1
    end
 
    get writable()
       poller = self.wr_poller
       poller.start()
-      poller.modify "+w"
+      poller.modify(Poller::POLLIN)
       self._wrsem.down()
-      poller.modify "-w"
+      poller.modify(-Poller::POLLIN)
       return 1
    end
 

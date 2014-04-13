@@ -86,16 +86,15 @@ module AsyncStream
 	 assert(self.fd, "need a file descriptor")
 	 self._rdsem = Semaphore(0)
 	 self._wrsem = Semaphore(0)
-	 self._ersem = Semaphore(0)
-
+	 self.errors = 0
 	 self._poller = Poller self.fd, 0, (poll, evts) =>
-	    if evts.find "e", 1, true then
-	       self._ersem.up()
+	    if (evts & Poller::POLLERR) > 0 then
+               self.errors += 1
 	    end
-	    if evts.find "r", 1, true then
+	    if (evts & Poller::POLLIN) > 0 then
 	       self._rdsem.up()
 	    end
-	    if evts.find "w", 1, true then
+	    if (evts & Poller::POLLOUT) > 0 then
 	       self._wrsem.up()
 	    end
 	 end
@@ -107,11 +106,15 @@ module AsyncStream
       if self.is_eof then
          return 0
       end
-      self.poller.start()
-      self.poller.modify "+r"
+      poller = self.poller
+      if self.errors > 0 then
+         return -1
+      end
+      poller.start()
+      poller.modify(Poller::POLLIN)
       self._rdsem.down()
-      if self._ersem.count > 0 then
-         self.poller.stop()
+      if self.errors > 0 then
+         poller.stop()
          return -1
       else
          return 1
@@ -119,11 +122,15 @@ module AsyncStream
    end
 
    get writable()
-      self.poller.start()
-      self.poller.modify "+w"
+      poller = self.poller
+      if self.errors > 0 then
+         return -1
+      end
+      poller.start()
+      poller.modify(Poller::POLLOUT)
       self._wrsem.down()
-      self.poller.modify "-w"
-      if self._ersem.count > 0 then
+      poller.modify(-Poller::POLLOUT)
+      if self.errors > 0 then
          self.poller.stop()
          return -1
       else
@@ -321,9 +328,12 @@ end
 module AsyncSocket
    include AsyncStream
    super = ...
+   self(...)
+      super(...)
+      self.nonblocking = true
+   end
    close()
       self.poller.stop()
-      self.poller = nil
       super.close()
    end
 end
@@ -336,7 +346,9 @@ class TCPServer extends _TCPServer
    include AsyncSocket super
    accept()
       if self.readable > 0 then
-         return super.accept() as TCPClient
+         client = super.accept() as TCPClient
+         client.nonblocking = true
+         return client
       else
          return nil
       end
@@ -345,6 +357,8 @@ end
 
 class TCPClient extends _TCPClient
    include AsyncSocket super
+   local rderr = 0
+   local wrerr = 0
    read(len = 4096)
       if self.readable > 0 then
          r = super.read(len)
@@ -372,7 +386,7 @@ class TCPClient extends _TCPClient
             end
          else
             self.poller.stop()
-            return out
+            return nil
          end
       end
       return out
