@@ -22,6 +22,37 @@ class URI
       } = pattern.match(uristr)
    end
 
+   function self::unescape(s)
+      s = s.gsub("+", " ")
+      return s.gsub "%%(%x%x)", (h) =>
+         return string::char(tonumber(h, 16))
+      end
+   end
+
+   function self::escape(s)
+      s = s.gsub "([&=+%c])", (c) =>
+         return "%%%02X".format(string::byte(c))
+      end
+      return s.gsub(" ", "+")
+   end
+
+   function self::encode(t = { })
+      buf = [ ]
+      for k,v in t do
+         buf.push("%{self::escape(k)}=%{self::escape(v)}")
+      end
+      return buf.join("&")
+   end
+
+   function self::decode(s = "", t = { })
+      for k, v in s.gmatch "([^&=]+)=([^&=]+)" do
+         k = self::unescape(k)
+         v = self::unescape(v)
+         t[k] = v
+      end
+      return t
+   end
+
    __tostring__()
       buf = { }
       if self.scheme then
