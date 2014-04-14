@@ -181,7 +181,7 @@ class HTTPResponse
 end
 
 function HTTPFilter(input, output = Channel())
-   local tonumber in _G
+   import tonumber from _G
 
    function parse_headers(head)
       line = head.find "\r\n", 1, true
@@ -204,77 +204,14 @@ function HTTPFilter(input, output = Channel())
       return stat, hdrs as HTTPHeaders
    end
 
-   function read_entity(headers, buf)
-      entity = HTTPEntity(headers)
-      if headers['Content-Length'] then
-         len = tonumber(headers['Content-Length'])
-         if len == nil then
-            return nil
-         end
-         stream = ByteStream(len)
-         entity.stream = stream
-         stream.write(buf)
-         len -= #buf
-         buf = ""
-         while len > 0 do
-            got = input.get()
-            if got == nil then
-               break
-            end
-            stream.write(got)
-            len -= #got
-         end
-         stream.seek("set", 0)
-      elseif buf.find("%x+\r\n") == 1 then
-         stream = ByteStream()
-         entity.stream = stream
-         while true do
-            len = nil
-            while not len do
-               pos = buf.find "\r\n", 1, true
-               if pos then
-                  len = buf.sub(1, pos - 1)
-                  len = tonumber(len, 16)
-                  buf = buf.sub(pos + 1)
-               else
-                  got = input.get()
-                  if got == nil or got == "" then
-                     break
-                  end
-                  buf ~= got
-               end
-            end
-            if not len or len == 0 then
-               break
-            end
-            while #buf < len do
-               got = input.get()
-               if not got then
-                  buf = nil
-                  break
-               end
-               buf ~= got
-            end
-            if not buf then
-               break
-            end
-            stream.write(buf.sub(1, len + 1))
-            buf = buf.sub(len + 2)
-         end
-         stream.seek("set", 0)
-      end
-      return entity
-   end
-
    async =>
       buf = ""
       while true do
-         head = nil
+         head, rest = nil
          while true do
-            ofs, aft = buf.find("\r\n\r\n", 1, true)
-            if ofs then
-               head = buf.sub(1, ofs)
-               buf  = buf.sub(aft + 1)
+            if buf.find("\r\n\r\n", 1, true) then
+               head, rest = ...buf.split("\r\n\r\n", 2, true)
+               buf = rest
                break
             else
                got = input.get()
@@ -301,13 +238,66 @@ function HTTPFilter(input, output = Channel())
             break
          end
 
-         entity = read_entity(hdrs, buf)
-         if not entity then
-            break
+         if hdrs['Content-Length'] then
+            len = tonumber(hdrs['Content-Length'])
+            if len == nil then
+               break
+            end
+            body = ByteStream(len)
+            mesg.entity = HTTPEntity(hdrs, body)
+            body.write(buf)
+            len -= #buf
+            buf = ""
+            while len > 0 do
+               got = input.get()
+               if got == nil then
+                  break
+               end
+               body.write(got)
+               len -= #got
+            end
+            body.seek("set", 0)
+         elseif buf.find("%x+\r\n") == 1 then
+            body = ByteStream()
+            mesg.entity = HTTPEntity(hdrs, body)
+            while true do
+               len = nil
+               while not len do
+                  pos = buf.find "\r\n", 1, true
+                  if pos then
+                     len = buf.sub(1, pos - 1)
+                     len = tonumber(len, 16)
+                     buf = buf.sub(pos + 1)
+                  else
+                     got = input.get()
+                     if got == nil or got == "" then
+                        break
+                     end
+                     buf ~= got
+                  end
+               end
+               if not len or len == 0 then
+                  break
+               end
+               while #buf < len do
+                  got = input.get()
+                  if not got then
+                     buf = nil
+                     break
+                  end
+                  buf ~= got
+               end
+               if not buf then
+                  break
+               end
+               body.write(buf.sub(1, len + 1))
+               buf = buf.sub(len + 2)
+            end
+            body.seek("set", 0)
          end
-         mesg.entity = entity
 
          output.put(mesg)
+         yield
       end
       output.put(nil)
    end
