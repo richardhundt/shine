@@ -330,7 +330,6 @@ module AsyncSocket
    super = ...
    self(...)
       super(...)
-      self.nonblocking = true
    end
    close()
       self.poller.stop()
@@ -346,9 +345,7 @@ class TCPServer extends _TCPServer
    include AsyncSocket super
    accept()
       if self.readable > 0 then
-         client = super.accept() as TCPClient
-         client.nonblocking = true
-         return client
+         return super.accept() as TCPClient
       else
          return nil
       end
