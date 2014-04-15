@@ -158,30 +158,6 @@ function like(spec)
       return repr
    end
 
-   pred = [ ]
-   pred.push"""
-   return function($1, $2)
-   """
-   for k, v in spec do
-      tk = typeof(k)
-      if tk == String then
-         k = "%q".format(k)
-      elseif tk == Class or tk == Meta or tk == Module or tk == Grammar then
-         k = k.__name
-      end
-      pred.push"""
-      if not ($1[%{k}] is $2[%{k}]) then
-         return false
-      end
-      """
-   end
-   pred.push"""
-      return true
-   end
-   """
-
-   pred = eval(pred.join())
-
    function meta::__uamp(a, b)
       return conjoin(a, b)
    end
@@ -193,7 +169,28 @@ function like(spec)
       if type(b) != 'table' then
          return false
       end
-      return pred(b, spec)
+
+      for k, v in spec do
+         tk = typeof(k)
+         if tk == String then
+            if not (b[k] is spec[k]) then
+               return false
+            end
+         elseif tk == Class or tk == Meta then
+            for _k, _v in b do
+               if not (_k is k) then
+                  return false
+               end
+               if not (_v is v) then
+                  return false
+               end
+            end
+            break
+         else
+            error "bad schema"
+         end
+      end
+      return true
    end
 
    return meta as meta
@@ -240,6 +237,11 @@ function fields(schema is Table)
          into.$slots = slots
          if into.__base and into.__base.$slots then
             setmetatable(into.$slots, { __index = into.__base.$slots })
+         end
+         local like_schema = like(schema)
+         local getmt = getmetatable
+         function into.__is(that)
+            return getmt(that) == self or that is like_schema
          end
       end
  
