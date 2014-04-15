@@ -12,7 +12,7 @@ local th1 = Thread::create =>
 
    print "Hello from a th1"
    f1 = async =>
-      for i=1, 100000 do
+      for i=1, 150000 do
          --print "[1] tick %{i}"
          nns.send("[1] %{i}")
       end
@@ -32,7 +32,7 @@ local th2 = Thread::create =>
 
    f1 = async =>
       local got
-      for i=1, 100000 do
+      for i=1, 150000 do
          got = nns.recv()
          --print "[2] got: %{got}"
          assert(got != null)

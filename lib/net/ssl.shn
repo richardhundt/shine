@@ -3,9 +3,9 @@ import ssl = lib from "net.ssl.ffi"
 
 module SHA1
    digest(str)
-      buf = ffi::new('char[20]')
+      buf = ffi::new('uint8_t[20]')
       ssl::SHA1(str, #str, buf)
-      return ffi::string(buf, 20)
+      return buf
    end
 end
 

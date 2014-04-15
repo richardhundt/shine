@@ -96,6 +96,13 @@ class HTTPHeaders
       end
       return table::concat(buf, "\r\n")~"\r\n"
    end
+   push(key, val)
+      if self[key] then
+         self[key] ~= (', ' ~ val)
+      else
+         self[key] = val
+      end
+   end
 end
 
 class HTTPEntity

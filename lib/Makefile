@@ -98,12 +98,16 @@ clean:
 	rm -f ${BUILD}/libnanomsg.a
 
 install:
+	mkdir -p ${PREFIX}/share/shine
 	install -m 0644 ${BUILD}/libs/sys.so ${PREFIX}/lib/shine/sys.so
 	install -m 0644 ${BUILD}/libs/util.so ${PREFIX}/lib/shine/util.so
 	install -m 0644 ${BUILD}/libs/net.so ${PREFIX}/lib/shine/net.so
 	install -m 0644 ${BUILD}/libs/data.so ${PREFIX}/lib/shine/data.so
 	install -m 0644 ${BUILD}/libs/async.so ${PREFIX}/lib/shine/async.so
 	install -m 0644 ${BUILD}/libs/codec.so ${PREFIX}/lib/shine/codec.so
+	mkdir -p ${PREFIX}/share/shine/net
+	cp -r net/ssl ${PREFIX}/share/shine/net
+	cp -r net/ssl.shn ${PREFIX}/share/shine/net
 
 uninstall:
 	rm -f ${PREFIX}/lib/shine/*.so

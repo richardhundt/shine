@@ -47,6 +47,8 @@ function disjoin(a, b)
    return meta as meta
 end
 
+export conjoin, disjoin
+
 function guard(name, pred)
    return function(n)
       meta = { }
@@ -160,10 +162,12 @@ function like(spec)
    pred.push"""
    return function($1, $2)
    """
-   for _k, v in spec do
-      k = _k
-      if typeof(k) == String then
+   for k, v in spec do
+      tk = typeof(k)
+      if tk == String then
          k = "%q".format(k)
+      elseif tk == Class or tk == Meta or tk == Module or tk == Grammar then
+         k = k.__name
       end
       pred.push"""
       if not ($1[%{k}] is $2[%{k}]) then
@@ -177,6 +181,13 @@ function like(spec)
    """
 
    pred = eval(pred.join())
+
+   function meta::__uamp(a, b)
+      return conjoin(a, b)
+   end
+   function meta::__upipe(a, b)
+      return disjoin(a, b)
+   end
 
    function meta.__is(b)
       if type(b) != 'table' then
