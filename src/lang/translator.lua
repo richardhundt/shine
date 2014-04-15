@@ -1131,13 +1131,15 @@ function match:ModuleDeclaration(node)
    self.ctx:define('self')
    self.ctx:define('__self__')
 
+   self.ctx:hoist(Op{'!let', Op{node.id.name}, Op{'self'}})
+
    local body = self:get(node.body)
 
    self.ctx:unhoist(body)
    self.ctx:leave()
 
    local init = Op{'!call', 'module', Op(node.id.name),
-      Op{'!lambda', Op{ node.id.name, 'self', '!vararg' }, body } }
+      Op{'!lambda', Op{ 'self', '!vararg' }, body } }
 
    init = apply_decorators(self, node, init)
 
@@ -1160,13 +1162,15 @@ function match:ClassDeclaration(node)
    self.ctx:define('super')
    self.ctx:define('__self__')
 
+   self.ctx:hoist(Op{'!let', Op{node.id.name}, Op{'self'}})
+
    local body = self:get(node.body)
 
    self.ctx:unhoist(body)
    self.ctx:leave()
 
    local init = Op{'!call', 'class', Op(node.id.name),
-      Op{'!lambda', Op{ node.id.name, 'self', 'super' }, body }, base }
+      Op{'!lambda', Op{ 'self', 'super' }, body }, base }
 
    init = apply_decorators(self, node, init)
 
@@ -1472,6 +1476,8 @@ function match:GrammarDeclaration(node)
    self.ctx:define('self')
    self.ctx:define('__self__')
 
+   self.ctx:hoist(Op{'!let', Op{node.id.name}, Op{'self'}})
+
    local body = OpChunk{ }
    local init = nil
    for i=1, #node.body do
@@ -1500,7 +1506,7 @@ function match:GrammarDeclaration(node)
    self.ctx:unhoist(body)
    self.ctx:leave()
 
-   body = Op{'!lambda', Op{ name, 'self' }, body }
+   body = Op{'!lambda', Op{ 'self' }, body }
 
    local init = Op{'!call1', 'grammar', Op(name), body}
    init = apply_decorators(self, node, init)

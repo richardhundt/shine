@@ -105,7 +105,7 @@ function Module.__call(self, ...)
    end
 
    setfenv(body, setmetatable({ __self__ = module }, { __index = getfenv(2) }))
-   body(setmetatable(module, Module), module, ...)
+   body(setmetatable(module, Module), ...)
    return module
 end
 
@@ -128,7 +128,7 @@ local function module(name, body)
 
    setfenv(body, setmetatable({ __self__ = module }, { __index = getfenv(2) }))
 
-   body(setmetatable(module, Module), module)
+   body(setmetatable(module, Module))
 
    return module
 end
@@ -160,21 +160,21 @@ Object.__members__ = { }
 Object.__include__ = { }
 
 local special = {
-   __add__ = { mmname = '__add', method = function(a, b) return a:__add__(b) end };
-   __sub__ = { mmname = '__sub', method = function(a, b) return a:__sub__(b) end };
-   __mul__ = { mmname = '__mul', method = function(a, b) return a:__mul__(b) end };
-   __div__ = { mmname = '__div', method = function(a, b) return a:__div__(b) end };
-   __pow__ = { mmname = '__pow', method = function(a, b) return a:__pow__(b) end };
-   __mod__ = { mmname = '__mod', method = function(a, b) return a:__mod__(b) end };
-   __len__ = { mmname = '__len', method = function(a, b) return a:__len__(b) end };
-   __unm__ = { mmname = '__unm', method = function(a, b) return a:__unm__(b) end };
-   __get__ = { mmname = '__getindex',  method = function(a, k) return a:__get__(k) end };
-   __set__ = { mmname = '__setindex',  method = function(a, k, v) a:__set__(k, v) end };
-   __concat__ = { mmname = '__concat', method = function(a, b) return a:__concat__(b) end };
-   __pairs__  = { mmname = '__pairs',  method = function(a, b) return a:__pairs__() end };
-   __ipairs__ = { mmname = '__ipairs', method = function(a, b) return a:__ipairs__() end };
-   __call__   = { mmname = '__call',   method = function(self, ...) return self:__call__(...) end };
-   __tostring__ = { mmname = '__tostring', method = function(self, ...) return self:__tostring__(...) end };
+   __add__ = { '__add', function(a, b) return a:__add__(b) end };
+   __sub__ = { '__sub', function(a, b) return a:__sub__(b) end };
+   __mul__ = { '__mul', function(a, b) return a:__mul__(b) end };
+   __div__ = { '__div', function(a, b) return a:__div__(b) end };
+   __pow__ = { '__pow', function(a, b) return a:__pow__(b) end };
+   __mod__ = { '__mod', function(a, b) return a:__mod__(b) end };
+   __len__ = { '__len', function(a, b) return a:__len__(b) end };
+   __unm__ = { '__unm', function(a, b) return a:__unm__(b) end };
+   __get__ = { '__getindex',  function(a, k) return a:__get__(k) end };
+   __set__ = { '__setindex',  function(a, k, v) a:__set__(k, v) end };
+   __concat__ = { '__concat', function(a, b) return a:__concat__(b) end };
+   __pairs__  = { '__pairs',  function(a, b) return a:__pairs__() end };
+   __ipairs__ = { '__ipairs', function(a, b) return a:__ipairs__() end };
+   __call__   = { '__call',   function(self, ...) return self:__call__(...) end };
+   __tostring__ = { '__tostring', function(self, ...) return self:__tostring__(...) end };
 }
 
 local function class(name, body, ...)
@@ -235,11 +235,11 @@ local function class(name, body, ...)
 
    setfenv(body, setmetatable({ __self__ = class }, { __index = getfenv(2) }))
 
-   body(setmetatable(class, Class), class, base.__members__)
+   body(setmetatable(class, Class), base.__members__)
 
    for name, delg in pairs(special) do
       if __members__[name] then
-         class[delg.mmname] = delg.method
+         class[delg[1]] = delg[2]
       end
    end
    if class.__finalize then
@@ -792,6 +792,7 @@ ApplyPattern = class("ApplyPattern", function(self)
 end)
 
 local Pattern = setmetatable(getmetatable(lpeg.P(1)), Meta)
+Pattern.__name = 'Pattern'
 Pattern.__call = function(self, ...)
    return self:match(...)
 end
@@ -861,7 +862,7 @@ local function grammar(name, body)
    }, Grammar)
 
    setfenv(body, setmetatable({ }, { __index = getfenv(2) }))
-   body(gram, gram)
+   body(gram)
 
    local patt = { }
    for k, v in pairs(members) do
