@@ -25,7 +25,6 @@ SHC = boot/bin/shinec ${DEBUG}
 VERSION=0.1
 
 CFLAGS=-O2 -Wall
-LDFLAGS=-lm -ldl
 SOFLAGS=-O2 -Wall
 
 LDPRE=
@@ -51,15 +50,19 @@ endif
 LPEG_BUILD=linux
 LIBEXT=so
 LDPRE+=-Wl,--whole-archive
-LDPOST+=-Wl,--no-whole-archive -Wl,-E
+LDPOST+=-Wl,--no-whole-archive -Wl,-E -lrt -lanl
 SOFLAGS+=-shared -fPIC
 LDCONFIG+=ldconfig -n ${PREFIX}/lib
+LPTHREAD=-pthread
 endif
+
+LDFLAGS=-lm -ldl ${LPTHREAD} -lanl -lrt
 
 export SOFLAGS
 export LDFLAGS
 export LDPRE
 export LDPOST
+export LPTHREAD
 
 LPEG := ${DEPDIR}/lpeg/lpeg.so
 
@@ -169,7 +172,7 @@ realclean: clean
 	make -C ./lib clean
 	make -C ${DEPDIR}/tvmjit clean
 	make -C ${DEPDIR}/lpeg clean
-	stat -q ${DEPDIR}/nanomsg/Makefile && make -C ${DEPDIR}/nanomsg clean
+	stat ${DEPDIR}/nanomsg/Makefile && make -C ${DEPDIR}/nanomsg clean
 	rm -rf ${BUILD}
 
 bootstrap: ${TJ} ${LPEG}

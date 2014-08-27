@@ -24,7 +24,7 @@ ${BUILD}/libs/sys.so: ${BUILD}/uthread.o
 	${BUILD}/sys.o ${BUILD}/sys_unix.o ${BUILD}/sys_win32.o \
 	${BUILD}/sys_ffi.o ${BUILD}/sys_ffi_posix.o ${BUILD}/sys_ffi_osx.o \
 	${BUILD}/sys_ffi_bsd.o ${BUILD}/sys_ffi_linux.o ${BUILD}/sys_argparse.o \
-	${BUILD}/sys_thread.o ${BUILD}/uthread.o ${LPTHREAD}
+	${BUILD}/sys_thread.o ${BUILD}/uthread.o
 
 ${BUILD}/libs/async.so: ${BUILD}/upoll.o
 	${SHC} -n "async"          async/init.shn  ${BUILD}/async.o
