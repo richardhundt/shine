@@ -56,7 +56,7 @@ LDCONFIG+=ldconfig -n ${PREFIX}/lib
 LPTHREAD=-pthread
 endif
 
-LDFLAGS=-lm -ldl ${LPTHREAD} -lanl -lrt
+LDFLAGS=-lm -ldl ${LPTHREAD}
 
 export SOFLAGS
 export LDFLAGS
