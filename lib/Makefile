@@ -85,7 +85,7 @@ ${BUILD}/trex.o:
 	-o ${BUILD}/trex.o -I${DEPDIR}/trex
 
 ${DEPDIR}/nanomsg/Makefile:
-	cd ${DEPDIR}/nanomsg && ./autogen.sh && ./configure --prefix=${BUILD}
+	cd ${DEPDIR}/nanomsg && ./autogen.sh && CFLAGS='${CFLAGS} -fPIC' ./configure --prefix=${BUILD}
 
 ${BUILD}/libnanomsg.a: ${DEPDIR}/nanomsg/Makefile
 	cd ${DEPDIR}/nanomsg && make && make install
