@@ -316,7 +316,37 @@ end
 
 local translate
 
+local function import_macro_func(import, package_name, func_name)
+   local errs = string.format(
+      "imported macro body for '%s' cannot be resolved",
+      name)
+   assert(type(package_name) == 'string', errs)
+   package_name = util.unquote(package_name)
+   local func = import(package_name, func_name)
+   assert(func ~= nil, errs)
+   return func
+end
+
 function match:ImportStatement(node)
+   if node.macro then
+      local import = require("core").__magic__.import
+      local package_name = self:get(node.from)
+      local func_name
+
+      for i=1, #node.names do
+         local import_name = node.names[i]
+         local macro_name = import_name[1].name
+         if import_name[2] then
+            func_name = import_name[2].name
+         else
+            func_name = macro_name
+         end
+         local macro_func = import_macro_func(import, package_name, func_name)
+         self.ctx.scope.macro[macro_name] = macro_func
+      end
+      return OpChunk{ }
+   end
+
    local args = OpList{ self:get(node.from) }
    local syms = OpList{ }
    for i=1, #node.names do
@@ -376,14 +406,10 @@ function match:MacroDeclaration(node)
       local info = self.ctx:lookup(nref)
       if info.type == 'import' then
          local from = self:get(info.node.from)
-         local errs = string.format(
-            "imported macro body for '%s' cannot be resolved",
-            name)
-         assert(type(from) == 'string', errs)
-         from = util.unquote(from)
-         local pckg = require(from)
-         func = pckg[nref]
-         assert(func ~= nil, errs)
+         local function import(package_name, func_name)
+            return require(package_name)[func_name]
+         end
+         func = import_macro_func(import, from, nref)
       elseif info.type == 'function' then
          local defn = self:get(info.node)
          local wrap = OpChunk{ defn, Op{'!return', nref} }
