@@ -417,7 +417,12 @@ function match:MacroDeclaration(node)
          local function import(package_name, func_name)
             return require(package_name)[func_name]
          end
-         func = import_macro_func(import, from, nref)
+         for i, alias, func_name in iterate_imported_symbols(info.node) do
+            if alias == nref then
+               func = import_macro_func(import, from, func_name)
+               break
+            end
+         end
       elseif info.type == 'function' then
          local defn = self:get(info.node)
          local wrap = OpChunk{ defn, Op{'!return', nref} }
