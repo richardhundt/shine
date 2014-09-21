@@ -327,20 +327,28 @@ local function import_macro_func(import, package_name, func_name)
    return func
 end
 
+local function iterate_imported_symbols(import_stmt_node)
+   local function iterator(names_num, i)
+      if i >= names_num then return end
+      i = i + 1
+      local current_name = import_stmt_node.names[i]
+      local imported_symbol_alias = current_name[1].name
+      local imported_symbol
+      if current_name[2] then
+         imported_symbol = current_name[2].name
+      else
+         imported_symbol = imported_symbol_alias
+      end
+      return i, imported_symbol_alias, imported_symbol
+   end
+   return iterator, #import_stmt_node.names, 0
+end
+
 function match:ImportStatement(node)
    if node.macro then
       local import = require("core").__magic__.import
       local package_name = self:get(node.from)
-      local func_name
-
-      for i=1, #node.names do
-         local import_name = node.names[i]
-         local macro_name = import_name[1].name
-         if import_name[2] then
-            func_name = import_name[2].name
-         else
-            func_name = macro_name
-         end
+      for i, macro_name, func_name in iterate_imported_symbols(node) do
          local macro_func = import_macro_func(import, package_name, func_name)
          self.ctx.scope.macro[macro_name] = macro_func
       end
