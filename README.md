@@ -946,10 +946,14 @@ around it.
 
 #### <a name="import-statement"></a>Import Statement
 
-`import (<alias> = )? <symbol> (, (<alias> = )? <symbol>)* from <expr>`
+`import macro? (<alias> = )? <symbol> (, (<alias> = )? <symbol>)* from <expr>`
 
 Calls `require(expr)` and then extracts and assigns the named symbols
 to `local` variables. May be used anywhere.
+
+`import macro ...` doesn't assign the named symbols to `local` variables, but
+introduces them as [macros](#macros) in current scope. `import macro ..` is a
+compile time statement evaluated in translating phase.
 
 #### <a name="export-statement"></a>Export Statement
 
@@ -1633,8 +1637,9 @@ $ shinec -o hello.shn
 This comes with a couple of caveats. First, the compiler needs to
 load and evaluate the module at compile time, so if the module's
 code has side effects (such as sending an email), then this will
-happen when the code is *compiled*. This is the only case where the
-compiler does any sort of early linking or binding.
+happen when the code is *compiled*. This is the only case (along with
+`import macro ...` statement) where the compiler does any sort of early
+linking or binding.
 
 Secondly, if the function to be used as the macro implementation is
 declared in the same compilation unit, then it must be declared in
@@ -1646,6 +1651,13 @@ what they need locally.
 
 Some tips:
 
+* Macros could be imported with shorthand syntax:
+```
+-- file: hello.shn
+import macro hello from "macros"
+
+hello("World!")
+```
 * To implement macros, one needs to know the structure of the
   AST, so `shinec -p` will print it out.
 * The "shine.lang.util" module has a `dump` function which pretty
