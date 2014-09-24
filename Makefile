@@ -136,9 +136,11 @@ ${BUILD}/deps/liblpeg.a: ${LPEG}
 ${BUILD}/deps/libtvmjit.a: ${TJ}
 	cp ${TVMDIR}/libtvmjit.a ${BUILD}/deps/libtvmjit.a
 
+${TJ}: TVMJIT_PREFIX ?= ${PREFIX}
+${TJ}: TVMJIT_MULTILIB ?=
 ${TJ}:
 	git submodule update --init ${DEPDIR}/tvmjit
-	${MAKE} PREFIX=${BUILD} TRAVIS=1 -C ${DEPDIR}/tvmjit
+	${MAKE} PREFIX=${TVMJIT_PREFIX} MULTILIB=${TVMJIT_MULTILIB} TRAVIS=1 -C ${DEPDIR}/tvmjit
 
 ${LPEG}:
 	make -C ${DEPDIR}/lpeg ${LPEG_BUILD}
@@ -175,6 +177,7 @@ realclean: clean
 	stat ${DEPDIR}/nanomsg/Makefile && make -C ${DEPDIR}/nanomsg clean
 	rm -rf ${BUILD}
 
+bootstrap: TVMJIT_PREFIX = ${BUILD}
 bootstrap: ${TJ} ${LPEG}
 	mkdir -p boot/bin
 	mkdir -p boot/lib
