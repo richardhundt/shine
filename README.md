@@ -957,6 +957,14 @@ to `local` variables. May be used anywhere.
 introduces them as [macros](#macros) in current scope. `import macro ..` is a
 compile time statement evaluated in translating phase.
 
+Alternative syntaxes:
+```
+import macro? <module_path>.<symbol>
+import macro? <module_path>.{(<alias> = )? <symbol> (, (<alias> = )? <symbol>)*}
+```
+
+`import a.b.{x = m, y = n}` is equivalent to `import x = m, y = n from "a.b"`
+
 #### <a name="export-statement"></a>Export Statement
 
 `export <ident> (, <ident>)*`
