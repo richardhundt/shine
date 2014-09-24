@@ -259,13 +259,15 @@ perhaps this is extracted by a markdown processor
 
 ### <a name="identifiers"></a>Identifiers
 
-Identifiers must start with `[a-zA-Z_$]` (alphabetical characters
-or `_` or `$`) which may be followed by zero or more `[a-zA-Z_$0-9]`
-characters (alphanumeric or `_` or `$`).
+Identifiers must start with `[a-zA-Z_$!?]` (alphabetical characters
+or `_` or `$` or `!` or `?`) which may be followed by zero or more
+`[a-zA-Z_$!?0-9]` characters (alphanumeric or `_` or `$` or `!` or `?`).
 
 ```
 $this_is_valid
 so_is_$this
+!this_is_valid_too
+unusual?_but_still_valid
 ```
 
 ### <a name="scoping"></a>Scoping
