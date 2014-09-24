@@ -107,8 +107,11 @@ local patt = [=[
    ) -> exportStmt
 
    import_stmt <- (
-      "import" <idsafe> s (<import_from> / <import_path>)
+      "import" <idsafe> s
+      ({<import_macro_keyword>?} (<import_from> / <import_path>)) -> importStmt
    )
+
+   import_macro_keyword <- "macro" <idsafe> s
 
    import_path <- {| <import_path_expr> |} -> importPath
 

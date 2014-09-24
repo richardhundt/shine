@@ -316,7 +316,45 @@ end
 
 local translate
 
+local function import_macro_func(import, package_name, func_name)
+   local errs = string.format(
+      "imported macro body for '%s' cannot be resolved",
+      name)
+   assert(type(package_name) == 'string', errs)
+   package_name = util.unquote(package_name)
+   local func = import(package_name, func_name)
+   assert(func ~= nil, errs)
+   return func
+end
+
+local function iterate_imported_symbols(import_stmt_node)
+   local function iterator(names_num, i)
+      if i >= names_num then return end
+      i = i + 1
+      local current_name = import_stmt_node.names[i]
+      local imported_symbol_alias = current_name[1].name
+      local imported_symbol
+      if current_name[2] then
+         imported_symbol = current_name[2].name
+      else
+         imported_symbol = imported_symbol_alias
+      end
+      return i, imported_symbol_alias, imported_symbol
+   end
+   return iterator, #import_stmt_node.names, 0
+end
+
 function match:ImportStatement(node)
+   if node.macro then
+      local import = require("core").__magic__.import
+      local package_name = self:get(node.from)
+      for i, macro_name, func_name in iterate_imported_symbols(node) do
+         local macro_func = import_macro_func(import, package_name, func_name)
+         self.ctx.scope.macro[macro_name] = macro_func
+      end
+      return OpChunk{ }
+   end
+
    local args = OpList{ self:get(node.from) }
    local syms = OpList{ }
    for i=1, #node.names do
@@ -376,14 +414,15 @@ function match:MacroDeclaration(node)
       local info = self.ctx:lookup(nref)
       if info.type == 'import' then
          local from = self:get(info.node.from)
-         local errs = string.format(
-            "imported macro body for '%s' cannot be resolved",
-            name)
-         assert(type(from) == 'string', errs)
-         from = util.unquote(from)
-         local pckg = require(from)
-         func = pckg[nref]
-         assert(func ~= nil, errs)
+         local function import(package_name, func_name)
+            return require(package_name)[func_name]
+         end
+         for i, alias, func_name in iterate_imported_symbols(info.node) do
+            if alias == nref then
+               func = import_macro_func(import, from, func_name)
+               break
+            end
+         end
       elseif info.type == 'function' then
          local defn = self:get(info.node)
          local wrap = OpChunk{ defn, Op{'!return', nref} }

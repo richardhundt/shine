@@ -136,6 +136,10 @@ end
 function defs.rawExpr(expr)
    return { type = "RawExpression", expression = expr }
 end
+function defs.importStmt(macro_keyword, node)
+   node.macro = (#macro_keyword ~= 0)
+   return node
+end
 function defs.importFrom(names, from)
    return { type = "ImportStatement", names = names, from = from }
 end
