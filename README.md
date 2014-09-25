@@ -156,8 +156,18 @@ $ git clone --recursive https://github.com/richardhundt/shine.git
 $ make && sudo make install
 ```
 
-This will install two executables `shinec` and `shine`.  The
-`shinec` executable is just the compiler and has the following
+Standard `package.path` and `package.cpath` values set up by virtual machine
+could be customized with passing `TVMJIT_PREFIX` and `TVMJIT_MULTILIB`
+parameters to `make`. It could be useful for accessing Lua libraries installed
+by standard Linux distro way. For example, on Debian following parameter
+values could be used:
+
+```
+$ make TVMJIT_PREFIX=/usr TVMJIT_MULTILIB="lib/$(gcc -print-multiarch)" && sudo make install
+```
+
+This will install two executables `shinec` and `shine` (along with standard
+library).  The `shinec` executable is just the compiler and has the following
 usage:
 
 ```
