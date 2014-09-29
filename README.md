@@ -259,13 +259,15 @@ perhaps this is extracted by a markdown processor
 
 ### <a name="identifiers"></a>Identifiers
 
-Identifiers must start with `[a-zA-Z_$]` (alphabetical characters
-or `_` or `$`) which may be followed by zero or more `[a-zA-Z_$0-9]`
-characters (alphanumeric or `_` or `$`).
+Identifiers must start with `[a-zA-Z_$!?]` (alphabetical characters
+or `_` or `$` or `!` or `?`) which may be followed by zero or more
+`[a-zA-Z_$!?0-9]` characters (alphanumeric or `_` or `$` or `!` or `?`).
 
 ```
 $this_is_valid
 so_is_$this
+!this_is_valid_too
+unusual?_but_still_valid
 ```
 
 ### <a name="scoping"></a>Scoping
@@ -954,6 +956,14 @@ to `local` variables. May be used anywhere.
 `import macro ...` doesn't assign the named symbols to `local` variables, but
 introduces them as [macros](#macros) in current scope. `import macro ..` is a
 compile time statement evaluated in translating phase.
+
+Alternative syntaxes:
+```
+import macro? <module_path>.<symbol>
+import macro? <module_path>.{(<alias> = )? <symbol> (, (<alias> = )? <symbol>)*}
+```
+
+`import a.b.{x = m, y = n}` is equivalent to `import x = m, y = n from "a.b"`
 
 #### <a name="export-statement"></a>Export Statement
 
