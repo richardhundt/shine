@@ -17,7 +17,7 @@ module UUID
       return "%x".format(v)
    end
 
-   generate()
+   function generate()
       uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.gsub "([xy])", mapper
       return uuid
    end

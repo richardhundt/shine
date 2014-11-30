@@ -1,8 +1,8 @@
 class A
-   get foo()
+   get function foo()
       return self._foo
    end
-   set foo(v)
+   set function foo(v)
       self._foo = v
    end
 end

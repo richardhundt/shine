@@ -9,11 +9,11 @@ io::stderr.setvbuf('no')
 class HTTPServer
    import ffi, C from "sys.ffi"
 
-   self(config = { })
+   function self(config = { })
       self.config = config
    end
 
-   start(host, port)
+   function start(host, port)
       C::signal(C.SIGPIPE, ffi::cast('sig_t', C.SIG_IGN))
 
       server = TCPServer()

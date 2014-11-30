@@ -89,7 +89,7 @@ module JSON
 
    local encode_helper
 
-   encode(item)
+   function encode(item)
       buf = { }
       function buf.write(str)
          self[#self + 1] = str
@@ -99,7 +99,7 @@ module JSON
       return table::concat(buf)
    end
 
-   decode(jstr)
+   function decode(jstr)
       return JSONGrammar(jstr)
    end
 

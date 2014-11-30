@@ -70,33 +70,33 @@ module HTTPStatus
       [511] = 'Network Authentication Required'
    }
 
-   message(code)
+   function message(code)
       return codes[code]
    end
 
-   is_error(code)
+   function is_error(code)
       return code >= 400
    end
-   is_client_error(code)
+   function is_client_error(code)
       return code >= 400 and code < 500
    end
-   is_server_error(code)
+   function is_server_error(code)
       return code >= 500
    end
-   is_redirect(code)
+   function is_redirect(code)
       return code >= 300 and code < 400
    end
 end
 
 class HTTPHeaders
-   __tostring__()
+   function __tostring__()
       buf = { }
       for k, v in self do
          buf[#buf + 1] = k ~ ': ' ~ v
       end
       return table::concat(buf, "\r\n")~"\r\n"
    end
-   push(key, val)
+   function push(key, val)
       if self[key] then
          self[key] ~= (', ' ~ val)
       else
@@ -106,12 +106,12 @@ class HTTPHeaders
 end
 
 class HTTPEntity
-   self(headers, stream)
+   function self(headers, stream)
       self.headers = headers
       self.stream  = stream
       self.nread   = 0
    end
-   read(len)
+   function read(len)
       local max = tonumber(self.headers['Content-Length'])
       if max and self.nread < max then
          if len then
@@ -147,14 +147,14 @@ class HTTPEntity
 end
 
 class HTTPRequest
-   self(method, path, headers, entity, protocol = 'HTTP/1.1')
+   function self(method, path, headers, entity, protocol = 'HTTP/1.1')
       self.method   = method
       self.path     = path
       self.headers  = headers
       self.entity   = entity
       self.protocol = protocol
    end
-   should_close()
+   function should_close()
       if self.protocol == 'HTTP/1.0' then
          if self.headers['Connection'] then
             return self.headers['Connection'].lower() != 'keep-alive'
@@ -169,19 +169,19 @@ class HTTPRequest
          end
       end
    end
-   __tostring__()
+   function __tostring__()
       return "%{self.method} %{self.path} %{self.protocol}\r\n%{self.headers}\r\n"
    end
 end
 
 class HTTPResponse
-   self(status, headers, entity, protocol = 'HTTP/1.1')
+   function self(status, headers, entity, protocol = 'HTTP/1.1')
       self.status   = status
       self.headers  = headers
       self.entity   = entity
       self.protocol = protocol
    end
-   __tostring__()
+   function __tostring__()
       message = HTTPStatus.message(self.status)
       return "%{self.protocol} %{self.status} %{message}\r\n%{self.headers}\r\n"
    end

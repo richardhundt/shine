@@ -32,7 +32,7 @@ module Base64
    local u8arr = ffi::typeof 'uint8_t[?]'
    local u8ptr = ffi::typeof 'uint8_t*'
 
-   decode(str, sz)
+   function decode(str, sz)
       if type(str) == "string" and sz == nil then
          sz = #str
       end
@@ -105,7 +105,7 @@ module Base64
    end
 
    local eq = string::byte('=')
-   encode(str, sz)
+   function encode(str, sz)
       if type(str) == "string" and sz == nil then
          sz = #str
       end

@@ -11,7 +11,7 @@ print(foo())
 print(foo())
 
 class A
-   *greeter(x)
+   function* greeter(x)
       for i=1, x do
          yield i
       end

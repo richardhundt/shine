@@ -9,7 +9,7 @@ a = [ 42, 69, "cheese" ]
 print(x, y)
 
 class Point
-   self(x, y)
+   function self(x, y)
       self.x = x
       self.y = y
    end

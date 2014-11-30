@@ -51,7 +51,7 @@ class Socket
       end
    end
 
-   self(proto is Number, domain = Socket::AF_SP)
+   function self(proto is Number, domain = Socket::AF_SP)
       if not proto then
          return nil, self.EINVAL
       end
@@ -62,7 +62,7 @@ class Socket
       self.fd = fd
    end
 
-   bind(addr)
+   function bind(addr)
       local rc = lib::nn_bind(self.fd, addr)
       if rc >= 0 then
          self.id = rc
@@ -71,7 +71,7 @@ class Socket
          return nil, lib::nn_errno()
       end
    end
-   connect(addr)
+   function connect(addr)
       local rc = lib::nn_connect(self.fd, addr)
       if rc >= 0 then
          return rc
@@ -80,7 +80,7 @@ class Socket
       end
    end
 
-   get rd_poller()
+   get function rd_poller()
       if not self._rd_poller then
          self._rd_fd = self.getsockopt(Socket::NN_SOL_SOCKET, Socket::NN_RCVFD)
 	 self._rdsem = Semaphore(0)
@@ -91,7 +91,7 @@ class Socket
       return self._rd_poller
    end
 
-   get wr_poller()
+   get function wr_poller()
       if not self._wr_poller then
          self._wr_fd = self.getsockopt(Socket::NN_SOL_SOCKET, Socket::NN_SNDFD)
 	 self._wrsem = Semaphore(0)
@@ -102,7 +102,7 @@ class Socket
       return self._wr_poller
    end
 
-   get readable()
+   get function readable()
       poller = self.rd_poller
       poller.start()
       poller.modify(Poller::POLLIN)
@@ -111,7 +111,7 @@ class Socket
       return 1
    end
 
-   get writable()
+   get function writable()
       poller = self.wr_poller
       poller.start()
       poller.modify(Poller::POLLIN)
@@ -123,7 +123,7 @@ class Socket
    local EAGAIN      = Socket::EAGAIN
    local NN_DONTWAIT = Socket::NN_DONTWAIT
 
-   send(mesg)
+   function send(mesg)
       rc = lib::nn_send(self.fd, mesg, #mesg, NN_DONTWAIT)
       if rc < 0 and lib::nn_errno() == EAGAIN then
          if self.writable > 0 then
@@ -135,7 +135,7 @@ class Socket
       return rc
    end
 
-   recv()
+   function recv()
       if not self._ptr then
          self._ptr = ffi::new('void*[1]')
       end
@@ -156,7 +156,7 @@ class Socket
       return nil, lib::nn_errno()
    end
 
-   stop()
+   function stop()
       if self._rd_poller then
          self._rd_poller.stop()
          self._rd_poller = nil
@@ -167,7 +167,7 @@ class Socket
       end
    end
 
-   shutdown(how)
+   function shutdown(how)
       self.stop()
       if self.id and self.id >= 0 then
          rc = lib::nn_shutdown(self.fd, self.id)
@@ -180,7 +180,7 @@ class Socket
       return nil, Socket::EINVAL
    end
 
-   close()
+   function close()
       self.stop()
       local rc
       if self.fd and self.fd >= 0 then
@@ -198,7 +198,7 @@ class Socket
    local size_1_t    = ffi::typeof("size_t[1]")
    local charptr_1_t = ffi::typeof('char *[1]')
 
-   setsockopt(lvl, opt, val, len)
+   function setsockopt(lvl, opt, val, len)
       if not len and val is Boolean then
          val = int_1_t(val and 1 or 0)
          len = int_sz
@@ -218,7 +218,7 @@ class Socket
       end
    end
 
-   getsockopt(lvl, opt)
+   function getsockopt(lvl, opt)
       val, len = int_1_t(), size_1_t(int_sz)
       rc = lib::nn_getsockopt(self.fd, lvl, opt, val, len)
       if rc == 0 then
@@ -243,7 +243,7 @@ class Socket
       end, _NAME
    end
 
-   __codec__()
+   function __codec__()
       return (v) =>
          import Socket from "net.nanomsg"
          return { fd = v[1] } as Socket

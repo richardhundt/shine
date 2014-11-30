@@ -4,7 +4,7 @@ end
 
 grammar Macro
    include A
-   function fail(err)
+   local function fail(err)
       return (s, i) =>
          local msg = (#s < i + 20) and s.sub(i)
          msg = "error %{err} near '%s'".format(msg)
@@ -12,7 +12,7 @@ grammar Macro
       end
    end
 
-   function expect(tok)
+   local function expect(tok)
       return / <{tok}> | <{fail("'%{tok}' expected")}> /
    end
 

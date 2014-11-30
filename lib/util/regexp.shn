@@ -32,7 +32,7 @@ unsigned int trex_getsubexp(TRex* exp, int n, TRexMatch *subexp);
 
 class RegExp
 
-   self(source)
+   function self(source)
       self.source  = source
       local errors = ffi::new("const char*[1]")
       local result = lib::trex_compile(source, errors)
@@ -43,11 +43,11 @@ class RegExp
       ffi::gc(self.pattern, lib.trex_free)
    end
 
-   test(str)
+   function test(str)
       return lib::trex_match(self.pattern, str) == 1
    end
 
-   match(str)
+   function match(str)
       if self.test(str) then
          local capt = { }
          local subm = ffi::new('TRexMatch')
@@ -63,7 +63,7 @@ class RegExp
 
    local _beg = ffi::new('const char*[1]')
    local _end = ffi::new('const char*[1]')
-   find(str)
+   function find(str)
       local ptr = ffi::new('const char*', str)
       if lib::trex_search(self.pattern, ptr, _beg, _end) == 1 then
          return (_beg[0] - ptr + 1), _end[0] - ptr
@@ -72,7 +72,7 @@ class RegExp
       end
    end
 
-   gsub(str, rep)
+   function gsub(str, rep)
       -- this needs to be re-entrant, so allocate these here
       local _beg = ffi::new('const char*[1]')
       local _end = ffi::new('const char*[1]')
@@ -100,12 +100,12 @@ class RegExp
       return table::concat(buf)
    end
 
-   __unapply(subj)
+   function __unapply(subj)
       local capt = self.match(subj)
       return ipairs(capt or { })
    end
 
-   __tostring__()
+   function __tostring__()
       return string::format('RegExp(%q)', tostring(self.source))
    end
 end

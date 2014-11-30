@@ -6,7 +6,7 @@ end
 
 class Socket
 
-   self(domain = C.AF_INET, type = C.SOCK_STREAM, proto = C.IPPROTO_TCP)
+   function self(domain = C.AF_INET, type = C.SOCK_STREAM, proto = C.IPPROTO_TCP)
       fd = C::socket(domain, type, proto)
       if fd == -1 then
          throw strerror(ffi::errno())
@@ -14,7 +14,7 @@ class Socket
       self.fd = fd
    end
 
-   get flags()
+   get function flags()
       flags = ffi.C::fcntl(self.fd, C.F_GETFL)
       if flags < 0 then
          throw strerror(ffi::errno())
@@ -22,7 +22,7 @@ class Socket
       return flags
    end
 
-   set flags(val)
+   set function flags(val)
       stat = C::fcntl(self.fd, C.F_SETFL, ffi::cast('int', val))
       if stat == -1 then
          throw strerror(ffi::errno())
@@ -30,20 +30,20 @@ class Socket
       return stat
    end
 
-   setoption(key, val)
+   function setoption(key, val)
       len = ffi::sizeof('intptr_t')
       val = ffi::cast('char *', ffi::new('intptr_t[1]', val))
       C::setsockopt(self.fd, C.SOL_SOCKET, key, val, len)
    end
 
-   getoption(key)
+   function getoption(key)
       len = ffi::sizeof('intptr_t')
       val = ffi::cast('char *', ffi::new('intptr_t[1]', 0))
       C::getsockopt(self.fd, C.SOL_SOCKET, key, val, len)
       return tonumber(val[0])
    end
 
-   reuseaddr(val)
+   function reuseaddr(val)
       if val then
          val = ffi::cast('char *', ffi::new('intptr_t[1]', 1))
       else
@@ -57,30 +57,30 @@ class Socket
       end
    end
 
-   set nonblocking(val)
+   set function nonblocking(val)
       if val then
          self.flags |= C.O_NONBLOCK
       else
          self.flags &= ~C.O_NONBLOCK
       end
    end
-   get nonblocking()
+   get function nonblocking()
       return (self.flags & C.O_NONBLOCK) != 0
    end
 
-   close()
+   function close()
       return C::close(self.fd)
    end
 end
 
 class TCPSocket extends Socket
-   self()
+   function self()
       super(C.AF_INET, C.SOCK_STREAM, C.IPPROTO_TCP)
    end
 end
 
 class TCPClient extends TCPSocket
-   connect(host, port)
+   function connect(host, port)
       port = port and tostring(port) or nil
       info = ffi::new('struct addrinfo*[1]')
       hint = ffi::new('struct addrinfo')
@@ -103,7 +103,7 @@ class TCPClient extends TCPSocket
       return true
    end
 
-   read(len = 4096)
+   function read(len = 4096)
       local buf
       if self._rdbuf and self._rdlen == len then
          buf = self._rdbuf
@@ -122,7 +122,7 @@ class TCPClient extends TCPSocket
       end
    end
 
-   write(buf)
+   function write(buf)
       if type(buf) == 'cdata' then
          buf = ffi::string(buf)
       end
@@ -134,7 +134,7 @@ class TCPClient extends TCPSocket
       end
    end
 
-   shutdown(how)
+   function shutdown(how)
       if how == "rd" then
          how = C.SHUT_RD
       elseif how == "wr" then
@@ -148,14 +148,14 @@ class TCPClient extends TCPSocket
 end
 
 class TCPServer extends TCPSocket
-   self(host, port)
+   function self(host, port)
       super()
       if host and port then
          self.bind(host, port)
       end
    end
 
-   bind(host, port)
+   function bind(host, port)
       port = port and tostring(port) or nil
       info = ffi::new('struct addrinfo*[1]')
       hint = ffi::new('struct addrinfo')
@@ -179,7 +179,7 @@ class TCPServer extends TCPSocket
       return stat
    end
 
-   listen(backlog = 128)
+   function listen(backlog = 128)
       stat = C::listen(self.fd, backlog)
       if stat == -1 then
          throw strerror(ffi::errno())
@@ -187,7 +187,7 @@ class TCPServer extends TCPSocket
       return stat
    end
 
-   accept()
+   function accept()
       addr = ffi::new('struct sockaddr')
       addr.sa_family = C.AF_INET
       addr_len = ffi::new('socklen_t[1]', ffi::sizeof(addr))
@@ -200,7 +200,7 @@ class TCPServer extends TCPSocket
       return { fd = fd } as TCPClient
    end
 
-   close()
+   function close()
       return C::close(self.fd)
    end
 end

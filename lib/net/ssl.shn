@@ -2,7 +2,7 @@ import ffi, C from "sys.ffi"
 import ssl = lib from "net.ssl.ffi"
 
 module SHA1
-   digest(str)
+   function digest(str)
       buf = ffi::new('uint8_t[20]')
       ssl::SHA1(str, #str, buf)
       return buf

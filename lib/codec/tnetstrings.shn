@@ -1,7 +1,7 @@
 
 module TNetStrings
 
-   dump(data)
+   function dump(data)
       typ = type(data)
       if typ == 'number' then
          out = tostring(data)
@@ -29,7 +29,7 @@ module TNetStrings
    end
 
 
-   parse(data)
+   function parse(data)
       payload, payload_type, remain = self.parse_payload(data)
 
       local value
@@ -55,7 +55,7 @@ module TNetStrings
       return value, remain
    end
 
-   parse_payload(data)
+   function parse_payload(data)
       assert data, "Invalid data to parse, it's empty."
       length, extra = ...data.split(':', 2)
       length = tonumber(length)
@@ -68,7 +68,7 @@ module TNetStrings
       return payload, payload_type, remain
    end
 
-   parse_list(data)
+   function parse_list(data)
       if #data == 0 then return { } end
 
       result = { }
@@ -83,7 +83,7 @@ module TNetStrings
       return result
    end
 
-   parse_pair(data)
+   function parse_pair(data)
       key, extra = self.parse(data)
       assert extra, "Unbalanced dictionary store."
       value, extra = self.parse(extra)
@@ -91,7 +91,7 @@ module TNetStrings
       return key, value, extra
    end
 
-   parse_dict(data)
+   function parse_dict(data)
       if #data == 0 then return { } end
 
       key, value, extra = self.parse_pair(data)
@@ -108,7 +108,7 @@ module TNetStrings
    end
 
 
-   dump_dict(data)
+   function dump_dict(data)
       result = { }
       for k,v in data do
         result[#result + 1] = self.dump(tostring(k))
@@ -118,7 +118,7 @@ module TNetStrings
       return '%d:'.format(#payload) ~ payload ~ '}'
    end
 
-   dump_list(data)
+   function dump_list(data)
       result = { }
       for i=1, #data do
          result[#result + 1] = self.dump(data[i])
@@ -127,10 +127,10 @@ module TNetStrings
       return '%d:'.format(#payload) ~ payload ~ ']'
    end
 
-   encode(obj)
+   function encode(obj)
       return self.dump(obj)
    end
-   decode(str)
+   function decode(str)
       return self.parse(str)
    end
 end

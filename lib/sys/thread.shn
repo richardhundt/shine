@@ -31,6 +31,7 @@ ffi::cdef"""
 """
 
 class Mutex
+
    function self.__apply()
       o = { }
       o.$c = lib::umutex_create()
@@ -39,13 +40,16 @@ class Mutex
       end
       return o as self
    end
-   destroy()
+
+   function destroy()
       lib::umutex_destroy(self.$c)
    end
-   lock()
+
+   function lock()
       return lib::umutex_lock(self.$c)
    end
-   unlock()
+
+   function unlock()
       return lib::umutex_unlock(self.$c)
    end
 
@@ -55,7 +59,8 @@ class Mutex
          return Mutex
       end, _NAME
    end
-   __codec__()
+
+   function __codec__()
       return (v) =>
          import ffi from "sys.ffi"
          import Mutex from "sys.thread"
@@ -67,6 +72,7 @@ class Mutex
 end
 
 class Cond
+
    function self.__apply()
       o = { }
       o.$c = lib::ucond_create()
@@ -75,16 +81,20 @@ class Cond
       end
       return o as self
    end
-   destroy()
+
+   function destroy()
       lib::ucond_destroy(self.$c)
    end
-   wait(mtx)
+
+   function wait(mtx)
       return lib::ucond_wait(self.$c, mtx.$c)
    end
-   signal()
+
+   function signal()
       return lib::ucond_signal(self.$c)
    end
-   broadcast()
+
+   function broadcast()
       return lib::ucond_broadcast(self.$c)
    end
 
@@ -94,7 +104,8 @@ class Cond
          return Cond
       end, _NAME
    end
-   __codec__()
+
+   function __codec__()
       return (v) =>
          import ffi from "sys.ffi"
          import Cond from "sys.thread"
@@ -106,6 +117,7 @@ class Cond
 end
 
 class Pipe
+
    ffi::cdef"""
       typedef struct thrd_mesg thrd_mesg_t;
       typedef struct thrd_pipe thrd_pipe_t;
@@ -135,7 +147,7 @@ class Pipe
       };
    """
 
-   self(size = 64)
+   function self(size = 64)
       self.$c = ffi::cast('thrd_pipe_t*', C::malloc(ffi::sizeof('thrd_pipe_t')))
 
       self.mutex  = Mutex()
@@ -162,7 +174,7 @@ class Pipe
    local U64 = 6
    local STR = 7
 
-   get()
+   function get()
       self.mutex.lock()
       $c = self.$c
       while $c.count == 0 do
@@ -203,7 +215,7 @@ class Pipe
       return val
    end
 
-   put(val)
+   function put(val)
       self.mutex.lock()
       $c = self.$c
       while $c.count >= $c.size do
@@ -279,7 +291,7 @@ class Pipe
       end
    end
 
-   __codec__()
+   function __codec__()
       return (v) =>
          import ffi  from "sys.ffi"
          import Pipe from "sys.thread"
@@ -334,7 +346,7 @@ class Thread
       int luaopen_lpeg(lua_State*);
    """
    
-   self(enter)
+   function self(enter)
       local buf = Serializer::encode(enter)
 
       local L = C::luaL_newstate()
@@ -398,7 +410,7 @@ class Thread
       end
    end
 
-   join()
+   function join()
       rc = lib::uthread_join(self.tid)
       if rc == -1 then
          return nil
@@ -414,7 +426,7 @@ class Thread
       end
    end
 
-   sleep(msec)
+   function sleep(msec)
       tv = ffi::new('struct timeval')
       s, f = math::modf(msec / 1000)
       tv.tv_sec  = s

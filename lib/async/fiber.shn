@@ -11,12 +11,12 @@ class Fiber
 
    local ready = { }
 
-   self(func, ...args)
+   function self(func, ...args)
       self.coro = coroutine::create(func)
       self.args = args
    end
 
-   __call__(...)
+   function __call__(...)
       prev = Fiber::current
       Fiber::current = self
       _1, _2 = resume(self.coro, ...)
@@ -68,7 +68,7 @@ class Fiber
       end
    end
 
-   ready()
+   function ready()
       if not self.queued then
          ready[#ready + 1] = self
          self.queued = true
@@ -76,16 +76,16 @@ class Fiber
       self.active = true
    end
 
-   pause()
+   function pause()
       self.active = false
    end
 
-   cancel(...)
+   function cancel(...)
       self.cancelled = true
       self.finish(...)
    end
 
-   join()
+   function join()
       curr, main = Fiber::running()
       if not main then
          self.on_cleanup =>
@@ -102,7 +102,7 @@ class Fiber
       end
    end
 
-   finish(...)
+   function finish(...)
       self.active = false
       self.retv = ...
       if self._cleanup then
@@ -112,12 +112,12 @@ class Fiber
       end
    end
  
-   on_cleanup(func)
+   function on_cleanup(func)
       self._cleanup or= [ ]
       self._cleanup.push(func)
    end
 
-   status()
+   function status()
       if self.cancelled then
          return "dead"
       end

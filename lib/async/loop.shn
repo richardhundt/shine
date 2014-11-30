@@ -8,29 +8,29 @@ function strerror(errno)
 end
 
 class Timer
-   self(delay, times = 0, react, data)
+   function self(delay, times = 0, react, data)
       self.delay = delay
       self.times = times
       self.react = react
       self.data  = data
       self.when  = -1
    end
-   start(loop = IOLoop)
+   function start(loop = IOLoop)
       loop.add_timer(self)
    end
-   stop(loop = IOLoop)
+   function stop(loop = IOLoop)
       loop.del_timer(self)
    end
 end
 
 class Idle
-   self(react)
+   function self(react)
       self.react = react
    end
-   start(loop = IOLoop)
+   function start(loop = IOLoop)
       loop.add_idle(self)
    end
-   stop(loop = IOLoop)
+   function stop(loop = IOLoop)
       loop.del_idle(self)
    end
 end
@@ -42,21 +42,21 @@ class Poller
    self.POLLOUT = 0x02
    self.POLLERR = 0x04
 
-   self(fd, events = 0, react)
+   function self(fd, events = 0, react)
       self.fd    = fd
       self.react = react
       self.event = ffi::new('upoll_event_t')
       self.event.events = events
    end
 
-   start(loop = IOLoop)
+   function start(loop = IOLoop)
       loop.add_poller(self)
    end
-   stop(loop = IOLoop)
+   function stop(loop = IOLoop)
       loop.del_poller(self)
    end
 
-   modify(events, loop = IOLoop)
+   function modify(events, loop = IOLoop)
       if events < 0 then
          self.event.events &= ~(-events)
       else
@@ -79,39 +79,39 @@ module IOLoop
    local poll_dur = -1
    local poll_cnt = 0
 
-   timer(delay, times = 0, react, data)
+   function timer(delay, times = 0, react, data)
       return Timer(delay, times, react, data)
    end
-   add_timer(timer)
+   function add_timer(timer)
       if not timer.queued then
          timer.queued = true
          timers.enqueue(timer)
       end
       timer.active = true
    end
-   del_timer(timer)
+   function del_timer(timer)
       timer.active = false
    end
 
-   idle(react)
+   function idle(react)
       return Idle(react)
    end
-   add_idle(idle)
+   function add_idle(idle)
       if not idle.queued then
          idle.queued = true
          idles.enqueue(idle)
       end
       idle.active = true
    end
-   del_idle(idle)
+   function del_idle(idle)
       idle.active = false
    end
 
-   poller(fd, events, react)
+   function poller(fd, events, react)
       return Poller(fd, events, react)
    end
 
-   add_poller(poller)
+   function add_poller(poller)
       if not poller.index then
          poller.index = tonumber(poller.fd)
          pollers[poller.index] = poller
@@ -124,7 +124,7 @@ module IOLoop
          end
       end
    end
-   del_poller(poller)
+   function del_poller(poller)
       if poller.index then
          poller.event.events = -1
          lib::upoll_ctl(upoll, lib.UPOLL_CTL_DEL, poller.fd, nil)
@@ -133,7 +133,7 @@ module IOLoop
          poll_cnt -= 1
       end
    end
-   mod_poller(poller)
+   function mod_poller(poller)
       if poller.index then
          lib::upoll_ctl(upoll, lib.UPOLL_CTL_MOD, poller.fd, poller.event)
          if poller.event.events == 0 and not poller.paused then
@@ -154,7 +154,7 @@ module IOLoop
 
    local _running = false
 
-   run_init()
+   function run_init()
       _running = true
       tloop = gettime()
       for _, timer in timers do
@@ -162,7 +162,7 @@ module IOLoop
       end
    end
    
-   run()
+   function run()
       self.run_init()
       again = true
       while _running and again do
@@ -174,19 +174,19 @@ module IOLoop
       end
    end
 
-   stop()
+   function stop()
       _running = false
    end
 
-   running()
+   function running()
       return _running
    end
 
-   count()
+   function count()
       return timers.count() + poll_cnt
    end
 
-   run_once(timeout = -1)
+   function run_once(timeout = -1)
       if not _running then
 	 self.run_init()
       end

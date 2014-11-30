@@ -2,7 +2,7 @@ class Foo
    local function bar()
       print "bar!"
    end
-   greet()
+   function greet()
       bar()
    end
 end

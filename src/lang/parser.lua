@@ -305,7 +305,8 @@ local patt = [=[
    ) -> coroDecl
 
    coro_prop <- (
-      ({"get"/"set"} <idsafe> HS &<ident> / '' -> "init") "*" <ident> s
+      ({"get"/"set"} <idsafe> HS &("function*" <idsafe>) / '' -> "init")
+      "function*" s <ident> s
       <func_head> s <func_body>
    ) -> coroProp
 
@@ -346,7 +347,8 @@ local patt = [=[
    )
 
    prop_defn <- (
-      ({"get"/"set"} <idsafe> HS &<ident> / '' -> "init") <ident> s
+      ({"get"/"set"} <idsafe> HS &("function" <idsafe>) / '' -> "init")
+      "function" <idsafe> s <ident> s
       <func_head> s <func_body>
    ) -> propDefn
 

@@ -1,5 +1,6 @@
 class ArgumentParser
-   self(name = _G.arg[0])
+
+   function self(name = _G.arg[0])
       self.name  = name
       self.rules = { }
       self.specs = { }
@@ -28,7 +29,7 @@ class ArgumentParser
       end
    end
 
-   add(name, spec)
+   function add(name, spec)
       local patt
       if name[1] == '-' then
          patt = / <{name}> /
@@ -58,7 +59,8 @@ class ArgumentParser
          spec = spec
       }
    end
-   usage()
+
+   function usage()
       buf  = { "usage %{self.name}" }
       opts = { }
       args = { }
@@ -102,7 +104,7 @@ class ArgumentParser
       return table::concat(buf, "")
    end
 
-   parse(argv = { })
+   function parse(argv = { })
       capt = { }
       argv = table::concat(argv, ' ')
       opts = / !. /

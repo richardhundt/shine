@@ -5,13 +5,16 @@ import TCPClient, StreamReader from "async.io"
 import HTTPFilter, HTTPHeaders, HTTPRequest from "net.http"
 
 class RESTClient
-   self()
+
+   function self()
       self.socket = TCPClient()
       self.input  = Channel()
       self.output = Channel()
    end
-   connect(host, port)
+
+   function connect(host, port)
       ok, er = self.socket.connect(host, port)
+      print("arse: ", ok, er)
       if not ok then
          return ok, er
       end
@@ -26,12 +29,14 @@ class RESTClient
          end
       end
    end
-   get(path, hdrs = { })
+
+   function get(path, hdrs = { })
       req = HTTPRequest('GET', path, hdrs as HTTPHeaders)
       self.input.put(req)
       return self.output.get()
    end
-   close()
+
+   function close()
       self.socket.close()
    end
 end

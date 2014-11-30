@@ -2,13 +2,13 @@ import ffi, C from "sys.ffi"
 
 class Date
 
-   self(time = C::time(null))
+   function self(time = C::time(null))
       clock = ffi::new('time_t[1]', time)
       self.tm = C::localtime(clock)
    end
 
    local iso8601 = '%Y-%m-%dT%H:%M:%S%z'
-   format(fmt = iso8601, len = 256)
+   function format(fmt = iso8601, len = 256)
       buf = ffi::new('char[?]', len)
       C::strftime(buf, len, fmt, self.tm)
       return ffi::string(buf)
@@ -23,7 +23,7 @@ class Date
       return ffi::string(ts_buf)
    end
 
-   parse(str is String, fmt = iso8601)
+   function parse(str is String, fmt = iso8601)
       tm = ffi::new('tm_t')
       C::strptime(str, fmt, tm)
       self.tm = tm
@@ -32,7 +32,8 @@ end
 
 module Clock
    local now = ffi::new("timeval_t")
-   gettime()
+
+   function gettime()
       C::gettimeofday(now, nil)
       return tonumber(now.tv_sec) * 1000 + tonumber(now.tv_usec) / 1000
    end

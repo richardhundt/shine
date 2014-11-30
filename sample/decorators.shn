@@ -26,11 +26,11 @@ end
 @foo({ answer = 42 })
 @bar('a','b')
 class Point
-   self(x, y)
+   function self(x, y)
    end
 
    @prop(self)
-   distance(that is Point)
+   function distance(that is Point)
    end
 end
 

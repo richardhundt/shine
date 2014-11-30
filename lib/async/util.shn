@@ -4,18 +4,18 @@ import Queue from 'data.queue'
 
 class Semaphore
 
-   self(count = 1)
+   function self(count = 1)
       self.count = count
       self.queue = Queue()
    end
-   up()
+   function up()
       self.count += 1
       if self.count > 0 and self.queue.count() > 0 then
          wait = self.queue.dequeue()
          wait.ready()
       end
    end
-   down()
+   function down()
       if self.count > 0 then
          self.count -= 1
          return
@@ -28,7 +28,7 @@ class Semaphore
       end
       self.count -= 1
    end
-   release()
+   function release()
       self.count = 1
       while not self.queue.empty() do
          wait = self.queue.dequeue()
@@ -36,7 +36,7 @@ class Semaphore
          self.count += 1
       end
    end
-   try_down()
+   function try_down()
       if self.count > 0 then
          self.down()
          return true
@@ -46,24 +46,27 @@ class Semaphore
 end
 
 class Channel
-   self(size = math.huge)
+   function self(size = math.huge)
       self.wput = Semaphore(size)
       self.wget = Semaphore(0)
       self.data = Queue()
    end
-   put(data)
+
+   function put(data)
       self.wput.down()
       self.data.enqueue(data)
       self.wget.up()
    end
-   get()
+
+   function get()
       self.wget.down()
       if self.wput.queue.count() > 0 then
          self.wput.up()
       end
       return self.data.dequeue()
    end
-   join(that)
+
+   function join(that)
       src, dst = that.wput.queue, self.wput.queue
       while src.count() > 0 do
          dst.enqueue(src.dequeue())

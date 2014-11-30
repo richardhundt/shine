@@ -307,4 +307,24 @@ struct stat {
    int64_t st_qspare[2];
 };
 
+/*
+struct stat {
+   dev_t    st_dev;
+   ino_t    st_ino;
+   mode_t   st_mode;
+   nlink_t  st_nlink;
+   uid_t    st_uid;
+   gid_t    st_gid;
+   dev_t    st_rdev;
+   struct timespec st_atimespec;
+   struct timespec st_mtimespec;
+   struct timespec st_ctimespec;
+   off_t    st_size;
+   quad_t   st_blocks;
+   unsigned long   st_blksize;
+   unsigned long   st_flags;
+   unsigned long   st_gen;
+};
+*/
+
 """

@@ -3,7 +3,7 @@ class Queue
    local free = newproxy()
    local hole = newproxy()
 
-   self(size = 32)
+   function self(size = 32)
       self.size = size
       self.head = 0
       self.tail = 0
@@ -25,7 +25,7 @@ class Queue
       return self.count()
    end
 
-   each(iter)
+   function each(iter)
       self.enqueue(hole)
       while true do
          item = self.dequeue()
@@ -38,13 +38,13 @@ class Queue
       end
    end
 
-   count()
+   function count()
       return self.tail - self.head
    end
-   empty()
+   function empty()
       return self.count() == 0
    end
-   enqueue(item)
+   function enqueue(item)
       if self.count() < self.size then
          slot = self.tail % self.size
          self[slot] = item
@@ -69,7 +69,7 @@ class Queue
          end
       end
    end
-   dequeue()
+   function dequeue()
       if self.count() > 0 then
          slot = self.head % self.size
          self.head += 1
@@ -78,7 +78,7 @@ class Queue
          return item
       end
    end
-   remove(item)
+   function remove(item)
       size = self.size
       seen = false
       local slot, next

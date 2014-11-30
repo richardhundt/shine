@@ -1455,7 +1455,12 @@ function match:RawString(node)
    if #node.expressions == 0 then
       return Op("")
    elseif #node.expressions == 1 then
-      return Op(node.expressions[1])
+      expr = node.expressions[1]
+      if type(expr) == 'string' then
+         return Op(expr)
+      else
+         return Op{'!call', 'tostring', self:get(expr.expression) }
+      end
    end
    local list = { }
    for i=1, #node.expressions do

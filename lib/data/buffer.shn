@@ -1,16 +1,18 @@
 import ffi, C from "sys.ffi"
 
 ffi::cdef"""
-   typedef struct nga_buffer_t {
+   typedef struct __shn_buffer {
       char*    base;
       size_t   size;
       size_t   nput;
       size_t   nget;
-   } nga_buffer_t;
+   } shn_buffer_t;
 """
 
 class Buffer
-   ctype = ffi::typeof('nga_buffer_t')
+
+   ctype = ffi::typeof('shn_buffer_t')
+
    function self.__apply(size = 4096)
       self = ctype()
       self.nput = 0
@@ -20,18 +22,22 @@ class Buffer
       ffi::fill(self.base, size, 0)
       return self
    end
+
    function self.__len()
       return self.nput - self.nget
    end
+
    function self.__gc()
       C::free(self.base)
    end
-   clear()
+
+   function clear()
       ffi::fill(self.base, self.size, 0)
       self.nput = 0
       self.nget = 0
    end
-   write(data, len, offs = self.nput)
+
+   function write(data, len, offs = self.nput)
       if len + offs > self.size then
          want = offs + len
          while want > offs + self.size do
@@ -47,7 +53,8 @@ class Buffer
       end
       return len
    end
-   read(len, offs = self.nget)
+
+   function read(len, offs = self.nget)
       if offs > self.nput then
          return 0, nil
       end
@@ -60,16 +67,18 @@ class Buffer
       end
       return len, ffi::string(self.base + offs, len)
    end
-   readall()
+
+   function readall()
       return ffi::string(self.base, self.nput)
    end
-   ffi::metatype('nga_buffer_t', self)
+
+   ffi::metatype('shn_buffer_t', self)
 end
 
 class ByteArray
    import type, rawset, assert from __magic__
 
-   self(source)
+   function self(source)
       if type(source) == 'string' then
          self.size = #source
          self.data = ffi::cast('char*', C::calloc(1, self.size))
@@ -100,13 +109,13 @@ class ByteArray
       end
    end
 
-   append(n)
+   function append(n)
       _need(self, 1)
       self.data[self.have] = n
       self.have += 1
    end
 
-   extend(x)
+   function extend(x)
       if type(x) == 'string' then
          _need(self, #x)
          bytes = ffi::cast('const char*', x)
@@ -119,7 +128,7 @@ class ByteArray
       end
    end
 
-   reverse()
+   function reverse()
       x = 0
       y = self.have - 1
       while x < y do
@@ -131,13 +140,13 @@ class ByteArray
       end
    end
 
-   decode(ofs = 0, len = self.have - ofs, decoder = ffi::string)
+   function decode(ofs = 0, len = self.have - ofs, decoder = ffi::string)
       assert(ofs <= self.have, "decode offset out of bounds")
       assert(len <= ofs + self.have, "decode length out of bounds")
       return decoder(self.data + ofs, len)
    end
 
-   find(str, ofs = 0)
+   function find(str, ofs = 0)
       buf = ffi::cast('char*', str)
       for i=ofs, self.have - #str do
          if self.data[i] == buf[0] then
@@ -155,7 +164,7 @@ class ByteArray
       end
    end
 
-   clear()
+   function clear()
       self.have = 0
    end
 

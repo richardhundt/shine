@@ -1,34 +1,36 @@
 class Point
-   self(x = 0, y = 0)
+
+   function self(x = 0, y = 0)
       print("""
          x: %{x},
          y: %{y}
       """)
       self.move(x, y)
    end
-   move(x, y)
+
+   function move(x, y)
       self.x = x
       self.y = y
    end
-   get foo()
+   get function foo()
       return self._foo
    end
-   set foo(v)
+   set function foo(v)
       self._foo = v
    end
    class Inner extends self
-      self()
-        super()
+      function self()
+         super()
       end
    end
 end
 
 class Point3D extends Point
-   self(x, y, z = 0)
+   function self(x, y, z = 0)
       super(x, y)
       self.z = z
    end
-   move(x, y, z)
+   function move(x, y, z)
       super.move(x, y)
       self.z = z
    end

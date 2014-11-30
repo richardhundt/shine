@@ -217,7 +217,7 @@ function fields(schema is Table)
          slots[k] = slot
       end
  
-      __get__(k)
+      function __get__(k)
          if slots[k] then
             return slots[k].get(self)
          else
@@ -225,7 +225,7 @@ function fields(schema is Table)
          end
       end
  
-      __set__(k, v)
+      function __set__(k, v)
          if slots[k] then
             slots[k].set(self, v)
          else

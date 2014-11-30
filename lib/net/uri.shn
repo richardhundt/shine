@@ -8,12 +8,13 @@ class URI
       {:fragment:  "#"{.*}       :}?
    |}/
 
-   self(uristr)
+   function self(uristr)
       if uristr then
          self.parse(uristr)
       end
    end
-   parse(uristr)
+
+   function parse(uristr)
       {
          scheme    = self.scheme,
          authority = self.authority,
@@ -53,7 +54,7 @@ class URI
       return t
    end
 
-   __tostring__()
+   function __tostring__()
       buf = { }
       if self.scheme then
          buf[#buf + 1] = self.scheme ~ ":"
