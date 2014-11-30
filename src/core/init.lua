@@ -47,7 +47,10 @@ Function.__tostring = function(self)
    if info.isvararg then params[#params+1] = '...' end
    return string.format('function(%s): %p', table.concat(params,', '), self)
 end
-Function.clone = function(self)
+function Function.__index(self, k)
+   return Function.__members__[k]
+end
+Function.__members__.clone = function(self)
    local copy = loadstring(string.dump(self))
    local info = debug.getinfo(self, 'u')
    for i=1, info.nups do
@@ -55,6 +58,17 @@ Function.clone = function(self)
    end
    setfenv(copy, getfenv(self))
    return copy
+end
+function Function.__members__.compose(f1, f2)
+   return function(...)
+      return f1(f2(...))
+   end
+end
+function Function.__members__.andthen(f1, f2)
+   return f2:compose(f1)
+end
+function Function.__uadd(f1, f2)
+   return f2:compose(f1)
 end
 debug.setmetatable(function() end, Function)
 
