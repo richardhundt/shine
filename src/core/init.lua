@@ -100,7 +100,7 @@ function Module.__call(self, ...)
    if self.__apply then
       return self:__apply(...)
    end
-   local body = Function.clone(self.__body)
+   local body = self.__body:clone()
    local name = self.__name .. '@' .. string.format('%p', module)
    local module = { __body = body, __name = name }
    module.__getters__ = { }
