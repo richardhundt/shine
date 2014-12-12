@@ -1009,6 +1009,10 @@ function match:UnaryExpression(node)
    return Op{unop[o], a }
 end
 
+function match:ParenExpression(node)
+   return self:get(node.expression)
+end
+
 local function apply_decorators(self, node, decl)
    if #node.decorators > 0 then
       for i=#node.decorators, 1, -1 do
