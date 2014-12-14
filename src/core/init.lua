@@ -1021,6 +1021,16 @@ local native = {
    [CData]     = 'cdata',
 }
 
+local function _is_type(m_a, m_b)
+   if m_a == nil then
+      return false
+   elseif m_a == m_b then
+      return true
+   else
+      return is_type(m_a.__base, m_b)
+   end
+end
+
 function __is__(a, b)
    if type(b) == 'table' and b.__is then
       return b:__is(a)
@@ -1034,11 +1044,7 @@ function __is__(a, b)
    elseif b == Pattern then
       return lpeg.type(a) == 'pattern'
    elseif getmetatable(b) == Class then
-      local m = getmetatable(a)
-      while m do
-         if m == b then return true end
-         m = m.__base
-      end
+      return _is_type(getmetatable(a), b)
    end
    return false
 end
