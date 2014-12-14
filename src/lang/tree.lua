@@ -165,18 +165,20 @@ function defs.error(src, pos, name)
       error("Unexpected end of input", 2)
    else
       local tok = string.match(src, '%s*(%S+)', pos) or loc
-      local line = 1
-      local ofs  = 0
+      local ln  = 1
+      local ofs = 0
       while ofs < pos do
          local a, b = string.find(src, "\n", ofs)
          if a then
             ofs = a + 1
-            line = line + 1
+            if ofs < pos then
+              ln = ln + 1
+            end
          else
             break
          end
       end
-      error("Unexpected token '"..tok.."' on line "..tostring(line).." "..tostring(name or '?'), 2)
+      error("Unexpected token '"..tok.."' on line "..tostring(ln).." "..tostring(name or '?'), 2)
    end
 end
 function defs.fail(src, pos, msg)

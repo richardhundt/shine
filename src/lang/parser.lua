@@ -436,7 +436,7 @@ local patt = [=[
       / <ident>
       / <literal>
       / <qstring>
-      / (("(" s <expr> s ")") -> parenExpr)
+      / (("(" s <expr> s (")" / %1 => error)) -> parenExpr)
    ))
 
    term <- (
