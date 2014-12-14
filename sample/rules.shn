@@ -20,7 +20,7 @@ grammar Macro
    item  <- <macro> | [^()] | '(' <item>* <{expect(')')}>
    args  <- '(' <arg> (',' <arg>)* ')'
    macro <- (
-        ('apply' <args>) -> '%1(%2)'
+      | ('apply' <args>) -> '%1(%2)'
       | ('add'   <args>) -> '%1 + %2'
       | ('mul'   <args>) -> '%1 * %2'
    )
@@ -35,7 +35,7 @@ g2 = /
    arg   <- ' '* {~ (!',' <item>)* ~}
    args  <- '(' <arg> (',' <arg>)* ')'
    macro <- (
-        ('apply' <args>) -> '%1(%2)'
+      | ('apply' <args>) -> '%1(%2)'
       | ('add'   <args>) -> '%1 + %2'
       | ('mul'   <args>) -> '%1 * %2'
    )

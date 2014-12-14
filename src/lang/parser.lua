@@ -442,7 +442,8 @@ local patt = [=[
    ))
 
    term <- (
-      <primary> {| (
+      <primary>
+      {| (
          s {'.' / '::'} s <name>
          / { "[" } s <expr> s ("]" / %1 => error)
          / { "(" } s {| <expr_list>? |} s (")" / %1 => error)
@@ -548,7 +549,7 @@ local patt = [=[
       <patt_rule> / <class_body_stmt>
    )
 
-   patt_expr <- (('' -> curline) <patt_alt>) -> pattExpr
+   patt_expr <- (('' -> curline) ('|' s)? <patt_alt>) -> pattExpr
 
    patt_grammar <- {|
       <patt_rule> (s <patt_rule>)*
