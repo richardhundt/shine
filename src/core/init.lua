@@ -1027,7 +1027,7 @@ local function _is_type(m_a, m_b)
    elseif m_a == m_b then
       return true
    else
-      return is_type(m_a.__base, m_b)
+      return _is_type(m_a.__base, m_b)
    end
 end
 
