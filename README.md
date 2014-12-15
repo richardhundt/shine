@@ -1,14 +1,41 @@
 
 ```Lua
-import like from "util.guards"
+-- taken from a real world web app which talks to elasticsearch
 
-Shiny = like { luminosity = Number }
+import JSON        from "codec.json"
+import Presenter   from "swarm.app"
+import HTTPStatic  from "swarm.static"
 
-function bling(what is Shiny)
-   print "\u2606\u20AC %{what.luminosity} \u20AC\u2606"
+import ESClient, ESIndex from "app.es.client"
+
+-- this presenter is a singleton, so we use `module` here
+module Features include Presenter
+
+   local client  = ESClient('localhost', 9200)
+   local storage = ESIndex(client, 'features')
+   local static  = HTTPStatic("./public/admin")
+
+   @self.route('GET', '/admin')
+   admin(req, path, query)
+      if #path == 0 then
+         path[#path + 1] = 'index.html'
+      end
+      return static.handler(req, path, query)
+   end
+
+   @self.route('GET', '/features/feature/:id')
+   fetch(req, args, query)
+      resp = storage.lookup('feature', args['id'])
+      hdrs = { }
+      hdrs['Content-Type'] = 'application/json'
+      if resp.exists then
+         return { 200, hdrs, { JSON.encode(resp) } }
+      else
+         return { 404, hdrs, { JSON.encode(resp) } }
+      end
+   end
+
 end
-
-bling { luminosity = 42 }
 ```
 
 # Shine Reference
