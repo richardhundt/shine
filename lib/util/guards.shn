@@ -98,19 +98,23 @@ end
 le = guard 'l3', function(a, b)
    return a <= b
 end
+eq = guard 'eq', function(a, b)
+   return a == b
+end
 ne = guard 'ne', function(a, b)
    return a != b
 end
 
-export gt, ge, lt, le, ne
+export gt, ge, lt, le, eq, ne
 
 ?gt = maybe gt
 ?ge = maybe ge
 ?lt = maybe lt
 ?le = maybe le
+?eq = maybe eq
 ?ne = maybe ne
 
-export ?gt, ?ge, ?lt, ?le, ?ne
+export ?gt, ?ge, ?lt, ?le, ?eq, ?ne
 
 function enum(opts)
    rmap = { }

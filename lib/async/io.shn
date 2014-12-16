@@ -161,15 +161,18 @@ class ByteStream
          wait.ready()
       end
    end
+
    get eof()
       return self.is_eof
    end
+
    get writable()
       if self.size == 0 then
          return -1
       end
       return 1
    end
+
    get readable()
       if self.size == 0 then
          return -1
@@ -274,8 +277,7 @@ class ByteStream
    end
 end
 
-class FileStream
-   include AsyncStream
+class FileStream include AsyncStream
 
    self(stream)
       self.stream = stream
@@ -325,16 +327,18 @@ class FileStream
    end
 end
 
-module AsyncSocket
-   include AsyncStream
+module AsyncSocket include AsyncStream
    super = ...
+
    self(...)
       super(...)
    end
+
    close()
       self.poller.stop()
       super.close()
    end
+
 end
 
 class TCPSocket extends _TCPSocket
@@ -343,6 +347,7 @@ end
 
 class TCPServer extends _TCPServer
    include AsyncSocket super
+
    accept()
       if self.readable > 0 then
          return super.accept() as TCPClient
@@ -350,12 +355,15 @@ class TCPServer extends _TCPServer
          return nil
       end
    end
+
 end
 
 class TCPClient extends _TCPClient
    include AsyncSocket super
+
    local rderr = 0
    local wrerr = 0
+
    read(len = 4096)
       if self.readable > 0 then
          r = super.read(len)
@@ -368,6 +376,7 @@ class TCPClient extends _TCPClient
          return nil
       end
    end
+
    write(buf)
       len = #buf
       out = 0
@@ -388,5 +397,6 @@ class TCPClient extends _TCPClient
       end
       return out
    end
+
 end
 

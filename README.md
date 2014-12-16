@@ -620,6 +620,8 @@ precedence. Operators marked with a trailing `_` are unary operators.
 | `and`    | 2          | left          | logical and |
 | `==`     | 3          | left          | equality |
 | `!=`     | 3          | left          | inequality |
+| `~~`     | 3          | left          | matches |
+| `!~`     | 3          | left          | does not match |
 | `is`     | 4          | left          | type equality |
 | `as`     | 4          | left          | type coercion |
 | `>=`     | 5          | left          | greater than or equal to |

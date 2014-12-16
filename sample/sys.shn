@@ -13,7 +13,7 @@ end
 
 sys::closedir(dir)
 
-stat = sys::stat('./a.shn')
+stat = sys::stat('./README.md')
 for k, v in stat do
    print "stat:", k, v
 end

@@ -452,11 +452,57 @@ local Array = class("Array", function(self)
       end
       return b
    end
+   function self:__match(that)
+      if type(that) == "table" then
+         if not __is__(that, Array) then
+            return false
+         end
+         if that.length ~= self.length then
+            return false
+         end
+         for i=0, self.length - 1 do
+            if not __match__(self[i], that[i]) then
+               return false
+            end
+         end
+         return true
+      end
+   end
 end)
+
+local Any = class("Any", function(self)
+   function self.__match(self, that)
+      for i=1, #self do
+         if __match__(self[i], that) then
+            return true
+         end
+      end
+      return false
+   end
+end)
+
+local function any(...)
+   return setmetatable({ ... }, Any)
+end
+
+local All = class("All", function(self)
+   function self.__match(self, that)
+      for i=1, #self do
+         if not __match__(self[i], that) then
+            return false
+         end
+      end
+      return true
+   end
+end)
+
+local function all(...)
+   return setmetatable({ ... }, All)
+end
 
 local function try(try, catch, finally)
    local ok, rv = pcall(try)
-   if not ok then
+   if not ok and catch ~= nil then
       ok, rv = pcall(catch, rv)
       if not ok then
          error("error in error handling", 2)
@@ -609,7 +655,6 @@ function __match__(that, this)
    local type_this = type(this)
    local type_that = type(that)
 
-   local meta_this = getmetatable(this)
    local meta_that = getmetatable(that)
    if meta_that then
       if meta_that.__match then
@@ -812,6 +857,10 @@ Pattern.__call = function(self, ...)
 end
 Pattern.__tostring = function(self)
    return string.format('Pattern<%p>', self)
+end
+Pattern.__match = function(self, subj)
+   if type(subj) ~= 'string' then return false end
+   return self:match(subj)
 end
 Pattern.__index.__match = function(self, subj, ...)
    if type(subj) ~= 'string' then return false end
@@ -1162,6 +1211,8 @@ __magic__ = {
    include = include;
    typeof = typeof;
    eval = eval;
+   any = any;
+   all = all;
 
    -- utility
    environ = environ;

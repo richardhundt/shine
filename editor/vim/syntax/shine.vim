@@ -35,6 +35,9 @@ syn keyword shineFunction assert print yield getmetatable setmetatable tonumber
 syn keyword shineFunction rawget rawset rawlen newproxy type typeof tostring
 syn keyword shineFunction _G __magic__ error pairs ipairs require
 
+syn match shineFunction "[a-zA-Z_][a-zA-Z_0-9]*\((\)\@="
+syn match shineFunction "[a-zA-Z_][a-zA-Z_0-9]*\s*\(<-\)\@="
+
 " Error Type Keywords
 syn keyword shineKeyword Error
 

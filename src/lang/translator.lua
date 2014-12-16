@@ -253,8 +253,8 @@ local globals = {
    'Nil','Number','Boolean', 'String', 'Function', 'Coroutine', 'Range',
    'UserData', 'Table', 'Array', 'Error', 'Module', 'Class', 'Object',
    'Grammar', 'Pattern', 'ArrayPattern', 'TablePattern', 'ApplyPattern',
-   '__magic__', 'yield', 'take', 'typeof', 'null', 'warn', 'eval',
-   '__FILE__', '__LINE__', '_M', '_PACKAGE', '_NAME', 'Meta'
+   '__magic__', 'yield', 'take', 'typeof', 'null', 'warn', 'eval', 'any', 'all',
+   '__FILE__', '__LINE__', '_M', '_PACKAGE', '_NAME', 'Meta', 'Any', 'All'
 }
 for k,v in pairs(_G) do
    globals[#globals + 1] = k
@@ -988,6 +988,12 @@ function match:BinaryExpression(node)
    end
    if o == '..' then
       return Op{'!call', '__range__', self:get(node.left), self:get(node.right)}
+   end
+   if o == "~~" then
+      return Op{'!call', '__match__', self:get(node.right), self:get(node.left)}
+   end
+   if o == "!~" then
+      return Op{'!not', Op{'!call', '__match__', self:get(node.right), self:get(node.left)} }
    end
    if string.sub(o, 1, 1) == ':' then
       return Op{'!call', '__usrop__', Op(o), self:get(node.left), self:get(node.right) }

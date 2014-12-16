@@ -44,7 +44,7 @@ local patt = [=[
    keyword  <- (
       <reserved> / "class" / "module" / "continue" / "throw" / "super"
       / "import" / "export" / "try" / "catch" / "finally" / "is" / "as"
-      / "include" / "grammar" / "given" / "case" / "macro"
+      / "include" / "grammar" / "given" / "case" / "macro"/ "with"
    ) <idsafe>
 
    sep <- <bcomment>? (<nl> / ";" / <lcomment>) / <ws> <sep>?
@@ -473,9 +473,9 @@ local patt = [=[
    ) -> exprStmt
 
    binop <- {
-      "+" / "-" / "~" / "/" / "**" / "*" / "%" / "^" / "|" / "&"
-      / ">>>" / ">>" / ">=" / ">" / "<<" / "<=" / "<" / ".."
-      / "!=" / "==" / ":" [+-~/*%^|&><!?=]
+      "+" / "-" / "~~" / "~" / "/" / "**" / "*" / "%" / "^"
+      / "|" / "&" / ">>>" / ">>" / ">=" / ">" / "<<" / "<="
+      / "<" / ".." / "!=" / "==" / "!~" / ":" [+-~/*%^|&><!?=]
       / ("or" / "and" / "is" / "as") <idsafe>
    }
 
@@ -484,7 +484,7 @@ local patt = [=[
    ) -> infixExpr
 
    prefix_expr <- (
-      ({ "#" / "-" !'-' / "~" / "!" / "not" <idsafe> } s)? <term>
+      ({ "#" / "-" !'-' / "~" / "!" !"~" / "not" <idsafe> } s)? <term>
    ) -> prefixExpr
 
    assop <- {
