@@ -1,6 +1,6 @@
 function* gen(x)
    for i in 1..x do
-      yield i
+      take i
    end
 end
 
@@ -13,7 +13,7 @@ print(foo())
 class A
    *greeter(x)
       for i=1, x do
-         yield i
+         take i
       end
    end
 end
@@ -24,7 +24,7 @@ for i=1, 5 do print(g()) end
 
 pow = *(x) =>
    for i=1, 10 do
-      yield i ** x
+      take i ** x
    end
 end
 

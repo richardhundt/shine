@@ -37,7 +37,7 @@ class Socket
    import Semaphore from "async.util"
 
    do
-      sym = ffi::new 'struct { int value[1]; const char* name; }' 
+      sym = ffi::new 'struct { int value[1]; const char* name; }'
       i = 0
       while true do
          sym.name = lib::nn_symbol(i, sym.value)
@@ -51,7 +51,7 @@ class Socket
       end
    end
 
-   self(proto is Number, domain = Socket::AF_SP)
+   self(proto: Number, domain = Socket::AF_SP)
       if not proto then
          return nil, self.EINVAL
       end

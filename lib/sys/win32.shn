@@ -1,6 +1,6 @@
 import ffi, C from "sys.ffi"
 
-function opendir(name is String)
+function opendir(name: String)
    dir = ffi::new('DIR')
    if name and #name > 0 then
       ffi::copy(dir.dd_name, name, 256)
@@ -12,7 +12,7 @@ function opendir(name is String)
       else
          path = name ~ "/*"
       end
-      
+
       handle = C::_findfirst(path, dir.dd_info)
       if handle == -1 then
          return nil, C::strerror(ffi::errno())

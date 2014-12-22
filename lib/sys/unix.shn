@@ -6,29 +6,29 @@ function getcwd()
    return ffi::string(buf)
 end
 
-function chdir(path is String)
+function chdir(path: String)
    return C::chdir(path)
 end
 
-function mkdir(path is String, mode is Number)
+function mkdir(path: String, mode: Number)
    return C::mkdir(path, mode)
 end
 
-function rmdir(path is String)
+function rmdir(path: String)
    return C::rmdir(path)
 end
 
-function unlink(path is String)
+function unlink(path: String)
    return C::unlink(path)
 end
 
 DIR = ffi::typeof('DIR')
 
-function opendir(path is String)
+function opendir(path: String)
    return C::opendir(path)
 end
 
-function readdir(dir is DIR)
+function readdir(dir: DIR)
    if dir == null then
       return nil, C::strerror(C::EINVAL)
    end
@@ -42,19 +42,19 @@ function readdir(dir is DIR)
    return ffi::string(ent.d_name, ent.d_namlen)
 end
 
-function rewinddir(dir is DIR)
+function rewinddir(dir: DIR)
    return C::rewinddir(dir)
 end
 
-function closedir(dir is DIR)
+function closedir(dir: DIR)
    return C::closedir(dir)
 end
 
-function seekdir(dir is DIR, loc is Number)
+function seekdir(dir: DIR, loc: Number)
    return C::seekdir(dir, loc)
 end
 
-function telldir(dir is DIR)
+function telldir(dir: DIR)
    return C::telldir(dir)
 end
 

@@ -2,8 +2,7 @@ grammar A
    arg   <- ' '* {~ (!',' <item>)* ~}
 end
 
-grammar Macro
-   include A
+grammar Macro extends A
    function fail(err)
       return (s, i) =>
          local msg = (#s < i + 20) and s.sub(i)
@@ -13,14 +12,14 @@ grammar Macro
    end
 
    function expect(tok)
-      return / <{tok}> | <{fail("'%{tok}' expected")}> /
+      / <{tok}> | <{fail("'%{tok}' expected")}> /
    end
 
-   text  <- {~ <item>* ~}
+   text  <- {~ <item>* ~} end
    item  <- <macro> | [^()] | '(' <item>* <{expect(')')}>
-   args  <- '(' <arg> (',' <arg>)* ')'
+   args  <- '(' <{super.arg}> (',' <{super.arg}>)* ')'
    macro <- (
-        ('apply' <args>) -> '%1(%2)'
+      | ('apply' <args>) -> '%1(%2)'
       | ('add'   <args>) -> '%1 + %2'
       | ('mul'   <args>) -> '%1 * %2'
    )
@@ -35,7 +34,7 @@ g2 = /
    arg   <- ' '* {~ (!',' <item>)* ~}
    args  <- '(' <arg> (',' <arg>)* ')'
    macro <- (
-        ('apply' <args>) -> '%1(%2)'
+      | ('apply' <args>) -> '%1(%2)'
       | ('add'   <args>) -> '%1 + %2'
       | ('mul'   <args>) -> '%1 * %2'
    )

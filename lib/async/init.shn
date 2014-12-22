@@ -29,6 +29,8 @@ function async(body)
    return fiber
 end
 
+task = async
+
 function sleep(msec)
    curr, main = Fiber::running()
    timer = IOLoop.timer msec, 1, =>
@@ -36,8 +38,8 @@ function sleep(msec)
    end
    timer.start()
    curr.pause()
-   yield
+   yield()
 end
 
-export Fiber, async, yield, sleep
+export Fiber, async, task, yield, sleep
 

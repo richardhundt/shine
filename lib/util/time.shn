@@ -23,7 +23,7 @@ class Date
       return ffi::string(ts_buf)
    end
 
-   parse(str is String, fmt = iso8601)
+   parse(str: String, fmt = iso8601)
       tm = ffi::new('tm_t')
       C::strptime(str, fmt, tm)
       self.tm = tm

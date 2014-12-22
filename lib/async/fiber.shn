@@ -111,7 +111,7 @@ class Fiber
          end
       end
    end
- 
+
    on_cleanup(func)
       self._cleanup or= [ ]
       self._cleanup.push(func)

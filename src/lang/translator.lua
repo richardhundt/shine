@@ -6,16 +6,13 @@ See Copyright Notice in shine
 local util = require('shine.lang.util')
 local tvm  = require("tvm")
 local DEBUG = true
- 
+
 local Op = { }
 setmetatable(Op, {
    __call = function(Op, ...)
       local v = ...
       local t = type(v)
       if t == 'string' then
-         if v == '...' then
-            return '!vararg'
-         end
          return tvm.quote(v)
       elseif v == true then
          return '!true'
@@ -94,6 +91,7 @@ function Scope.new(outer)
       hoist   = { };
       block   = { };
       macro   = { };
+      stash   = { };
    }
    if outer then
       setmetatable(self.macro, { __index = outer.macro })
@@ -151,13 +149,19 @@ function Context:enter(type)
    else
       topline = self.scope.topline
    end
+
+   local outer = self.scope
+
+   self.scope = Scope.new(outer)
    self.scope.type = type
-   self.scope = Scope.new(self.scope)
    self.scope.topline = topline
+   self.stash = self.scope.stash
+
    if type == "function" then
-      self.scope.level = (self.scope.outer.level or 0) + 1
+      self.scope.level = (outer.level or 0) + 1
    else
-      self.scope.level = self.scope.outer.level or 1
+      self.scope.level = outer.level or 1
+      setmetatable(self.scope.stash, { __index = outer.stash })
    end
    return self.scope.block
 end
@@ -166,9 +170,10 @@ function Context:leave(block)
    -- propagate hoisted statements to outer scope
    self:unhoist(block)
    self.scope = self.scope.outer
+   self.stash = self.scope.stash
 end
 function Context:in_module()
-   return self.scope.outer and self.scope.outer.type == "module"
+   return self.scope.type == "module"
 end
 function Context:hoist(stmt)
    self.scope.hoist[#self.scope.hoist + 1] = stmt
@@ -263,7 +268,8 @@ end
 local magic = {
    'null', '__range__', '__spread__', '__match__', '__extract__', '__each__',
    '__var__', '__in__', '__is__', '__as__', '__lshift__', '__rshift__',
-   '__arshift__', '__bor__', '__bxor__', '__band__', '__bnot__'
+   '__arshift__', '__bor__', '__bxor__', '__band__', '__bnot__',
+   '__with__', '__take__'
 }
 
 function match:Chunk(node, opts)
@@ -714,7 +720,15 @@ function match:ThrowStatement(node)
    return Op{'!call', 'throw', self:get(node.argument)}
 end
 
+function match:TakeStatement(node)
+   local args = self:list(node.arguments)
+   return Op{'!call', '__take__', OpList(args)}
+end
+
 function match:ReturnStatement(node)
+   if self.ctx.scope.stash['is_expr'] then
+      self.ctx:abort("illegal return in expression")
+   end
    local args = self:list(node.arguments)
    if self.retsig then
       return Op{'!do',
@@ -986,6 +1000,9 @@ function match:BinaryExpression(node)
    if o == 'as' then
       return Op{'!call', '__as__', self:get(node.left), self:get(node.right)}
    end
+   if o == "with" then
+      return Op{'!call', '__with__', self:get(node.left), self:get(node.right)}
+   end
    if o == '..' then
       return Op{'!call', '__range__', self:get(node.left), self:get(node.right)}
    end
@@ -1020,7 +1037,7 @@ function match:ParenExpression(node)
 end
 
 local function apply_decorators(self, node, decl)
-   if #node.decorators > 0 then
+   if node.decorators ~= nil and #node.decorators > 0 then
       for i=#node.decorators, 1, -1 do
          local deco = node.decorators[i]
          decl = Op{'!call1', self:get(deco.term), decl }
@@ -1323,11 +1340,26 @@ function match:DoStatement(node)
 end
 function match:BlockStatement(node)
    local body = OpChunk{ }
+   local scope = self.ctx.scope
    for i=1, #node.body do
-      local line = self.ctx:sync(node.body[i])
-      local stmt = self:get(node.body[i])
+      local n = node.body[i]
+      local line = self.ctx:sync(n)
+      if i == #node.body then
+         if scope.type == "function" then
+            scope.stash["is_last"] = true
+         end
+      end
+
+      local stmt = self:get(n)
+      if i == #node.body and n.type == 'ExpressionStatement' and
+         n.expression.type ~= 'AssignmentExpression' and
+         scope.stash["is_last"] and not scope.stash['is_loop']
+      then
+         body[#body + 1] = OpList{Op{'!line', line}, Op{'!return', stmt}}
+      else
+         body[#body + 1] = OpList{Op{'!line', line}, stmt}
+      end
       self.ctx:shift(body)
-      body[#body + 1] = OpList{Op{'!line', line}, stmt}
    end
    return body
 end
@@ -1335,7 +1367,12 @@ function match:ExpressionStatement(node)
    if node.expression.type == 'Identifier' then
       return Op{'!call', self:get(node.expression)}
    end
-   return self:get(node.expression)
+   local scope = self.ctx.scope
+   local save = scope.stash['is_expr']
+   scope.stash['is_expr'] = true
+   local expr = self:get(node.expression)
+   scope.stash['is_expr'] = save
+   return expr
 end
 function match:CallExpression(node)
    local callee = node.callee
@@ -1378,6 +1415,7 @@ function match:WhileStatement(node)
    local save = self.loop
    self.loop = loop
    self.ctx:enter()
+   self.ctx.stash['is_loop'] = true
    local body = self:get(node.body)
    body[#body + 1] = Op{'!label', loop}
    self.ctx:leave()
@@ -1389,6 +1427,7 @@ function match:RepeatStatement(node)
    local save = self.loop
    self.loop = loop
    self.ctx:enter()
+   self.ctx.stash['is_loop'] = true
    local body = self:get(node.body)
    body[#body + 1] = Op{'!label',loop}
    self.ctx:leave()
@@ -1400,6 +1439,7 @@ function match:ForStatement(node)
    local save = self.loop
    self.loop = loop
    self.ctx:enter()
+   self.ctx.stash['is_loop'] = true
    self.ctx:define(node.name.name)
    local name = self:get(node.name)
    local init = self:get(node.init)
@@ -1421,6 +1461,7 @@ function match:ForInStatement(node)
    local iter = Op{'!call', '__each__', self:get(node.right) }
 
    self.ctx:enter()
+   self.ctx.stash['is_loop'] = true
    local left = { }
    for i=1, #node.left do
       self.ctx:define(node.left[i].name)
@@ -1521,6 +1562,8 @@ function match:GrammarDeclaration(node)
       self.ctx:hoist(Op{'!define', name})
    end
 
+   local base = node.base and self:get(node.base) or nil
+
    self.ctx:enter("module")
    self.ctx:define('self')
    self.ctx:define('__self__')
@@ -1555,9 +1598,9 @@ function match:GrammarDeclaration(node)
    self.ctx:unhoist(body)
    self.ctx:leave()
 
-   body = Op{'!lambda', Op{ 'self' }, body }
+   body = Op{'!lambda', Op{ 'self', 'super' }, body }
 
-   local init = Op{'!call1', 'grammar', Op(name), body}
+   local init = Op{'!call1', 'grammar', Op(name), body, base}
    init = apply_decorators(self, node, init)
 
    return Op{'!assign', name, init }

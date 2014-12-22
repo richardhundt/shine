@@ -44,7 +44,7 @@ local patt = [=[
    keyword  <- (
       <reserved> / "class" / "module" / "continue" / "throw" / "super"
       / "import" / "export" / "try" / "catch" / "finally" / "is" / "as"
-      / "include" / "grammar" / "given" / "case" / "macro"/ "with"
+      / "include" / "grammar" / "given" / "case" / "macro"/ "with"/ "take"
    ) <idsafe>
 
    sep <- <bcomment>? (<nl> / ";" / <lcomment>) / <ws> <sep>?
@@ -144,6 +144,7 @@ local patt = [=[
       / <return_stmt>
       / <try_stmt>
       / <throw_stmt>
+      / <take_stmt>
       / <break_stmt>
       / <continue_stmt>
       / <given_stmt>
@@ -163,6 +164,10 @@ local patt = [=[
    goto_stmt <- (
       'goto' <idsafe> hs <ident>
    ) -> gotoStmt
+
+   take_stmt <- (
+      "take" <idsafe> {| (hs <expr_list>)? |}
+   ) -> takeStmt
 
    break_stmt <- (
       "break" <idsafe>
@@ -209,7 +214,7 @@ local patt = [=[
    ) -> decorator
 
    guarded_ident <- (
-      <ident> hs "is" <idsafe> s <expr>
+      <ident> hs ":" <idsafe> s <expr>
    ) -> guardedIdent
 
    local_decl <- (
@@ -297,7 +302,8 @@ local patt = [=[
 
    coro_expr <- (
       "function*" s <func_head> s <func_body>
-      / "*" <func_head> s "=>" s (hs <expr> / <block_stmt> s <end> / %1 => error)
+      / "*" <func_head> s "=>" (hs <expr> / s <block_stmt> s)
+      (<end> / %1 => error)
    ) -> coroExpr
 
    coro_decl <- (
@@ -313,12 +319,24 @@ local patt = [=[
       "include" <idsafe> s {| <expr_list> |}
    ) -> includeStmt
 
+   module_expr <- (
+      "module" <idsafe> s
+      <class_body> s
+      (<end> / %1 => error)
+   ) -> moduleExpr
+
    module_decl <- (
       ({"local"} <idsafe> s / '' -> "package")
       "module" <idsafe> s <ident> s
       <class_body> s
       (<end> / %1 => error)
    ) -> moduleDecl
+
+   class_expr <- (
+      "class" <idsafe> (s <class_heritage>)? s
+      <class_body> s
+      (<end> / %1 => error)
+   )-> classExpr
 
    class_decl <- (
       ({"local"} <idsafe> s / '' -> "package")
@@ -352,7 +370,7 @@ local patt = [=[
 
    param <- {|
       {:name: <ident> :}
-      (s "is" <idsafe> s {:guard: <expr> :})?
+      (s ":" <idsafe> s {:guard: <expr> :})?
       (s "=" s {:default: <expr> :})?
    |}
    param_list <- (
@@ -446,11 +464,36 @@ local patt = [=[
          / { "(" } s {| <expr_list>? |} s (")" / %1 => error)
       )* (
          {~ (hs &['"[{] / HS) -> "(" ~}
-         {| <spread_expr> / !<binop> <expr_list> |}
+         {| <spread_expr> / (&"*("/!<binop>) <expr_list> |}
       )? |}
    ) -> term
 
-   expr <- (('' -> curline) (<in_expr> / <infix_expr> / <spread_expr>)) -> expr
+   expr <- (('' -> curline) (
+      <if_expr>
+      / <for_expr>
+      / <for_in_expr>
+      / <while_expr>
+      / <repeat_expr>
+      / <given_expr>
+      / <in_expr>
+      / <class_expr>
+      / <module_expr>
+      / <grammar_expr>
+      / <infix_expr>
+      / <spread_expr>
+   )) -> expr
+
+   if_expr <- <if_stmt> -> blockExpr
+
+   given_expr <- <given_stmt> -> blockExpr
+
+   for_expr <- <for_stmt> -> loopExpr
+
+   for_in_expr <- <for_in_stmt> -> loopExpr
+
+   while_expr <- <while_stmt> -> loopExpr
+
+   repeat_expr <- <repeat_stmt> -> loopExpr
 
    spread_expr <- (
       "..." <term>?
@@ -469,14 +512,14 @@ local patt = [=[
    ) -> superExpr
 
    expr_stmt <- (
-      ('' -> curline) <update_expr>
+      ('' -> curline) (<update_expr> / <expr>)
    ) -> exprStmt
 
    binop <- {
       "+" / "-" / "~~" / "~" / "/" / "**" / "*" / "%" / "^"
       / "|" / "&" / ">>>" / ">>" / ">=" / ">" / "<<" / "<="
       / "<" / ".." / "!=" / "==" / "!~" / ":" [+-~/*%^|&><!?=]
-      / ("or" / "and" / "is" / "as") <idsafe>
+      / ("or" / "and" / "is" / "as" / "with") <idsafe>
    }
 
    infix_expr  <- (
@@ -497,7 +540,7 @@ local patt = [=[
          (s {:oper: <assop> :} s {:expr: <expr> :})
          / ((s "," s <bind_left>)* s {:oper: {'=' !'>' / 'in' <idsafe>} :}
              s {:list: {| <expr_list> |} :})
-      |}?
+      |}
    ) -> updateExpr
 
    array_expr <- (
@@ -532,10 +575,15 @@ local patt = [=[
       "/" s (<patt_grammar> / <patt_expr>) s ("/" / %s => error)
    ) -> regexExpr
 
+   grammar_expr <- (
+      "grammar" <idsafe> (s <class_heritage>)? s
+      (s <grammar_body>)? s (<end> / %1 => error)
+   ) -> grammarExpr
+
    grammar_decl <- (
       ({"local"} <idsafe> s / '' -> "package")
-      "grammar" <idsafe> HS <ident> (s <grammar_body>)? s
-      (<end> / %1 => error)
+      "grammar" <idsafe> hs <ident> (s <class_heritage>)? s
+      (s <grammar_body>)? s (<end> / %1 => error)
    ) -> grammarDecl
 
    grammar_body <- {|
@@ -546,7 +594,7 @@ local patt = [=[
       <patt_rule> / <class_body_stmt>
    )
 
-   patt_expr <- (('' -> curline) <patt_alt>) -> pattExpr
+   patt_expr <- (('' -> curline) ('|' s)? <patt_alt>) -> pattExpr
 
    patt_grammar <- {|
       <patt_rule> (s <patt_rule>)*

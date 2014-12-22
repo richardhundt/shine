@@ -126,6 +126,17 @@ end
 function defs.includeStmt(list)
    return { type = "IncludeStatement", list = list }
 end
+
+function defs.moduleExpr(body)
+   local name = defs.identifier("Module"..util.genid())
+   local decl = defs.moduleDecl('local', name, body)
+   return defs.callExpr(
+      defs.funcExpr({ }, defs.blockStmt{
+         decl, defs.returnStmt({ name })
+      }),
+      { }
+   )
+end
 function defs.moduleDecl(scope, name, body)
    return { type = "ModuleDeclaration", id = name, body = body, scope = scope }
 end
@@ -249,6 +260,23 @@ function defs.ifStmt(test, cons, altn)
    end
    return { type = "IfStatement", test = test, consequent = cons, alternate = altn }
 end
+function defs.blockExpr(node)
+   return defs.callExpr(
+      defs.funcExpr({ }, defs.blockStmt{ node }),
+      { }
+   )
+end
+function defs.loopExpr(node)
+   local wrap = defs.memberExpr(
+      defs.identifier("coroutine"),
+      defs.identifier("wrap")
+   )
+   wrap.namespace = true
+   return defs.callExpr(
+      wrap, { defs.funcExpr({ }, defs.blockStmt{ node }) }
+   )
+end
+
 function defs.whileStmt(test, body)
    return { type = "WhileStatement", test = test, body = body }
 end
@@ -376,6 +404,9 @@ function defs.givenCase(test, guard, cons)
    return { type = "GivenCase", test = test, guard = guard[1], consequent = cons }
 end
 
+function defs.takeStmt(args)
+   return { type = "TakeStatement", arguments = args }
+end
 function defs.returnStmt(args)
    return { type = "ReturnStatement", arguments = args }
 end
@@ -416,6 +447,17 @@ end
 function defs.catchClause(param, guard, body)
    if not body then body, guard = guard, nil end
    return { type = "CatchClause", param = param, guard = guard, body = body }
+end
+
+function defs.classExpr(base, body)
+   local name = defs.identifier("Class"..util.genid())
+   local decl = defs.classDecl('local', name, base, body)
+   return defs.callExpr(
+      defs.funcExpr({ }, defs.blockStmt{
+         decl, defs.returnStmt({ name })
+      }),
+      { }
+   )
 end
 
 function defs.classDecl(scope, name, base, body)
@@ -550,6 +592,8 @@ local op_info = {
    ["is"]  = { 4, 'L' },
    ["as"]  = { 4, 'L' },
 
+   ["with"]= { 4, 'R' },
+
    [">="]  = { 5, 'L' },
    ["<="]  = { 5, 'L' },
    [">"]   = { 5, 'L' },
@@ -617,33 +661,29 @@ local patt_op_info = {
    ["^-"]  = { 4, 'R' },
 }
 
-local shift = table.remove
 
 local function debug(t)
    return (string.gsub(util.dump(t), "%s+", " "))
 end
 
-local function fold_expr(exp, min)
+local shift = table.remove
+local fold_expr, fold_atom
+
+function fold_atom(exp)
    local lhs = shift(exp, 1)
+   if type(lhs) == 'table' and lhs.type == 'ParenExpression' then
+      return fold_expr({lhs.expression}, 1)
+   end
+   return lhs
+end
+
+function fold_expr(exp, min)
+   local lhs = fold_atom(exp, 1)
    if type(lhs) == 'table' and lhs.type == 'UnaryExpression' then
       local op   = lhs.operator..'_'
       local info = op_info[op]
       table.insert(exp, 1, lhs.argument)
       lhs.argument = fold_expr(exp, info[1])
-   elseif type(lhs) == 'table' and lhs.type == 'ParenExpression' then
-      if #exp > 0 then
-        local op = shift(exp, 1)
-        if type(op) ~= "string" then
-           print("ARSE!", op, util.dump(exp))
-        end
-        local rhs = fold_expr(exp, op_info[op][1])
-        if op == "or" or op == "and" then
-           lhs = defs.logicalExpr(op, lhs, rhs)
-        else
-           lhs = defs.binaryExpr(op, lhs, rhs)
-        end
-      end
-      return lhs
    end
    while op_info[exp[1]] ~= nil and op_info[exp[1]][1] >= min do
       local op = shift(exp, 1)
@@ -673,8 +713,27 @@ function defs.regexExpr(expr)
    return { type = "RegExp", pattern = expr }
 end
 
-function defs.grammarDecl(scope, name, body)
-   return { type = "GrammarDeclaration", id = name, body = body, scope = scope }
+function defs.grammarExpr(base, body)
+   local name = defs.identifier("Grammar"..util.genid())
+   local decl = defs.grammarDecl('local', name, base, body)
+   return defs.callExpr(
+      defs.funcExpr({ }, defs.blockStmt{
+         decl, defs.returnStmt({ name })
+      }),
+      { }
+   )
+end
+function defs.grammarDecl(scope, name, base, body)
+   if #base == 0 and not base.type then
+      base = nil
+   end
+   return {
+      type = "GrammarDeclaration",
+      id = name,
+      base = base,
+      body = body,
+      scope = scope
+   }
 end
 function defs.pattRule(name, body)
    return { type = "PatternRule", name = name, body = body }

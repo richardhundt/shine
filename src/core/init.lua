@@ -22,7 +22,7 @@ local type, tonumber, tostring = _G.type, _G.tonumber, _G.tostring
 local getmetatable, setmetatable = _G.getmetatable, _G.setmetatable
 local pcall, unpack, select = _G.pcall, _G.unpack, _G.select
 
-local __is__, __match__
+local __is__, __match__, include
 
 local Meta = { }
 Meta.__index = Meta
@@ -188,8 +188,18 @@ local special = {
    __pairs__  = { '__pairs',  function(a, b) return a:__pairs__() end };
    __ipairs__ = { '__ipairs', function(a, b) return a:__ipairs__() end };
    __call__   = { '__call',   function(self, ...) return self:__call__(...) end };
+   __each__   = { '__each',   function(self) return self:__each__() end };
    __tostring__ = { '__tostring', function(self, ...) return self:__tostring__(...) end };
 }
+
+local function stringify(o)
+   local m = getmetatable(o)
+   local b = { }
+   for k,v in pairs(o) do
+      b[#b + 1] = tostring(k) .. "=" .. tostring(v)
+   end
+   return tostring(m) .. "(" .. table.concat(b, ",") .. ")"
+end
 
 local function class(name, body, ...)
    local base
@@ -218,6 +228,10 @@ local function class(name, body, ...)
    class.__members__ = __members__
    class.__include__ = __include__
 
+   if getmetatable(base) == Module then
+      class.__include__[base] = true
+   end
+
    function __getters__.__class(self)
       return class
    end
@@ -244,7 +258,8 @@ local function class(name, body, ...)
       end
    end
    function __members__.__tostring__(o)
-      return string.format('<%s>: %p', tostring(class.__name), o)
+      -- return string.format('<%s>: %p', tostring(class.__name), o)
+      return stringify(o)
    end
 
    setfenv(body, setmetatable({ __self__ = class }, { __index = getfenv(2) }))
@@ -265,7 +280,7 @@ local function class(name, body, ...)
    return class
 end
 
-local function include(into, ...)
+function include(into, ...)
    for i=1, select('#', ...) do
       if select(i, ...) == nil then
          error("attempt to include a nil value", 2)
@@ -295,6 +310,49 @@ local function include(into, ...)
       into.__include__[from] = true
    end
 end
+
+local function is_classy(m)
+   return m == Module or m == Class or m == Grammar
+end
+local function with(this, that)
+   local this_m, that_m = getmetatable(this), getmetatable(that)
+   if is_classy(this_m) and is_classy(that_m) then
+      local n = tostring(this).."+"..tostring(that)
+      local m = module(n, function(self)
+         include(self, this, that)
+      end)
+      return m
+   elseif is_classy(that_m) then
+      local n = string.format("%s: %p", typeof(this), this).."+"..tostring(that)
+      local m = module(n, function(self)
+         include(self, that)
+         for k,v in pairs(this) do
+            self[k] = v
+         end
+      end)
+      return m
+   elseif is_classy(this_m) then
+      local n = tostring(this).."+"..string.format("%s: %p", typeof(that), that)
+      local m = module(n, function(self)
+         include(self, this)
+         for k,v in pairs(that) do
+            self[k] = v
+         end
+      end)
+      return m
+   else
+      local n = string.format("%s: %p", typeof(this), this).."+"..string.format("%s: %p", typeof(that), that)
+      local m = module(n, function(self)
+         self.__include__[this_m] = true
+         self.__include__[that_m] = true
+         for k,v in pairs(this) do self[k] = v end
+         for k,v in pairs(that) do self[k] = v end
+      end)
+      return m
+   end
+
+end
+
 
 local Array = class("Array", function(self)
    local Array = self
@@ -910,25 +968,32 @@ function Grammar.__call(self, subj, ...)
    return self:__match(subj, ...)
 end
 
-local function grammar(name, body)
-   local members = { }
-   local getters = { }
-   local setters = { }
-   local include = { }
+local function grammar(name, body, base)
+   local __members__ = { }
+   local __getters__ = { }
+   local __setters__ = { }
+   local __include__ = { }
+
+   if not base then base = Object end
 
    local gram = setmetatable({
       __name      = name,
-      __members__ = members,
-      __getters__ = getters,
-      __setters__ = setters,
-      __include__ = include
+      __body      = body,
+      __base      = base,
+      __members__ = __members__,
+      __getters__ = __getters__,
+      __setters__ = __setters__,
+      __include__ = __include__
    }, Grammar)
 
    setfenv(body, setmetatable({ }, { __index = getfenv(2) }))
-   body(gram)
+
+   include(gram, base)
+
+   body(gram, base.__members__)
 
    local patt = { }
-   for k, v in pairs(members) do
+   for k, v in pairs(__members__) do
       if lpeg.type(v) == 'pattern' then
          patt[k] = v
       end
@@ -1204,7 +1269,6 @@ __magic__ = {
    module = module;
    import = import;
    yield = coroutine.yield;
-   take = coroutine.yield;
    throw = error;
    warn = warn;
    grammar = grammar;
@@ -1223,6 +1287,7 @@ __magic__ = {
    __usrop__ = usrop;
 
    -- operators
+   __with__ = with;
    __check__ = check;
    __rule__ = rule;
    __range__ = range;
@@ -1241,6 +1306,7 @@ __magic__ = {
    __band__ = bit.band;
    __bor__ = bit.bor;
    __bxor__ = bit.bxor;
+   __take__ = coroutine.yield;
 }
 
 setmetatable(__magic__, {
