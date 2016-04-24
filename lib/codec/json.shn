@@ -27,7 +27,7 @@ grammar JSONGrammar
    string <-
         '"' {~ (<decode_escapes> | ('\"'  -> '"') | !'"' .)* ~} '"'
       | "'" {~ (<decode_escapes> | ("\\'" -> "'") | !"'" .)* ~} "'"
-   
+
    null <- "null" {`null`}
 
    number <- (

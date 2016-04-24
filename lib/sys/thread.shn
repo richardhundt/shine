@@ -333,7 +333,7 @@ class Thread
       int tvm_loadbuffer(lua_State*, const char*, size_t, const char*);
       int luaopen_lpeg(lua_State*);
    """
-   
+
    self(enter)
       local buf = Serializer::encode(enter)
 

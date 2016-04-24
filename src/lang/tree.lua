@@ -630,20 +630,6 @@ local function fold_expr(exp, min)
       local info = op_info[op]
       table.insert(exp, 1, lhs.argument)
       lhs.argument = fold_expr(exp, info[1])
-   elseif type(lhs) == 'table' and lhs.type == 'ParenExpression' then
-      if #exp > 0 then
-        local op = shift(exp, 1)
-        if type(op) ~= "string" then
-           print("ARSE!", op, util.dump(exp))
-        end
-        local rhs = fold_expr(exp, op_info[op][1])
-        if op == "or" or op == "and" then
-           lhs = defs.logicalExpr(op, lhs, rhs)
-        else
-           lhs = defs.binaryExpr(op, lhs, rhs)
-        end
-      end
-      return lhs
    end
    while op_info[exp[1]] ~= nil and op_info[exp[1]][1] >= min do
       local op = shift(exp, 1)

@@ -10,7 +10,7 @@ function conjoin(a, b)
       end
       return repr
    end
- 
+
    function meta::__uamp(a, b)
       return conjoin(a, b)
    end
@@ -23,7 +23,7 @@ function conjoin(a, b)
    end
    return meta as meta
 end
- 
+
 function disjoin(a, b)
    meta = { }
    repr = nil
@@ -205,7 +205,7 @@ export enum, like, maybe
 function fields(schema is Table)
    module fields
       local slots = { }
- 
+
       for k, v in schema do
          slot = { }
          function slot.set(o, v)
@@ -220,7 +220,7 @@ function fields(schema is Table)
          end
          slots[k] = slot
       end
- 
+
       __get__(k)
          if slots[k] then
             return slots[k].get(self)
@@ -228,7 +228,7 @@ function fields(schema is Table)
             error("attempt to get member: %{k} in %{self}", 4)
          end
       end
- 
+
       __set__(k, v)
          if slots[k] then
             slots[k].set(self, v)
@@ -236,7 +236,7 @@ function fields(schema is Table)
             error("attempt to set member: %{k} in %{self}", 4)
          end
       end
- 
+
       function self.__included(into)
          into.$slots = slots
          if into.__base and into.__base.$slots then
@@ -248,9 +248,9 @@ function fields(schema is Table)
             return getmt(that) == self or that is like_schema
          end
       end
- 
+
    end
- 
+
    return fields
 end
 
@@ -265,9 +265,9 @@ function struct(schema is Table)
          end
          return o
       end
- 
+
    end
- 
+
    return struct
 end
 

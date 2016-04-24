@@ -161,7 +161,7 @@ module IOLoop
          timer.when = timer.delay + tloop
       end
    end
-   
+
    run()
       self.run_init()
       again = true
@@ -240,7 +240,7 @@ module IOLoop
       end
 
       -- poll
-      --print "upoll_wait:", poll_dur, poll_cnt 
+      --print "upoll_wait:", poll_dur, poll_cnt
       local rv = lib::upoll_wait(upoll, poll_evt, poll_max, poll_dur)
 
       -- run expired timers

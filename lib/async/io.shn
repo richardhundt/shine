@@ -243,7 +243,7 @@ class ByteStream
 
    seek(whence = "cur", offset = 0)
       local base
-      given whence 
+      given whence
          case "set" then
             base = 0
          case "cur" then

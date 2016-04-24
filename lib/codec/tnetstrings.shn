@@ -11,7 +11,7 @@ module TNetStrings
             return '%d:%s^'.format(#out, out)
          end
       elseif typ == 'string' then
-         return '%d:'.format(#data) ~ data ~ ',' 
+         return '%d:'.format(#data) ~ data ~ ','
       elseif typ == 'table' then
          if #data > 0 then
             return self.dump_list(data)
@@ -27,7 +27,6 @@ module TNetStrings
          assert false, "Can't serialize stuff that's %s.".format(typ)
       end
    end
-
 
    parse(data)
       payload, payload_type, remain = self.parse_payload(data)

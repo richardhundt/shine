@@ -4,9 +4,9 @@
 [submodule "deps/uthread"]
 	path = deps/uthread
 	url = https://github.com/richardhundt/uthread.git
-[submodule "deps/tvmjit"]
-	path = deps/tvmjit
-	url = https://github.com/richardhundt/tvmjit.git
 [submodule "deps/nanomsg"]
 	path = deps/nanomsg
 	url = https://github.com/nanomsg/nanomsg.git
+[submodule "deps/tvmjit"]
+	path = deps/tvmjit
+	url = https://github.com/fperrad/tvmjit.git

@@ -96,7 +96,7 @@ class SerializeBuffer
    end
 
    clear()
-      ffi::fill(self.data, self.size, 0) 
+      ffi::fill(self.data, self.size, 0)
       self.offs = 0
       self.seek = 0
    end

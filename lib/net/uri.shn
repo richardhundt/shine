@@ -46,8 +46,8 @@ class URI
 
    function self::decode(s = "", t = { })
       for k, v in s.gmatch "([^&=]+)=([^&=]+)" do
-         k = self::unescape(k)
-         v = self::unescape(v)
+         local k = self::unescape(k)
+         local v = self::unescape(v)
          t[k] = v
       end
       return t
