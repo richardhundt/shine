@@ -40,10 +40,11 @@ ${BUILD}/libs/async.so: ${BUILD}/upoll.o
 
 ${BUILD}/libs/data.so:
 	${SHC} -n "data.queue" data/queue.shn ${BUILD}/data_queue.o
+	${SHC} -n "data.heap" data/heap.shn ${BUILD}/data_heap.o
 	${SHC} -n "data.buffer" data/buffer.shn ${BUILD}/data_buffer.o
 	${SHC} -n "data.uuid" data/uuid.shn  ${BUILD}/data_uuid.o
 	${CC} ${SOFLAGS} -o ${BUILD}/libs/data.so ${LDFLAGS} \
-	${BUILD}/data_queue.o ${BUILD}/data_buffer.o ${BUILD}/data_uuid.o
+	${BUILD}/data_queue.o ${BUILD}/data_heap.o ${BUILD}/data_buffer.o ${BUILD}/data_uuid.o
 
 ${BUILD}/libs/util.so: ${BUILD}/trex.o
 	${SHC} -n "util.time" util/time.shn  ${BUILD}/util_time.o

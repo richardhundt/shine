@@ -1,0 +1,57 @@
+class BinaryHeap
+
+   -- the `sort` function has the same semantics as `table.sort` in
+   -- that it is expected to return true iff a < b, and false otherwise
+   self(sort, heap = { })
+      self.heap = heap
+      self.sort = sort
+   end
+
+   insert(item)
+      self.heap[#self.heap + 1] = item
+      self.sift_up(#self.heap)
+   end
+
+   remove()
+      local v = self.heap[1]
+      self.heap[1] = self.heap[#self.heap]
+      self.heap[#self.heap] = nil
+      self.sift_down(1)
+      return v
+   end
+
+   local floor, huge in math
+
+   sift_up(k)
+      local heap, sort in self
+      heap[0] = huge
+      local v = heap[k]
+      while k != 1 and sort(heap[floor(k/2)], v) do
+         local _k = floor(k/2)
+         heap[k] = heap[_k]
+         k = _k
+      end
+      heap[k] = v
+   end
+
+   sift_down(k)
+      local heap, sort in self
+      local N = #self.heap
+      local n = floor(N/2)
+      local v = heap[k]
+      while k <= n do
+         local j = 2 * k
+         if j < N and sort(heap[j], heap[j + 1]) then
+            j += 1
+         end
+         if not sort(v, heap[j]) then
+            break
+         end
+         heap[k] = heap[j]
+         k = j
+      end
+      heap[k] = v
+   end
+
+end
+
