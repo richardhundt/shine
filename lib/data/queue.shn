@@ -1,4 +1,4 @@
-
+-- circular queue (a.k.a. ring buffer)
 class Queue
    local free = newproxy()
    local hole = newproxy()
