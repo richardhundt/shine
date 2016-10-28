@@ -16,7 +16,7 @@ local Object
 
 local export = { }
 
-export._VERSION = "0.1.0"
+export._VERSION = "0.1.1"
 
 local type, tonumber, tostring = _G.type, _G.tonumber, _G.tostring
 local getmetatable, setmetatable = _G.getmetatable, _G.setmetatable
