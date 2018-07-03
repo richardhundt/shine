@@ -39,7 +39,7 @@ function readdir(dir is DIR)
    if ent == null then
       return null
    end
-   return ffi::string(ent.d_name, ent.d_namlen)
+   return ffi::string(ent.d_name)
 end
 
 function rewinddir(dir is DIR)

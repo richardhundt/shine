@@ -1,7 +1,7 @@
 --[=[
 Shine -- Modifiable OO Lua Dialect. http://github.com/richardhundt/shine
 
-Copyright (C) 2013-2014 Richard Hundt and contributors. All rights reserved.
+Copyright (C) 2013-2016 Richard Hundt and contributors. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -97,7 +97,7 @@ end
 
 local function print_version()
    local core = require("core")
-   local info = "Shine %s -- Copyright (C) 2013-2014 Richard Hundt.\n"
+   local info = "Shine %s -- Copyright (C) 2013-2016 Richard Hundt.\n"
    io.stdout:write(string.format(info, core._VERSION))
 end
 

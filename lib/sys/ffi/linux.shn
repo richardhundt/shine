@@ -314,6 +314,14 @@ typedef struct dirent {
 
 """
 
+ffi::cdef"""
+   /* sigh, as if this isn't complicated enough */
+   static const int STAT_VER = 1;
+   int __xlstat(int, const char *, struct stat *);
+   int __xfstat(int, int, struct stat *);
+   int __xstat(int, const char *, struct stat *);
+"""
+
 if ffi::arch == 'x86' then
    ffi::cdef """
       struct stat {
@@ -399,12 +407,5 @@ elseif ffi::arch == 'arm' then
          };
       """
    end
-   ffi::cdef"""
-      /* sigh, as if this isn't complicated enough */
-      static const int STAT_VER = 1;
-      int __xlstat(int, const char *, struct stat *);
-      int __xfstat(int, const char *, struct stat *);
-      int __xstat(int, const char *, struct stat *);
-   """
 end
 
