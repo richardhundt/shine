@@ -1,5 +1,5 @@
 --[=[
-Copyright (C) 2013-2014 Richard Hundt and contributors.
+Copyright (C) 2013-2018 Richard Hundt and contributors.
 See Copyright Notice in shine
 ]=]
 
