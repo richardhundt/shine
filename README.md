@@ -1726,7 +1726,7 @@ with (but not scheduled by) an event loop.
 This gives a clean linear flow to writing concurrent applications
 without the need for inverting everything using callbacks.
 
-Here's the canonical TCP echo server example:
+Here is the canonical TCP echo server example:
 
 ```
 import async, yield from "async"
